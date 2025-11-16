@@ -116,5 +116,59 @@
     <footer>
         True Digital Solutions © 2025 — Demo
     </footer>
+  <!-- Sección para agendar cita -->
+  <section id="agenda" style="padding: 60px 20px; background: #f8f8f8; text-align: center;">
+    <h2 style="font-size: 32px; margin-bottom: 10px;">Agenda una cita</h2>
+    <p style="max-width: 600px; margin: 0 auto 30px; font-size: 18px; color: #555;">
+      Programa una llamada o reunión y con gusto te muestro cómo quedaría tu página web personalizada.
+    </p>
+
+    <!-- Formulario simple para generar enlace de Google Calendar -->
+    <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left;">
+      <label>Nombre:</label>
+      <input id="nameInput" type="text" placeholder="Tu nombre" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px;">
+
+      <label>Fecha:</label>
+      <input id="dateInput" type="date" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px;">
+
+      <label>Hora:</label>
+      <input id="timeInput" type="time" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px;">
+
+      <button onclick="generateCalendarLink()" style="background: #ff4444; color: white; padding: 12px 20px; width: 100%; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Agendar</button>
+
+      <div id="calendarLink" style="margin-top: 20px;"></div>
+    </div>
+  </section>
+
+  <script>
+    function generateCalendarLink() {
+      const name = document.getElementById('nameInput').value.trim();
+      const date = document.getElementById('dateInput').value;
+      const time = document.getElementById('timeInput').value;
+
+      if (!name || !date || !time) {
+        alert('Por favor llena todos los campos.');
+        return;
+      }
+
+      // Convertir a formato Google Calendar
+      const startDateTime = new Date(`${date}T${time}:00`);
+      const endDateTime = new Date(startDateTime.getTime() + 30 * 60000); // 30 min
+
+      const format = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+      const text = encodeURIComponent(`Reunión con ${name}`);
+      const details = encodeURIComponent('Consulta sobre sitio web');
+      const start = format(startDateTime);
+      const end = format(endDateTime);
+
+      const link = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}%2F${end}&details=${details}`;
+
+      document.getElementById('calendarLink').innerHTML = `
+        <a href="${link}" target="_blank" style="display:block; margin-top: 10px; padding: 12px; background:#222; color:white; text-align:center; border-radius:8px; text-decoration:none;">Agregar al Google Calendar</a>
+      `;
+    }
+  </script>
+
 </body>
 </html>
