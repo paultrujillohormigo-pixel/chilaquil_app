@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Señor Chilaquil - Sistema Ventas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        nav a { margin-right: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        table, th, td { border: 1px solid #ccc; padding: 5px; }
+        .flash { padding: 8px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #c8e6c9; }
+        .error { background: #ffcdd2; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
+        <a href="{{ url_for('productos') }}">Productos</a>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <hr>
+    {% block content %}{% endblock %}
+</body>
+</html>
