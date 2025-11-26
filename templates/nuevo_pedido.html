@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Nuevo pedido</h2>
+
+<form method="post">
+    <label>Origen:</label>
+    <select name="origen">
+        <option value="mostrador">Mostrador</option>
+        <option value="uber">Uber</option>
+        <option value="didi">Didi</option>
+        <option value="otro">Otro</option>
+    </select>
+
+    <label>Mesero:</label>
+    <input type="text" name="mesero">
+
+    <label>Método de pago:</label>
+    <select name="metodo_pago">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="transfer">Transfer</option>
+        <option value="otro">Otro</option>
+    </select>
+
+    <label>Monto Uber (usa negativo para comisión, ej. -30):</label>
+    <input type="number" name="monto_uber" step="0.01" value="0">
+
+    <hr>
+    <h3>Productos</h3>
+    <p>Puedes capturar varias líneas de producto en un solo pedido.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cant</th>
+                <th>Salsa</th>
+                <th>Proteína</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(8) %}
+            <tr>
+                <td>
+                    <select name="producto_id">
+                        <option value="">--</option>
+                        {% for p in productos %}
+                        <option value="{{ p.id }}">{{ p.categoria }} - {{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td><input type="number" name="cantidad" min="0" value="0"></td>
+                <td>
+                    <select name="salsa_id">
+                        <option value="">--</option>
+                        {% for s in salsas %}
+                        <option value="{{ s.id }}">{{ s.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="proteina_id">
+                        <option value="">--</option>
+                        {% for pr in proteinas %}
+                        <option value="{{ pr.id }}">{{ pr.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button type="submit">Guardar pedido</button>
+</form>
+{% endblock %}
