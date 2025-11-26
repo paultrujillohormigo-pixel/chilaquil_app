@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<h3>Ventas por día</h3>
+<table>
+    <tr><th>Día</th><th>Total</th><th>Neto</th></tr>
+    {% for row in data.por_dia %}
+    <tr>
+        <td>{{ row.dia }}</td>
+        <td>{{ row.total_dia }}</td>
+        <td>{{ row.neto_dia }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Top 10 productos</h3>
+<table>
+    <tr><th>Producto</th><th>Cantidad</th><th>Ingreso</th></tr>
+    {% for row in data.top_productos %}
+    <tr>
+        <td>{{ row.nombre }}</td>
+        <td>{{ row.cantidad_vendida }}</td>
+        <td>{{ row.ingreso }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Ventas por origen</h3>
+<table>
+    <tr><th>Origen</th><th>Pedidos</th><th>Neto</th></tr>
+    {% for row in data.por_origen %}
+    <tr>
+        <td>{{ row.origen }}</td>
+        <td>{{ row.pedidos }}</td>
+        <td>{{ row.neto }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
