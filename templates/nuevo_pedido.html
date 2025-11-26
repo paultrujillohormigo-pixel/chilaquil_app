@@ -33,7 +33,7 @@
         <thead>
             <tr>
                 <th>Producto</th>
-                <th>Cant</th>
+                <th>Cantidad</th>
                 <th>Salsa</th>
                 <th>Proteína</th>
             </tr>
@@ -45,7 +45,7 @@
                     <select name="producto_id">
                         <option value="">--</option>
                         {% for p in productos %}
-                        <option value="{{ p.id }}">{{ p.categoria }} - {{ p.nombre }}</option>
+                        <option value="{{ p.id }}">{{ p.categoria }} - {{ p.nombre }} (${{ p.precio }})</option>
                         {% endfor %}
                     </select>
                 </td>
@@ -71,6 +71,52 @@
         </tbody>
     </table>
 
+    <br>
+    <h3>Total del Pedido: <span id="totalPedido">$0.00</span></h3>
+
     <button type="submit">Guardar pedido</button>
 </form>
+
+<!-- ===========================
+     SCRIPT PARA CALCULAR TOTAL
+=========================== -->
+<script>
+    // Precios enviados desde Flask
+    const precios = {
+        {% for p in productos %}
+        "{{ p.id }}": {{ p.precio }},
+        {% endfor %}
+    };
+
+    function calcularTotal() {
+        let total = 0;
+
+        const filas = document.querySelectorAll("tbody tr");
+
+        filas.forEach((fila) => {
+            const selectProducto = fila.querySelector("select[name='producto_id']");
+            const inputCantidad = fila.querySelector("input[name='cantidad']");
+
+            if (!selectProducto || !inputCantidad) return;
+
+            const prodId = selectProducto.value;
+            const cantidad = parseInt(inputCantidad.value) || 0;
+
+            if (prodId && cantidad > 0) {
+                const precio = precios[prodId] || 0;
+                total += precio * cantidad;
+            }
+        });
+
+        document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
+    }
+
+    // Ejecutar cálculo cada vez que cambian producto o cantidad
+    document.addEventListener("change", function(e) {
+        if (e.target.name === "producto_id" || e.target.name === "cantidad") {
+            calcularTotal();
+        }
+    });
+</script>
+
 {% endblock %}
