@@ -284,6 +284,74 @@ def dashboard():
         top_productos=top_productos,
     )
 
+@app.route("/dashboard")
+def dashboard():
+    mes = request.args.get("mes")  # YYYY-MM
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            filtro = ""
+            params = []
+
+            if mes:
+                filtro = "WHERE DATE_FORMAT(fecha, '%Y-%m') = %s"
+                params.append(mes)
+
+            # ---------- INGRESOS ----------
+            cursor.execute(f"""
+                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                       SUM(total) AS total
+                FROM pedidos
+                {filtro}
+                GROUP BY mes
+                ORDER BY mes
+            """, params)
+            ingresos = cursor.fetchall()
+
+            # ---------- COSTOS ----------
+            cursor.execute(f"""
+                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                       SUM(costo) AS costo
+                FROM insumos_compras
+                {filtro}
+                GROUP BY mes
+                ORDER BY mes
+            """, params)
+            costos = cursor.fetchall()
+
+            # ---------- COSTOS POR TIPO ----------
+            cursor.execute(f"""
+                SELECT tipo_costo, SUM(costo) AS total
+                FROM insumos_compras
+                {filtro}
+                GROUP BY tipo_costo
+            """, params)
+            costos_tipo = cursor.fetchall()
+
+            # ---------- KPI ----------
+            total_ingresos = sum(i["total"] for i in ingresos if i["total"])
+            total_costos = sum(c["costo"] for c in costos if c["costo"])
+            utilidad = total_ingresos - total_costos
+            margen = (utilidad / total_ingresos * 100) if total_ingresos else 0
+
+    finally:
+        conn.close()
+
+    return render_template(
+        "dashboard.html",
+        ingresos=ingresos,
+        costos=costos,
+        costos_tipo=costos_tipo,
+        total_ingresos=total_ingresos,
+        total_costos=total_costos,
+        utilidad=utilidad,
+        margen=round(margen, 2),
+        mes=mes
+    )
+
+
 
 # ------------------ RUN ------------------
 if __name__ == "__main__":
