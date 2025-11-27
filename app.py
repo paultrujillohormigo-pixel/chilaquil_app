@@ -3,7 +3,7 @@ from decimal import Decimal
 from db import get_connection
 
 app = Flask(__name__)
-app.secret_key = "super_secret_key"  # cambia en prod
+app.secret_key = "super_secret_key"  # cámbiala en prod
 
 
 # ================== FILTRO DE MONEDA ==================
@@ -199,7 +199,7 @@ def compras():
 # ================== DASHBOARD ==================
 @app.route("/dashboard")
 def dashboard():
-    mes = request.args.get("mes")  # YYYY-MM
+    mes = request.args.get("mes")  # formato YYYY-MM
 
     conn = get_connection()
     try:
@@ -209,12 +209,12 @@ def dashboard():
             params = []
 
             if mes:
-                filtro = "WHERE DATE_FORMAT(fecha, '%Y-%m') = %s"
+                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
             # ---------- INGRESOS ----------
             cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
                 FROM pedidos
                 {filtro}
@@ -225,7 +225,7 @@ def dashboard():
 
             # ---------- COSTOS ----------
             cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
                 FROM insumos_compras
                 {filtro}
