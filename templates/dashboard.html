@@ -30,16 +30,20 @@
 
 <div class="graficas-container">
 
-    <!-- GRAFICA LINEA -->
+    <!-- GRAFICA INGRESOS -->
     <div class="grafica-box">
         <h3>Ingresos vs Costos (por mes)</h3>
-        <canvas id="graficaIngresos" style="height:260px;"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="graficaIngresos"></canvas>
+        </div>
     </div>
 
-    <!-- GRAFICA PASTEL -->
+    <!-- GRAFICA COSTOS -->
     <div class="grafica-box">
         <h3>Costos por tipo</h3>
-        <canvas id="graficaCostos" style="height:260px;"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="graficaCostos"></canvas>
+        </div>
     </div>
 
 </div>
@@ -69,7 +73,6 @@
     const dataIngresos = {{ ingresos | map(attribute="total") | list | tojson }};
     const dataCostos = {{ costos | map(attribute="costo") | list | tojson }};
 
-    // Line chart
     new Chart(document.getElementById('graficaIngresos'), {
         type: 'line',
         data: {
@@ -97,7 +100,6 @@
         }
     });
 
-    // Doughnut chart
     const labelsTipos = {{ costos_tipo | map(attribute="tipo_costo") | list | tojson }};
     const dataTipos = {{ costos_tipo | map(attribute="total") | list | tojson }};
 
@@ -163,6 +165,12 @@
     text-align:center;
     margin-bottom:10px;
     color:white;
+}
+
+.canvas-wrapper{
+    position: relative;
+    height: 260px;
+    width: 100%;
 }
 
 table{
