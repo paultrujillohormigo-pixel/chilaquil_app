@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+
 <h2>Nuevo pedido</h2>
 
 <form method="post">
+
+    <label>Fecha del pedido:</label>
+    <input type="datetime-local" name="fecha_pedido">
+    <small>Déjalo vacío para usar la fecha actual</small>
+    <br><br>
+
     <label>Origen:</label>
     <select name="origen">
         <option value="mostrador">Mostrador</option>
@@ -22,12 +29,12 @@
         <option value="otro">Otro</option>
     </select>
 
-    <label>Monto Uber (usa negativo para comisión, ej. -30):</label>
+    <label>Monto Uber (usa negativo para comisión):</label>
     <input type="number" name="monto_uber" step="0.01" value="0">
 
     <hr>
+
     <h3>Productos</h3>
-    <p>Puedes capturar varias líneas de producto en un solo pedido.</p>
 
     <table>
         <thead>
@@ -45,11 +52,15 @@
                     <select name="producto_id">
                         <option value="">--</option>
                         {% for p in productos %}
-                        <option value="{{ p.id }}">{{ p.categoria }} - {{ p.nombre }} (${{ p.precio }})</option>
+                        <option value="{{ p.id }}">
+                            {{ p.categoria }} - {{ p.nombre }} (${{ p.precio }})
+                        </option>
                         {% endfor %}
                     </select>
                 </td>
-                <td><input type="number" name="cantidad" min="0" value="0"></td>
+                <td>
+                    <input type="number" name="cantidad" min="0" value="0">
+                </td>
                 <td>
                     <select name="salsa_id">
                         <option value="">--</option>
@@ -78,10 +89,9 @@
 </form>
 
 <!-- ===========================
-     SCRIPT PARA CALCULAR TOTAL
+     SCRIPT CÁLCULO TOTAL
 =========================== -->
 <script>
-    // Precios enviados desde Flask
     const precios = {
         {% for p in productos %}
         "{{ p.id }}": {{ p.precio }},
@@ -90,29 +100,17 @@
 
     function calcularTotal() {
         let total = 0;
-
-        const filas = document.querySelectorAll("tbody tr");
-
-        filas.forEach((fila) => {
-            const selectProducto = fila.querySelector("select[name='producto_id']");
-            const inputCantidad = fila.querySelector("input[name='cantidad']");
-
-            if (!selectProducto || !inputCantidad) return;
-
-            const prodId = selectProducto.value;
-            const cantidad = parseInt(inputCantidad.value) || 0;
-
-            if (prodId && cantidad > 0) {
-                const precio = precios[prodId] || 0;
-                total += precio * cantidad;
+        document.querySelectorAll("tbody tr").forEach(row => {
+            const prod = row.querySelector("select[name='producto_id']").value;
+            const qty = parseInt(row.querySelector("input[name='cantidad']").value) || 0;
+            if (prod && qty > 0) {
+                total += (precios[prod] || 0) * qty;
             }
         });
-
         document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
     }
 
-    // Ejecutar cálculo cada vez que cambian producto o cantidad
-    document.addEventListener("change", function(e) {
+    document.addEventListener("change", e => {
         if (e.target.name === "producto_id" || e.target.name === "cantidad") {
             calcularTotal();
         }
