@@ -209,17 +209,18 @@ def dashboard():
                 params.append(mes)
 
             # ---------- VENTAS POR DÍA ----------
-            cursor.execute("""
-                SELECT DATE(fecha) AS dia,
-                       COUNT(*) AS pedidos,
-                       SUM(total) AS total,
-                       SUM(neto) AS neto
-                FROM pedidos
-                GROUP BY DATE(fecha)
-                ORDER BY dia DESC
-                LIMIT 15
-            """)
-            ventas_dia = cursor.fetchall()
+            cursor.execute(f"""
+    SELECT DATE(fecha) AS dia,
+           COUNT(*) AS pedidos,
+           SUM(total) AS total,
+           SUM(neto) AS neto
+    FROM pedidos
+    {filtro}
+    GROUP BY DATE(fecha)
+    ORDER BY dia DESC
+""", params)
+
+ventas_dia = cursor.fetchall()
 
             # ---------- INGRESOS ----------
             cursor.execute(f"""
@@ -259,18 +260,20 @@ def dashboard():
             margen = (utilidad / total_ingresos * 100) if total_ingresos else 0
 
             # ---------- TOP PRODUCTOS ----------
-            cursor.execute("""
-                SELECT p.nombre,
-                       SUM(pi.cantidad) cantidad,
-                       SUM(pi.subtotal) ingreso
-                FROM pedido_items pi
-                JOIN productos p ON p.id = pi.producto_id
-                GROUP BY p.id
-                ORDER BY ingreso DESC
-                LIMIT 10
-            """)
-            top_productos = cursor.fetchall()
+           cursor.execute(f"""
+        SELECT p.nombre,
+           SUM(pi.cantidad) AS cantidad,
+           SUM(pi.subtotal) AS ingreso
+    FROM pedido_items pi
+    JOIN pedidos pe ON pe.id = pi.pedido_id
+    JOIN productos p ON p.id = pi.producto_id
+    {filtro}
+    GROUP BY p.id
+    ORDER BY ingreso DESC
+    LIMIT 10
+""", params)
 
+top_productos = cursor.fetchall()
     finally:
         conn.close()
 
