@@ -4,7 +4,7 @@
 <h2 style="margin-bottom:20px;">📊 Dashboard – Señor Chilaquil</h2>
 
 <!-- ================= KPI CARDS ================= -->
-<div style="display:grid; grid-template-columns: repeat(4,1fr); gap:15px; margin-bottom:30px;">
+<div class="kpis">
     <div class="card">
         <h4>Total Ingresos</h4>
         <h2>{{ total_ingresos | money }}</h2>
@@ -12,7 +12,6 @@
     <div class="card">
         <h4>Total Costos</h4>
         <h2>{{ total_costos | money }}</h2>
-
     </div>
     <div class="card">
         <h4>Utilidad</h4>
@@ -29,19 +28,27 @@
 <!-- ================= GRAFICAS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<h3>Ingresos vs Costos por mes</h3>
-<canvas id="graficaIngresos" height="100"></canvas>
+<div class="graficas-container">
 
-<br><br>
+    <!-- GRAFICA LINEA -->
+    <div class="grafica-box">
+        <h3>Ingresos vs Costos (por mes)</h3>
+        <canvas id="graficaIngresos" style="height:260px;"></canvas>
+    </div>
 
-<h3>Costos por tipo</h3>
-<canvas id="graficaCostos" height="100"></canvas>
+    <!-- GRAFICA PASTEL -->
+    <div class="grafica-box">
+        <h3>Costos por tipo</h3>
+        <canvas id="graficaCostos" style="height:260px;"></canvas>
+    </div>
+
+</div>
 
 <hr>
 
 <!-- ================= TOP PRODUCTOS ================= -->
 <h3>Top productos vendidos</h3>
-<table border="1" cellpadding="6" cellspacing="0">
+<table>
     <tr>
         <th>Producto</th>
         <th>Cantidad</th>
@@ -56,14 +63,14 @@
     {% endfor %}
 </table>
 
-<!-- ================= DATA PARA JS ================= -->
+<!-- ================= JAVASCRIPT ================= -->
 <script>
     const labelsMeses = {{ ingresos | map(attribute="mes") | list | tojson }};
     const dataIngresos = {{ ingresos | map(attribute="total") | list | tojson }};
     const dataCostos = {{ costos | map(attribute="costo") | list | tojson }};
 
-    const ctx1 = document.getElementById('graficaIngresos').getContext('2d');
-    new Chart(ctx1, {
+    // Line chart
+    new Chart(document.getElementById('graficaIngresos'), {
         type: 'line',
         data: {
             labels: labelsMeses,
@@ -89,10 +96,48 @@
             maintainAspectRatio: false
         }
     });
+
+    // Doughnut chart
+    const labelsTipos = {{ costos_tipo | map(attribute="tipo_costo") | list | tojson }};
+    const dataTipos = {{ costos_tipo | map(attribute="total") | list | tojson }};
+
+    new Chart(document.getElementById('graficaCostos'), {
+        type: 'doughnut',
+        data: {
+            labels: labelsTipos,
+            datasets: [{
+                data: dataTipos,
+                backgroundColor: [
+                    '#ff6384',
+                    '#36a2eb',
+                    '#ffce56',
+                    '#4bc0c0',
+                    '#9966ff',
+                    '#ff9f40'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
 </script>
 
-<!-- ================= ESTILOS RAPIDOS ================= -->
+<!-- ================= ESTILOS ================= -->
 <style>
+.kpis{
+    display:grid;
+    grid-template-columns: repeat(4,1fr);
+    gap:15px;
+    margin-bottom:30px;
+}
+
 .card{
     background:#111;
     color:#fff;
@@ -100,16 +145,40 @@
     border-radius:10px;
     text-align:center;
 }
+
+.graficas-container{
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    gap:25px;
+    margin:30px 0;
+}
+
+.grafica-box{
+    background:#111;
+    padding:20px;
+    border-radius:12px;
+}
+
+.grafica-box h3{
+    text-align:center;
+    margin-bottom:10px;
+    color:white;
+}
+
 table{
     width:100%;
     margin-top:15px;
+    border-collapse: collapse;
 }
+
 th{
     background:#222;
     color:white;
 }
+
 td, th{
     padding:8px;
+    border:1px solid #333;
 }
 </style>
 
