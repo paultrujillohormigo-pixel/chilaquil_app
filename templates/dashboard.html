@@ -7,15 +7,16 @@
 <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:15px; margin-bottom:30px;">
     <div class="card">
         <h4>Total Ingresos</h4>
-        <h2>${{ total_ingresos }}</h2>
+        <h2>{{ total_ingresos | money }}</h2>
     </div>
     <div class="card">
         <h4>Total Costos</h4>
-        <h2>${{ total_costos }}</h2>
+        <h2>{{ total_costos | money }}</h2>
+
     </div>
     <div class="card">
         <h4>Utilidad</h4>
-        <h2>${{ utilidad }}</h2>
+        <h2>{{ utilidad | money }}</h2>
     </div>
     <div class="card">
         <h4>Margen</h4>
@@ -50,7 +51,7 @@
     <tr>
         <td>{{ p.nombre }}</td>
         <td>{{ p.cantidad }}</td>
-        <td>${{ p.ingreso }}</td>
+        <td>{{ p.ingreso | money }}</td>
     </tr>
     {% endfor %}
 </table>
