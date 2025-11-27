@@ -3,6 +3,14 @@ from db import get_connection
 from decimal import Decimal
 
 app = Flask(__name__)
+
+@app.template_filter("money")
+def money_format(value):
+    try:
+        return "${:,.2f}".format(float(value))
+    except:
+        return value
+        
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
 
