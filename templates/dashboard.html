@@ -24,7 +24,12 @@
 </div>
 
 <hr>
-
+<form method="get" action="/dashboard" style="margin-bottom:20px;">
+    <label style="font-weight:bold;">Filtrar por mes:</label>
+    <input type="month" name="mes" value="{{ mes or '' }}">
+    <button type="submit">Aplicar</button>
+    <a href="/dashboard" style="margin-left:10px;">Limpiar</a>
+</form>
 <!-- ================= GRAFICAS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
