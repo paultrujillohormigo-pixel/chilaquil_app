@@ -1,40 +1,133 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Dashboard</h2>
 
-<h3>Ventas por día</h3>
-<table>
-    <tr><th>Día</th><th>Total</th><th>Neto</th></tr>
-    {% for row in data.por_dia %}
+<h2 style="margin-bottom:20px;">📊 Dashboard – Señor Chilaquil</h2>
+
+<!-- ================= KPI CARDS ================= -->
+<div style="display:grid; grid-template-columns: repeat(4,1fr); gap:15px; margin-bottom:30px;">
+    <div class="card">
+        <h4>Total Ingresos</h4>
+        <h2>${{ total_ingresos }}</h2>
+    </div>
+    <div class="card">
+        <h4>Total Costos</h4>
+        <h2>${{ total_costos }}</h2>
+    </div>
+    <div class="card">
+        <h4>Utilidad</h4>
+        <h2>${{ utilidad }}</h2>
+    </div>
+    <div class="card">
+        <h4>Margen</h4>
+        <h2>{{ margen }}%</h2>
+    </div>
+</div>
+
+<hr>
+
+<!-- ================= GRAFICAS ================= -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<h3>Ingresos vs Costos por mes</h3>
+<canvas id="graficaIngresos" height="100"></canvas>
+
+<br><br>
+
+<h3>Costos por tipo</h3>
+<canvas id="graficaCostos" height="100"></canvas>
+
+<hr>
+
+<!-- ================= TOP PRODUCTOS ================= -->
+<h3>Top productos vendidos</h3>
+<table border="1" cellpadding="6" cellspacing="0">
     <tr>
-        <td>{{ row.dia }}</td>
-        <td>{{ row.total_dia }}</td>
-        <td>{{ row.neto_dia }}</td>
+        <th>Producto</th>
+        <th>Cantidad</th>
+        <th>Ingreso</th>
+    </tr>
+    {% for p in top_productos %}
+    <tr>
+        <td>{{ p.nombre }}</td>
+        <td>{{ p.cantidad }}</td>
+        <td>${{ p.ingreso }}</td>
     </tr>
     {% endfor %}
 </table>
 
-<h3>Top 10 productos</h3>
-<table>
-    <tr><th>Producto</th><th>Cantidad</th><th>Ingreso</th></tr>
-    {% for row in data.top_productos %}
-    <tr>
-        <td>{{ row.nombre }}</td>
-        <td>{{ row.cantidad_vendida }}</td>
-        <td>{{ row.ingreso }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<!-- ================= DATA PARA JS ================= -->
+<script>
+    const labelsMeses = {{ ingresos | map(attribute="mes") | list | tojson }};
+    const dataIngresos = {{ ingresos | map(attribute="total") | list | tojson }};
+    const dataCostos = {{ costos | map(attribute="costo") | list | tojson }};
 
-<h3>Ventas por origen</h3>
-<table>
-    <tr><th>Origen</th><th>Pedidos</th><th>Neto</th></tr>
-    {% for row in data.por_origen %}
-    <tr>
-        <td>{{ row.origen }}</td>
-        <td>{{ row.pedidos }}</td>
-        <td>{{ row.neto }}</td>
-    </tr>
-    {% endfor %}
-</table>
+    const ctx1 = document.getElementById('graficaIngresos').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: labelsMeses,
+            datasets: [
+                {
+                    label: 'Ingresos',
+                    data: dataIngresos,
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0,128,0,0.2)',
+                    tension: 0.3
+                },
+                {
+                    label: 'Costos',
+                    data: dataCostos,
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255,0,0,0.2)',
+                    tension: 0.3
+                }
+            ]
+        }
+    });
+
+    const labelsTipos = {{ costos_tipo | map(attribute="tipo_costo") | list | tojson }};
+    const dataTipos = {{ costos_tipo | map(attribute="total") | list | tojson }};
+
+    const ctx2 = document.getElementById('graficaCostos').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: labelsTipos,
+            datasets: [{
+                data: dataTipos,
+                backgroundColor: [
+                    '#ff6384',
+                    '#36a2eb',
+                    '#ffce56',
+                    '#4bc0c0',
+                    '#9966ff',
+                    '#ff9f40'
+                ]
+            }]
+        }
+    });
+</script>
+
+<!-- ================= ESTILOS RAPIDOS ================= -->
+<style>
+.card{
+    background:#111;
+    color:#fff;
+    padding:20px;
+    border-radius:10px;
+    text-align:center;
+}
+table{
+    width:100%;
+    margin-top:15px;
+}
+th{
+    background:#222;
+    color:white;
+}
+td, th{
+    padding:8px;
+}
+</style>
+
 {% endblock %}
