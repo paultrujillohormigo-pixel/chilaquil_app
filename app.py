@@ -238,3 +238,40 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
+@app.route("/compras", methods=["GET", "POST"])
+def compras():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            if request.method == "POST":
+                
+                fecha = request.form["fecha"]
+                lugar = request.form["lugar"]
+                cantidad = request.form["cantidad"]
+                unidad = request.form["unidad"]
+                concepto = request.form["concepto"]
+                costo = request.form["costo"]
+                tipo_costo = request.form["tipo_costo"]
+                nota = request.form.get("nota", "")
+
+                sql = """
+                INSERT INTO insumos_compras
+                (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """
+
+                cursor.execute(sql, (
+                    fecha, lugar, cantidad, unidad,
+                    concepto, costo, tipo_costo, nota
+                ))
+                conn.commit()
+
+                flash("Compra registrada correctamente", "success")
+
+            cursor.execute("SELECT * FROM insumos_compras ORDER BY fecha DESC, id DESC")
+            compras = cursor.fetchall()
+
+    finally:
+        conn.close()
+
+    return render_template("compras.html", compras=compras)
