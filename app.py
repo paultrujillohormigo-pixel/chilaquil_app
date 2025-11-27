@@ -275,3 +275,58 @@ def compras():
         conn.close()
 
     return render_template("compras.html", compras=compras)
+@app.route("/dashboard")
+def dashboard():
+    mes = request.args.get("mes")
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    filtro = ""
+    params = ()
+
+    if mes:
+        filtro = "WHERE DATE_FORMAT(fecha, '%Y-%m') = %s"
+        params = (mes,)
+
+    cursor.execute(f"""
+        SELECT DATE_FORMAT(fecha, '%Y-%m') mes, SUM(total) total
+        FROM pedidos
+        {filtro}
+        GROUP BY mes
+        ORDER BY mes
+    """, params)
+    ingresos = cursor.fetchall()
+
+    cursor.execute(f"""
+        SELECT DATE_FORMAT(fecha, '%Y-%m') mes, SUM(costo) costo
+        FROM insumos_compras
+        {filtro}
+        GROUP BY mes
+        ORDER BY mes
+    """, params)
+    costos = cursor.fetchall()
+
+    cursor.execute(f"""
+        SELECT tipo_costo, SUM(costo) total
+        FROM insumos_compras
+        {filtro}
+        GROUP BY tipo_costo
+    """, params)
+    costos_tipo = cursor.fetchall()
+
+    total_ingresos = sum(i["total"] for i in ingresos) if ingresos else 0
+    total_costos = sum(c["costo"] for c in costos) if costos else 0
+    utilidad = total_ingresos - total_costos
+    margen = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
+
+    return render_template(
+        "dashboard.html",
+        ingresos=ingresos,
+        costos=costos,
+        costos_tipo=costos_tipo,
+        total_ingresos=total_ingresos,
+        total_costos=total_costos,
+        utilidad=utilidad,
+        margen=round(margen, 2)
+    )
