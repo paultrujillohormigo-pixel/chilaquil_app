@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Registrar compra de insumos</h2>
+
+<form method="post">
+
+    <label>Fecha:</label>
+    <input type="date" name="fecha" required>
+
+    <label>Lugar:</label>
+    <input type="text" name="lugar" placeholder="Walmart, Abarrotes Juan…" required>
+
+    <label>Cantidad:</label>
+    <input type="number" name="cantidad" step="0.01" required>
+
+    <label>Unidad:</label>
+    <select name="unidad" required>
+        <option value="pieza">Pieza</option>
+        <option value="kg">Kg</option>
+        <option value="lt">Litro</option>
+        <option value="paquete">Paquete</option>
+        <option value="otro">Otro</option>
+    </select>
+
+    <label>Concepto (qué compraste):</label>
+    <input type="text" name="concepto" required>
+
+    <label>Costo total pagado:</label>
+    <input type="number" name="costo" step="0.01" required>
+
+    <label>Tipo de costo:</label>
+    <select name="tipo_costo" required>
+        <option value="variable">Variable (insumos)</option>
+        <option value="fijo">Fijo (gas, luz, renta)</option>
+    </select>
+
+    <label>Nota (opcional):</label>
+    <textarea name="nota" rows="2" placeholder="Algo extra…"></textarea>
+
+    <button type="submit">Guardar compra</button>
+</form>
+
+<hr>
+
+<h3>Historial de compras</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Lugar</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Concepto</th>
+            <th>Costo</th>
+            <th>Tipo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in compras %}
+        <tr>
+            <td>{{ c.fecha }}</td>
+            <td>{{ c.lugar }}</td>
+            <td>{{ c.cantidad }}</td>
+            <td>{{ c.unidad }}</td>
+            <td>{{ c.concepto }}</td>
+            <td>${{ c.costo }}</td>
+            <td>{{ c.tipo_costo }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
