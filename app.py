@@ -309,6 +309,7 @@ def dashboard():
         total_costos=total_costos,
         utilidad=utilidad,
         margen=round(margen, 2),
+        meses_disponibles=meses_disponibles,  # 👈 ESTA LÍNEA
         mes=mes,
     )
 
