@@ -263,6 +263,23 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
+
+
+
+            
+            # ===== MESES DISPONIBLES =====
+            cursor.execute("""
+                SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes
+                FROM pedidos
+                ORDER BY mes DESC
+            """)
+            meses_disponibles = [m["mes"] for m in cursor.fetchall()]
+
+            
+            
+            
+            
+            
             # ---------- TOP PRODUCTOS ----------
             cursor.execute(f"""
                 SELECT p.nombre,
