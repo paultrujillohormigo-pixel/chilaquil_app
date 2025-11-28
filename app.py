@@ -93,15 +93,23 @@ def nuevo_pedido():
                     if cant <= 0:
                         continue
 
-                    cursor.execute(
-                        "SELECT precio FROM productos WHERE id = %s",
-                        (prod_id,)
-                    )
+                    # ✅ PRECIO SEGÚN ORIGEN (UBER / NORMAL)
+                    cursor.execute("""
+                        SELECT 
+                            CASE 
+                                WHEN %s = 'uber' AND precio_uber IS NOT NULL
+                                    THEN precio_uber
+                                ELSE precio
+                            END AS precio_final
+                        FROM productos
+                        WHERE id = %s
+                    """, (origen, prod_id))
+
                     row = cursor.fetchone()
                     if not row:
                         continue
 
-                    precio_unit = Decimal(row["precio"])
+                    precio_unit = Decimal(row["precio_final"])
                     subtotal = precio_unit * cant
                     total += subtotal
 
@@ -212,7 +220,6 @@ def dashboard():
                 filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
-            # ---------- INGRESOS ----------
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
@@ -223,7 +230,6 @@ def dashboard():
             """, params)
             ingresos = cursor.fetchall()
 
-            # ---------- COSTOS ----------
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
@@ -234,7 +240,6 @@ def dashboard():
             """, params)
             costos = cursor.fetchall()
 
-            # ---------- COSTOS POR TIPO ----------
             cursor.execute(f"""
                 SELECT tipo_costo,
                        SUM(costo) AS total
@@ -244,13 +249,11 @@ def dashboard():
             """, params)
             costos_tipo = cursor.fetchall()
 
-            # ---------- KPI ----------
             total_ingresos = sum(i["total"] for i in ingresos if i["total"])
             total_costos = sum(c["costo"] for c in costos if c["costo"])
             utilidad = total_ingresos - total_costos
             margen = (utilidad / total_ingresos * 100) if total_ingresos else 0
 
-            # ---------- VENTAS POR DÍA ----------
             cursor.execute(f"""
                 SELECT DATE(fecha) AS dia,
                        COUNT(*) AS pedidos,
@@ -263,11 +266,6 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
-
-
-
-            
-            # ===== MESES DISPONIBLES =====
             cursor.execute("""
                 SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes
                 FROM pedidos
@@ -275,12 +273,6 @@ def dashboard():
             """)
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
-            
-            
-            
-            
-            
-            # ---------- TOP PRODUCTOS ----------
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
@@ -309,7 +301,7 @@ def dashboard():
         total_costos=total_costos,
         utilidad=utilidad,
         margen=round(margen, 2),
-        meses_disponibles=meses_disponibles,  # 👈 ESTA LÍNEA
+        meses_disponibles=meses_disponibles,
         mes=mes,
     )
 
