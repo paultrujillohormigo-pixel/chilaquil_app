@@ -1,11 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-
 from decimal import Decimal
 from db import get_connection
 
 app = Flask(__name__)
-app.secret_key = "super_secret_key"  # cambia en prod
-
+app.secret_key = "super_secret_key"  # cámbiala en prod
 
 
 # ================== FILTRO DE MONEDA ==================
@@ -79,14 +77,16 @@ def nuevo_pedido():
                 metodo_pago = request.form["metodo_pago"]
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
 
-
-
-
-
                 productos_ids = request.form.getlist("producto_id")
                 cantidades = request.form.getlist("cantidad")
                 salsas_ids = request.form.getlist("salsa_id")
-@@ -94,210 +90,212 @@
+                proteinas_ids = request.form.getlist("proteina_id")
+
+                total = Decimal("0")
+                items = []
+
+                for i, prod_id in enumerate(productos_ids):
+                    if not prod_id:
                         continue
 
                     cant = int(cantidades[i] or 0)
@@ -196,11 +196,10 @@ def compras():
     return render_template("compras.html", compras=compras)
 
 
-
 # ================== DASHBOARD ==================
 @app.route("/dashboard")
 def dashboard():
-    mes = request.args.get("mes")  # YYYY-MM
+    mes = request.args.get("mes")  # formato YYYY-MM
 
     conn = get_connection()
     try:
@@ -210,28 +209,12 @@ def dashboard():
             params = []
 
             if mes:
-                filtro = "WHERE DATE_FORMAT(fecha, '%Y-%m') = %s"
+                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             # ---------- INGRESOS ----------
             cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
                 FROM pedidos
                 {filtro}
@@ -242,7 +225,7 @@ def dashboard():
 
             # ---------- COSTOS ----------
             cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
                 FROM insumos_compras
                 {filtro}
@@ -293,7 +276,6 @@ def dashboard():
                 ORDER BY ingreso DESC
                 LIMIT 10
             """, params)
-
             top_productos = cursor.fetchall()
 
     finally:
@@ -311,13 +293,7 @@ def dashboard():
         utilidad=utilidad,
         margen=round(margen, 2),
         mes=mes,
-
-
     )
-
-
-
-
 
 
 # ================== RUN ==================
