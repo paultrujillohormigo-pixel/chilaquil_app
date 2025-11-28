@@ -73,7 +73,7 @@ def nuevo_pedido():
 
             if request.method == "POST":
                 fecha = request.form["fecha"]  # ✅ FECHA SELECCIONADA
-                origen = request.form["origen"]
+                origen = request.form["origen"].strip().lower()
                 mesero = request.form["mesero"]
                 metodo_pago = request.form["metodo_pago"]
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
@@ -97,7 +97,7 @@ def nuevo_pedido():
                     cursor.execute("""
                         SELECT 
                             CASE 
-                                WHEN %s = 'Uber' AND precio_uber IS NOT NULL
+                                WHEN %s = 'uber' AND precio_uber IS NOT NULL
                                     THEN precio_uber
                                 ELSE precio
                             END AS precio_final
