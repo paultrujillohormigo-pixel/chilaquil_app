@@ -50,30 +50,7 @@
             </div>
         </div>
 
-       
-
-        <!-- ===== TABLA VENTAS POR DÍA ===== -->
-        <div class="card">
-            <h4>Ventas por Día</h4>
-            <table>
-                <tr>
-                    <th>Día</th>
-                    <th>Pedidos</th>
-                    <th>Total</th>
-                    <th>Neto</th>
-                </tr>
-                {% for v in ventas_dia %}
-                <tr>
-                    <td>{{ v.dia }}</td>
-                    <td>{{ v.pedidos }}</td>
-                    <td>{{ v.total | money }}</td>
-                    <td>{{ v.neto | money }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-
-<!-- ===== SECCIÓN PRINCIPAL ===== -->
+       <!-- ===== SECCIÓN PRINCIPAL ===== -->
 <div class="bottom-grid">
 
     <!-- IZQUIERDA: TOP PRODUCTOS -->
@@ -109,6 +86,29 @@
     </div>
 
 </div>
+
+        <!-- ===== TABLA VENTAS POR DÍA ===== -->
+        <div class="card">
+            <h4>Ventas por Día</h4>
+            <table>
+                <tr>
+                    <th>Día</th>
+                    <th>Pedidos</th>
+                    <th>Total</th>
+                    <th>Neto</th>
+                </tr>
+                {% for v in ventas_dia %}
+                <tr>
+                    <td>{{ v.dia }}</td>
+                    <td>{{ v.pedidos }}</td>
+                    <td>{{ v.total | money }}</td>
+                    <td>{{ v.neto | money }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+
 
 
     </main>
