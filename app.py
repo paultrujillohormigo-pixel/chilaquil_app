@@ -30,9 +30,9 @@ def dashboard():
     try:
         with conn.cursor() as cursor:
 
-            # -------- MESES DISPONIBLES --------
+            # ========= MESES DISPONIBLES =========
             cursor.execute("""
-                SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS valor
+                SELECT DISTINCT DATE_FORMAT(fecha, '%%Y-%%m') AS valor
                 FROM pedidos
                 ORDER BY valor
             """)
@@ -42,69 +42,69 @@ def dashboard():
             params = []
 
             if mes:
-                filtro = "WHERE DATE_FORMAT(fecha, '%Y-%m') = %s"
+                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
-            # -------- INGRESOS --------
-            cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+            # ========= INGRESOS =========
+            cursor.execute("""
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
                 FROM pedidos
-                {filtro}
+                """ + filtro + """
                 GROUP BY mes
                 ORDER BY mes
             """, params)
             ingresos = cursor.fetchall()
 
-            # -------- COSTOS --------
-            cursor.execute(f"""
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+            # ========= COSTOS =========
+            cursor.execute("""
+                SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
                 FROM insumos_compras
-                {filtro}
+                """ + filtro + """
                 GROUP BY mes
                 ORDER BY mes
             """, params)
             costos = cursor.fetchall()
 
-            # -------- COSTOS POR TIPO --------
-            cursor.execute(f"""
+            # ========= COSTOS POR TIPO =========
+            cursor.execute("""
                 SELECT tipo_costo, SUM(costo) AS total
                 FROM insumos_compras
-                {filtro}
+                """ + filtro + """
                 GROUP BY tipo_costo
             """, params)
             costos_tipo = cursor.fetchall()
 
-            # -------- KPI --------
+            # ========= KPI =========
             total_ingresos = sum(i["total"] for i in ingresos if i["total"])
             total_costos = sum(c["costo"] for c in costos if c["costo"])
             utilidad = total_ingresos - total_costos
             margen = round((utilidad / total_ingresos) * 100, 2) if total_ingresos else 0
 
-            # -------- VENTAS POR DÍA --------
-            cursor.execute(f"""
+            # ========= VENTAS POR DIA =========
+            cursor.execute("""
                 SELECT DATE(fecha) AS dia,
                        COUNT(*) AS pedidos,
                        SUM(total) AS total,
                        SUM(neto) AS neto
                 FROM pedidos
-                {filtro}
+                """ + filtro + """
                 GROUP BY DATE(fecha)
                 ORDER BY dia DESC
                 LIMIT 15
             """, params)
             ventas_dia = cursor.fetchall()
 
-            # -------- TOP PRODUCTOS --------
-            cursor.execute(f"""
+            # ========= TOP PRODUCTOS =========
+            cursor.execute("""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
                        SUM(pi.subtotal) AS ingreso
                 FROM pedido_items pi
                 JOIN pedidos pe ON pe.id = pi.pedido_id
                 JOIN productos p ON p.id = pi.producto_id
-                {filtro}
+                """ + filtro + """
                 GROUP BY p.id
                 ORDER BY ingreso DESC
                 LIMIT 10
