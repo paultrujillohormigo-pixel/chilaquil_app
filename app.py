@@ -261,6 +261,7 @@ def dashboard():
 
             cursor.execute(f"""
                 SELECT DATE(fecha) AS dia,
+                        dayname(fecha) AS dia_semana,
                        COUNT(*) AS pedidos,
                        SUM(total) AS total,
                        SUM(neto) AS neto
