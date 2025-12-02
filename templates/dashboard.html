@@ -125,6 +125,12 @@
                     <td>{{ v.total | money }}</td>
                     <td>{{ v.neto | money }}</td>
                 </tr>
+                <tr style="background:#f3f4f6;font-weight:bold;">
+    <td>Promedio</td>
+    <td>{{ promedios_dia.avg_pedidos | round(1) }}</td>
+    <td>{{ promedios_dia.avg_total | money }}</td>
+    <td>{{ promedios_dia.avg_neto | money }}</td>
+</tr>
                 {% endfor %}
             </table>
         </div>
