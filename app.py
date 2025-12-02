@@ -345,7 +345,7 @@ def dashboard():
         margen=round(margen, 2),
         meses_disponibles=meses_disponibles,
         mes=mes,
-        promedios_dia=promedios_dia
+        promedios_dia=promedios_dia,
         top_gastos=top_gastos,
 
     )
