@@ -259,17 +259,19 @@ def dashboard():
             utilidad = total_ingresos - total_costos
             margen = (utilidad / total_ingresos * 100) if total_ingresos else 0
 
-            cursor.execute(f"""
-                SELECT DATE(fecha) AS dia,
-                        dayname(fecha) AS dia_semana,
-                       COUNT(*) AS pedidos,
-                       SUM(total) AS total,
-                       SUM(neto) AS neto
-                FROM pedidos
-                {filtro}
-                GROUP BY DATE(fecha)
-                ORDER BY dia DESC
-            """, params)
+            ccursor.execute(f"""
+                    SELECT
+                        DATE(fecha) AS dia,
+                        DAYNAME(fecha) AS dia_semana,
+                        COUNT(*) AS pedidos,
+                        SUM(total) AS total,
+                        SUM(neto) AS neto
+                    FROM pedidos
+                    {filtro}
+                    GROUP BY DATE(fecha), DAYNAME(fecha)
+                    ORDER BY dia DESC
+                """, params)
+
             ventas_dia = cursor.fetchall()
 
             cursor.execute("""
