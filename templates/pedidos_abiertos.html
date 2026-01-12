@@ -30,8 +30,8 @@
           style="margin-top:8px;">
         <button type="submit">Cerrar pedido</button>
     </form>
-</div>
-        <form method="post"
+
+           <form method="post"
       action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}"
       onsubmit="return confirm('¿Seguro que deseas eliminar este pedido? Esta acción no se puede deshacer.')"
       style="margin-top:6px;">
@@ -39,7 +39,9 @@
         🗑️ Eliminar pedido
     </button>
 </form>
-
+       
+</div>
+     
 
         {% endfor %}
     </div>
