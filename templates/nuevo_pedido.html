@@ -3,8 +3,9 @@
 
 <h2>Nuevo pedido</h2>
 
-<form method="post">
+<form method="post" id="pedidoForm">
 
+    <!-- ================== DATOS GENERALES ================== -->
     <label>Fecha del pedido:</label>
     <input type="datetime-local" name="fecha">
     <small>Déjalo vacío para usar la fecha actual</small>
@@ -34,87 +35,142 @@
 
     <hr>
 
+    <!-- ================== PRODUCTOS ================== -->
     <h3>Productos</h3>
 
-    <table>
+    <div class="productos-grid">
+        {% for p in productos %}
+        <div class="producto-card"
+             onclick="agregarProducto('{{ p.id }}', '{{ p.nombre }}', {{ p.precio }})">
+            <strong>{{ p.nombre }}</strong>
+            <div>{{ p.categoria }}</div>
+            <div class="precio">${{ p.precio }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <hr>
+
+    <!-- ================== CARRITO ================== -->
+    <h3>Carrito</h3>
+
+    <table id="carritoTable">
         <thead>
             <tr>
                 <th>Producto</th>
                 <th>Cantidad</th>
-                <th>Salsa</th>
-                <th>Proteína</th>
+                <th>Precio</th>
+                <th>Subtotal</th>
             </tr>
         </thead>
-        <tbody>
-            {% for i in range(8) %}
-            <tr>
-                <td>
-                    <select name="producto_id">
-                        <option value="">--</option>
-                        {% for p in productos %}
-                        <option value="{{ p.id }}">
-                            {{ p.categoria }} - {{ p.nombre }} (${{ p.precio }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td>
-                    <input type="number" name="cantidad" min="0" value="0">
-                </td>
-                <td>
-                    <select name="salsa_id">
-                        <option value="">--</option>
-                        {% for s in salsas %}
-                        <option value="{{ s.id }}">{{ s.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td>
-                    <select name="proteina_id">
-                        <option value="">--</option>
-                        {% for pr in proteinas %}
-                        <option value="{{ pr.id }}">{{ pr.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+        <tbody></tbody>
     </table>
 
-    <br>
     <h3>Total del Pedido: <span id="totalPedido">$0.00</span></h3>
+
+    <!-- Inputs ocultos que se envían al backend -->
+    <div id="inputsHidden"></div>
 
     <button type="submit">Guardar pedido</button>
 </form>
 
-<!-- ===========================
-     SCRIPT CÁLCULO TOTAL
-=========================== -->
-<script>
-    const precios = {
-        {% for p in productos %}
-        "{{ p.id }}": {{ p.precio }},
-        {% endfor %}
-    };
+<!-- ================== ESTILOS ================== -->
+<style>
+.productos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
 
-    function calcularTotal() {
-        let total = 0;
-        document.querySelectorAll("tbody tr").forEach(row => {
-            const prod = row.querySelector("select[name='producto_id']").value;
-            const qty = parseInt(row.querySelector("input[name='cantidad']").value) || 0;
-            if (prod && qty > 0) {
-                total += (precios[prod] || 0) * qty;
-            }
-        });
-        document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
+.producto-card {
+    border: 1px solid #ccc;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: 0.2s;
+    text-align: center;
+}
+
+.producto-card:hover {
+    background: #f0f0f0;
+    transform: scale(1.03);
+}
+
+.producto-card .precio {
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+#carritoTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#carritoTable th,
+#carritoTable td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    text-align: center;
+}
+</style>
+
+<!-- ================== SCRIPT ================== -->
+<script>
+let carrito = {};
+
+// Agregar producto al carrito
+function agregarProducto(id, nombre, precio) {
+    if (!carrito[id]) {
+        carrito[id] = {
+            nombre: nombre,
+            precio: precio,
+            cantidad: 1
+        };
+    } else {
+        carrito[id].cantidad += 1;
+    }
+    renderCarrito();
+}
+
+// Renderiza tabla + inputs ocultos
+function renderCarrito() {
+    const tbody = document.querySelector("#carritoTable tbody");
+    const hidden = document.getElementById("inputsHidden");
+
+    tbody.innerHTML = "";
+    hidden.innerHTML = "";
+
+    let total = 0;
+    let index = 0;
+
+    for (const id in carrito) {
+        const item = carrito[id];
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        // Tabla
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td>${item.cantidad}</td>
+                <td>$${item.precio.toFixed(2)}</td>
+                <td>$${subtotal.toFixed(2)}</td>
+            </tr>
+        `;
+
+        // Inputs ocultos (backend friendly)
+        hidden.innerHTML += `
+            <input type="hidden" name="producto_id[]" value="${id}">
+            <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+        `;
+
+        index++;
     }
 
-    document.addEventListener("change", e => {
-        if (e.target.name === "producto_id" || e.target.name === "cantidad") {
-            calcularTotal();
-        }
-    });
+    document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
+}
 </script>
 
 {% endblock %}
