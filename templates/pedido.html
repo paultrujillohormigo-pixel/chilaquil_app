@@ -148,5 +148,21 @@ function renderCarrito() {
     🧾 Ver ticket
 </button>
 
+<script>
+function abrirTicketPreview(pedidoId) {
+    fetch(`/pedido/${pedidoId}/ticket_preview`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("ticketTexto").innerText = data.texto;
+            document.getElementById("btnWhatsapp").href = data.whatsapp_url;
+            document.getElementById("ticketModal").style.display = "flex";
+        });
+}
+
+function cerrarTicketModal() {
+    document.getElementById("ticketModal").style.display = "none";
+}
+</script>
+
 
 {% endblock %}
