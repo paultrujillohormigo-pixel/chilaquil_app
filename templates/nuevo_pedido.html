@@ -1,109 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>🧾 Nuevo pedido</h2>
+<div class="pos-layout">
 
-<form method="post" id="pedidoForm">
+    <!-- ================== PRODUCTOS ================== -->
+    <section class="productos-panel">
+        <h2>Productos</h2>
 
-<!-- ================== DATOS GENERALES ================== -->
-<div class="card">
+        <div class="productos-grid">
+            {% for p in productos %}
+            <button class="producto-card"
+                    type="button"
+                    onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
+                <div class="producto-nombre">{{ p.nombre }}</div>
+                <div class="producto-precio">{{ p.precio | money }}</div>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
 
-    <h3>Datos del pedido</h3>
+    <!-- ================== CARRITO ================== -->
+    <section class="carrito-panel">
 
-    <div class="form-grid">
+        <h2>Pedido</h2>
 
-        <div>
-            <label>Fecha</label>
-            <input type="datetime-local" name="fecha">
-            <small>Vacío = ahora</small>
+        <div class="carrito-items" id="carritoItems"></div>
+
+        <div class="total-box">
+            TOTAL
+            <div id="totalPedido">$0.00</div>
         </div>
 
-        <div>
-            <label>Origen</label>
-            <select name="origen">
-                <option value="mostrador">Mostrador</option>
-                <option value="uber">Uber</option>
-                <option value="didi">Didi</option>
-                <option value="otro">Otro</option>
-            </select>
-        </div>
+        <form method="post" id="pedidoForm">
+            <input type="hidden" name="origen" value="mostrador">
+            <input type="hidden" name="metodo_pago" value="pendiente">
 
-        <div>
-            <label>Mesero</label>
-            <input type="text" name="mesero" placeholder="Nombre">
-        </div>
+            <div id="inputsHidden"></div>
 
-        <div>
-            <label>Método de pago</label>
-            <select name="metodo_pago">
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta">Tarjeta</option>
-                <option value="transfer">Transferencia</option>
-                <option value="otro">Otro</option>
-            </select>
-        </div>
+            <button type="submit" class="btn-guardar">
+                GUARDAR PEDIDO
+            </button>
+        </form>
 
-        <div>
-            <label>Monto Uber</label>
-            <input type="number" name="monto_uber" step="0.01" value="0">
-            <small>Negativo = comisión</small>
-        </div>
-
-    </div>
-</div>
-
-<!-- ================== PRODUCTOS ================== -->
-<div class="card">
-
-    <h3>Productos</h3>
-
-    <div class="productos-grid">
-        {% for p in productos %}
-        <div class="producto-card"
-             onclick="agregarProducto('{{ p.id }}', '{{ p.nombre }}', {{ p.precio }})">
-            <strong>{{ p.nombre }}</strong>
-            <span class="categoria">{{ p.categoria }}</span>
-            <span class="precio">${{ p.precio }}</span>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- ================== CARRITO ================== -->
-<div class="card">
-
-    <h3>Carrito</h3>
-
-    <table id="carritoTable">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cant.</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <div class="total-box">
-        Total: <span id="totalPedido">$0.00</span>
-    </div>
-
-    <div id="inputsHidden"></div>
-
-    <button type="submit" class="btn-guardar">
-        💾 Guardar pedido
-    </button>
+    </section>
 
 </div>
 
-</form>
-
-
-
-<!-- ================== SCRIPT ================== -->
 <script>
 let carrito = {};
 
@@ -111,7 +53,7 @@ function agregarProducto(id, nombre, precio) {
     if (!carrito[id]) {
         carrito[id] = { nombre, precio, cantidad: 1 };
     } else {
-        carrito[id].cantidad += 1;
+        carrito[id].cantidad++;
     }
     renderCarrito();
 }
@@ -128,40 +70,38 @@ function eliminarProducto(id) {
 }
 
 function renderCarrito() {
-    const tbody = document.querySelector("#carritoTable tbody");
+    const cont = document.getElementById("carritoItems");
     const hidden = document.getElementById("inputsHidden");
 
-    tbody.innerHTML = "";
+    cont.innerHTML = "";
     hidden.innerHTML = "";
 
     let total = 0;
 
     for (const id in carrito) {
-        const item = carrito[id];
-        const subtotal = item.precio * item.cantidad;
+        const it = carrito[id];
+        const subtotal = it.precio * it.cantidad;
         total += subtotal;
 
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.nombre}</td>
-                <td>
-                    <button type="button" class="btn btn-gray" onclick="restarProducto('${id}')">–</button>
-                    ${item.cantidad}
-                    <button type="button" class="btn btn-gray"
-                        onclick="agregarProducto('${id}','${item.nombre}',${item.precio})">+</button>
-                </td>
-                <td>$${item.precio.toFixed(2)}</td>
-                <td>$${subtotal.toFixed(2)}</td>
-                <td>
-                    <button type="button" class="btn btn-red"
-                        onclick="eliminarProducto('${id}')">X</button>
-                </td>
-            </tr>
+        cont.innerHTML += `
+            <div class="carrito-row">
+                <div class="carrito-info">
+                    <strong>${it.nombre}</strong>
+                    <span>$${subtotal.toFixed(2)}</span>
+                </div>
+
+                <div class="carrito-controls">
+                    <button type="button" onclick="restarProducto('${id}')">–</button>
+                    <span>${it.cantidad}</span>
+                    <button type="button" onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
+                    <button type="button" class="btn-delete" onclick="eliminarProducto('${id}')">✕</button>
+                </div>
+            </div>
         `;
 
         hidden.innerHTML += `
             <input type="hidden" name="producto_id[]" value="${id}">
-            <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+            <input type="hidden" name="cantidad[]" value="${it.cantidad}">
         `;
     }
 
