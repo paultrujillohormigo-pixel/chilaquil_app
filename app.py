@@ -226,7 +226,6 @@ def nuevo_pedido():
     try:
         with conn.cursor() as cursor:
 
-            # ====== CARGA CATÁLOGOS ======
             cursor.execute("""
                 SELECT * FROM productos
                 WHERE activo = 1
@@ -240,7 +239,6 @@ def nuevo_pedido():
             cursor.execute("SELECT * FROM proteinas")
             proteinas = cursor.fetchall()
 
-            # ====== GUARDAR PEDIDO ======
             if request.method == "POST":
 
                 fecha = request.form.get("fecha") or None
@@ -288,7 +286,6 @@ def nuevo_pedido():
 
                 neto = total + monto_uber
 
-                # ====== INSERT PEDIDO (ABIERTO) ======
                 cursor.execute("""
                     INSERT INTO pedidos
                     (fecha, origen, mesero, metodo_pago, total, monto_uber, neto, estado)
@@ -305,7 +302,6 @@ def nuevo_pedido():
 
                 pedido_id = cursor.lastrowid
 
-                # ====== INSERT ITEMS ======
                 for it in items:
                     cursor.execute("""
                         INSERT INTO pedido_items
