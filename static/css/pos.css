@@ -407,3 +407,35 @@ small { color: #666; display:block; margin-top: 6px; }
     .pos-layout { grid-template-columns: 1fr; }
     .pos-right { position: static; }
 }
+.pedido-actions {
+    display: flex;
+    gap: 12px;
+    margin: 10px 0 18px;
+}
+
+.btn-primary {
+    background: #2c3e50;
+    color: #fff;
+    border: none;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: #fff;
+    border: none;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-primary:active,
+.btn-warning:active {
+    transform: scale(0.97);
+}
