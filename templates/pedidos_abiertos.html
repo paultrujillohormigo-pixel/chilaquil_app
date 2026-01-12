@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Pedidos abiertos</h2>
+
+{% if pedidos %}
+    <div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px;">
+        {% for p in pedidos %}
+        <div style="border:1px solid #ccc; padding:12px; border-radius:8px;">
+            <strong>Pedido #{{ p.id }}</strong><br>
+            {% if p.mesa %}
+                Mesa: {{ p.mesa }}<br>
+            {% endif %}
+            Mesero: {{ p.mesero or '-' }}<br>
+            Total: {{ p.total | money }}<br><br>
+
+            <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}">
+                ➕ Entrar al pedido
+            </a>
+
+            <form method="post"
+                  action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}"
+                  style="margin-top:8px;">
+                <button type="submit">Cerrar pedido</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No hay pedidos abiertos.</p>
+{% endif %}
+
+{% endblock %}
