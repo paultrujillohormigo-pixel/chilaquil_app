@@ -34,10 +34,11 @@ def ver_pedido(pedido_id):
                 return redirect(url_for("pedidos_abiertos"))
 
             cursor.execute("""
-                SELECT pi.*, p.nombre
-                FROM pedido_items pi
-                JOIN productos p ON p.id = pi.producto_id
-                WHERE pi.pedido_id = %s
+                SELECT pi.id, pi.cantidad, pi.precio_unitario, pi.subtotal, p.nombre
+                    FROM pedido_items pi
+                    JOIN productos p ON p.id = pi.producto_id
+                    WHERE pi.pedido_id = %s
+
             """, (pedido_id,))
             items = cursor.fetchall()
 
