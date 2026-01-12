@@ -112,6 +112,8 @@ def pedidos_abiertos():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+
+            # Pedidos abiertos
             cursor.execute("""
                 SELECT id, mesa, mesero, total, fecha
                 FROM pedidos
@@ -119,10 +121,23 @@ def pedidos_abiertos():
                 ORDER BY fecha
             """)
             pedidos = cursor.fetchall()
+
+            # Preview de items por pedido (máx 4)
+            for p in pedidos:
+                cursor.execute("""
+                    SELECT pr.nombre, pi.cantidad
+                    FROM pedido_items pi
+                    JOIN productos pr ON pr.id = pi.producto_id
+                    WHERE pi.pedido_id = %s
+                    LIMIT 4
+                """, (p["id"],))
+                p["items_preview"] = cursor.fetchall()
+
     finally:
         conn.close()
 
     return render_template("pedidos_abiertos.html", pedidos=pedidos)
+
 
 
 
