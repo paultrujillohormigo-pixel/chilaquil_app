@@ -1,1 +1,38 @@
 
+/* =========================
+   LAYOUT GENERAL
+========================= */
+
+.app-header {
+  height: 60px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.app-container {
+  height: calc(100vh - 60px);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+
+.panel {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.panel + .panel {
+  border-left: 1px solid var(--border);
+}
+
+/* Responsive (tablet vertical) */
+@media (max-width: 900px) {
+  .app-container {
+    grid-template-columns: 1fr;
+  }
+}
