@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Pedido #{{ pedido.id }}</h2>
+
+<p>
+    Estado: <strong>{{ pedido.estado }}</strong><br>
+    Total actual: <strong>{{ pedido.total | money }}</strong>
+</p>
+
+<hr>
+
+<h3>Productos en el pedido</h3>
+
+{% if items %}
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for it in items %}
+        <tr>
+            <td>{{ it.nombre }}</td>
+            <td>{{ it.cantidad }}</td>
+            <td>{{ it.precio_unitario | money }}</td>
+            <td>{{ it.subtotal | money }}</td>
+            <td>
+                {% if pedido.estado == 'abierto' %}
+                <form method="post"
+                      action="{{ url_for('eliminar_item_pedido',
+                                          pedido_id=pedido.id,
+                                          item_id=it.id) }}"
+                      onsubmit="return confirm('¿Eliminar este producto?')">
+                    <button type="submit">❌</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No hay productos aún.</p>
+{% endif %}
+
+<hr>
+
+<h3>Agregar más productos</h3>
+
+<form method="post">
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:10px;">
+        {% for p in productos %}
+        <button type="button"
+                onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
+            {{ p.nombre }}<br>
+            {{ p.precio | money }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <hr>
+
+    <table id="carritoTable" border="1" cellpadding="6">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cant</th>
+                <th>Precio</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div id="inputsHidden"></div>
+
+    <br>
+    <button type="submit">Agregar al pedido</button>
+</form>
+
+<script>
+let carrito = {};
+
+function agregarProducto(id, nombre, precio) {
+    if (!carrito[id]) {
+        carrito[id] = { nombre, precio, cantidad: 1 };
+    } else {
+        carrito[id].cantidad += 1;
+    }
+    renderCarrito();
+}
+
+function restarProducto(id) {
+    carrito[id].cantidad--;
+    if (carrito[id].cantidad <= 0) delete carrito[id];
+    renderCarrito();
+}
+
+function eliminarProducto(id) {
+    delete carrito[id];
+    renderCarrito();
+}
+
+function renderCarrito() {
+    const tbody = document.querySelector("#carritoTable tbody");
+    const hidden = document.getElementById("inputsHidden");
+    tbody.innerHTML = "";
+    hidden.innerHTML = "";
+
+    for (const id in carrito) {
+        const it = carrito[id];
+        tbody.innerHTML += `
+            <tr>
+                <td>${it.nombre}</td>
+                <td>
+                    <button type="button" onclick="restarProducto('${id}')">-</button>
+                    ${it.cantidad}
+                    <button type="button" onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
+                </td>
+                <td>$${it.precio.toFixed(2)}</td>
+                <td>$${(it.precio * it.cantidad).toFixed(2)}</td>
+                <td>
+                    <button type="button" onclick="eliminarProducto('${id}')">X</button>
+                </td>
+            </tr>
+        `;
+
+        hidden.innerHTML += `
+            <input type="hidden" name="producto_id[]" value="${id}">
+            <input type="hidden" name="cantidad[]" value="${it.cantidad}">
+        `;
+    }
+}
+</script>
+
+{% endblock %}
