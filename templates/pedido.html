@@ -2,121 +2,121 @@
 
 {% block content %}
 
-<h2>Pedido #{{ pedido.id }}</h2>
-
-<p>
-    Estado: <strong>{{ pedido.estado }}</strong><br>
-    Total actual: <strong>{{ pedido.total | money }}</strong>
-</p>
-
-<div style="display:flex; gap:10px; margin-bottom:10px;">
-    <button type="button"
-            onclick="abrirTicketPreview({{ pedido.id }})"
-            style="background:#333;color:white;padding:8px;border-radius:6px;">
-        🧾 Ver ticket
-    </button>
-
-    {% if pedido.estado == 'abierto' %}
-    <button type="button"
-            onclick="abrirCerrarPedido()"
-            style="background:#e67e22;color:white;padding:8px;border-radius:6px;">
-        ✅ Cerrar pedido
-    </button>
-    {% endif %}
+<div class="app-header">
+    <div>🧾 Pedido #{{ pedido.id }}</div>
+    <div>
+        Estado: <strong>{{ pedido.estado }}</strong> ·
+        Total: <strong>{{ pedido.total | money }}</strong>
+    </div>
 </div>
 
-<hr>
+<div class="panel">
 
-<h3>Productos en el pedido</h3>
-
-{% if items %}
-<table border="1" cellpadding="6" cellspacing="0">
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Precio</th>
-            <th>Subtotal</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for it in items %}
-        <tr>
-            <td>{{ it.nombre }}</td>
-            <td>{{ it.cantidad }}</td>
-            <td>{{ it.precio_unitario | money }}</td>
-            <td>{{ it.subtotal | money }}</td>
-            <td>
-                {% if pedido.estado == 'abierto' %}
-                <form method="post"
-                      action="{{ url_for('eliminar_item_pedido',
-                                          pedido_id=pedido.id,
-                                          item_id=it.id) }}"
-                      onsubmit="return confirm('¿Eliminar este producto?')">
-                    <button type="submit">❌</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p>No hay productos aún.</p>
-{% endif %}
-
-<hr>
-
-<h3>Agregar más productos</h3>
-
-<form method="post">
-
-    <div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:10px;">
-        {% for p in productos %}
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
         <button type="button"
-                onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
-            {{ p.nombre }}<br>
-            {{ p.precio | money }}
+                class="btn btn-secondary"
+                onclick="abrirTicketPreview({{ pedido.id }})">
+            🧾 Ver ticket
         </button>
-        {% endfor %}
+
+        {% if pedido.estado == 'abierto' %}
+        <button type="button"
+                class="btn btn-warning"
+                onclick="abrirCerrarPedido()">
+            ✅ Cerrar pedido
+        </button>
+        {% endif %}
     </div>
 
     <hr>
 
-    <table id="carritoTable" border="1" cellpadding="6">
+    <h3>Productos en el pedido</h3>
+
+    {% if items %}
+    <table class="table">
         <thead>
             <tr>
                 <th>Producto</th>
-                <th>Cant</th>
+                <th>Cantidad</th>
                 <th>Precio</th>
                 <th>Subtotal</th>
                 <th></th>
             </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            {% for it in items %}
+            <tr>
+                <td>{{ it.nombre }}</td>
+                <td>{{ it.cantidad }}</td>
+                <td>{{ it.precio_unitario | money }}</td>
+                <td>{{ it.subtotal | money }}</td>
+                <td>
+                    {% if pedido.estado == 'abierto' %}
+                    <form method="post"
+                          action="{{ url_for('eliminar_item_pedido',
+                                              pedido_id=pedido.id,
+                                              item_id=it.id) }}"
+                          onsubmit="return confirm('¿Eliminar este producto?')">
+                        <button type="submit" class="btn btn-danger">❌</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
+    {% else %}
+    <p>No hay productos aún.</p>
+    {% endif %}
 
-    <div id="inputsHidden"></div>
+    <hr>
 
-    <br>
-    <button type="submit">Agregar al pedido</button>
-</form>
+    <h3>Agregar más productos</h3>
+
+    <form method="post">
+
+        <div class="product-grid">
+            {% for p in productos %}
+            <button type="button"
+                    class="product-btn"
+                    onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
+                {{ p.nombre }}
+                <span>{{ p.precio | money }}</span>
+            </button>
+            {% endfor %}
+        </div>
+
+        <hr>
+
+        <table id="carritoTable" class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cant</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div id="inputsHidden"></div>
+
+        <br>
+        <button type="submit" class="btn btn-success">
+            ➕ Agregar al pedido
+        </button>
+    </form>
+</div>
 
 <!-- ================== MODAL TICKET ================== -->
-<div id="ticketModal"
-     style="display:none; position:fixed; inset:0;
-            background:rgba(0,0,0,.6);
-            align-items:center; justify-content:center; z-index:999;">
+<div id="ticketModal" class="modal-backdrop">
+    <div class="modal">
 
-    <div style="background:white; padding:20px; width:320px;
-                border-radius:10px; font-family:monospace; position:relative;">
-
-        <!-- X cerrar -->
         <button type="button"
-                onclick="cerrarTicketModal()"
-                style="position:absolute; top:8px; right:10px;
-                       background:none; border:none; font-size:20px; cursor:pointer;">
+                class="modal-close"
+                onclick="cerrarTicketModal()">
             ✕
         </button>
 
@@ -129,15 +129,15 @@
         <div style="display:flex; gap:10px; margin-top:12px;">
             <a id="btnWhatsapp"
                target="_blank"
-               style="flex:1; background:#25D366; color:white;
-                      text-align:center; padding:8px;
-                      border-radius:6px; text-decoration:none;">
+               class="btn btn-success"
+               style="flex:1; text-align:center;">
                 📲 Enviar
             </a>
 
             <button type="button"
-                    onclick="cerrarTicketModal()"
-                    style="flex:1;">
+                    class="btn btn-outline"
+                    style="flex:1;"
+                    onclick="cerrarTicketModal()">
                 Cancelar
             </button>
         </div>
@@ -145,26 +145,20 @@
 </div>
 
 <!-- ================== MODAL CERRAR PEDIDO ================== -->
-<div id="cerrarModal"
-     style="display:none; position:fixed; inset:0;
-            background:rgba(0,0,0,.6);
-            align-items:center; justify-content:center; z-index:999;">
+<div id="cerrarModal" class="modal-backdrop">
+    <div class="modal">
 
-    <div style="background:white; padding:20px; width:320px;
-                border-radius:10px; position:relative;">
-
-        <!-- X cerrar -->
         <button type="button"
-                onclick="cerrarCerrarModal()"
-                style="position:absolute; top:8px; right:10px;
-                       background:none; border:none; font-size:20px; cursor:pointer;">
+                class="modal-close"
+                onclick="cerrarCerrarModal()">
             ✕
         </button>
 
         <h3>Cerrar pedido</h3>
 
         <label>Número de WhatsApp (opcional)</label>
-        <input type="text" id="telefonoWhatsapp"
+        <input type="text"
+               id="telefonoWhatsapp"
                placeholder="Ej: 5214491234567"
                style="width:100%; padding:6px; margin-top:4px;">
 
@@ -175,19 +169,21 @@
         <div style="display:flex; gap:10px; margin-top:12px;">
             <form method="post"
                   action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}">
-                <button type="submit">Cerrar sin enviar</button>
+                <button type="submit" class="btn btn-secondary">
+                    Cerrar sin enviar
+                </button>
             </form>
 
             <button type="button"
-                    onclick="cerrarYEnviar()"
-                    style="background:#25D366;color:white;">
+                    class="btn btn-success"
+                    onclick="cerrarYEnviar()">
                 Cerrar y enviar
             </button>
         </div>
     </div>
 </div>
 
-<!-- ================== SCRIPTS ================== -->
+<!-- ================== SCRIPTS (SIN CAMBIOS) ================== -->
 <script>
 let carrito = {};
 
