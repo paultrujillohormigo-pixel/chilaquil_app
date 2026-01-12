@@ -1,1 +1,85 @@
 
+/* =========================
+   CARDS
+========================= */
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+/* =========================
+   BOTONES
+========================= */
+
+.btn {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: white;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-outline {
+  background: white;
+  border: 2px solid var(--border);
+}
+
+/* =========================
+   TABLAS
+========================= */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.badge {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-open {
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.badge-closed {
+  background: #f3f4f6;
+  color: var(--gray);
+}
