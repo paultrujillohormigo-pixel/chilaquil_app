@@ -56,12 +56,15 @@ def productos():
 
 
 # ================== NUEVO PEDIDO ==================
+
+
 @app.route("/nuevo_pedido", methods=["GET", "POST"])
 def nuevo_pedido():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
 
+            # ====== CARGA CATÁLOGOS ======
             cursor.execute("""
                 SELECT * FROM productos
                 WHERE activo = 1
@@ -75,29 +78,31 @@ def nuevo_pedido():
             cursor.execute("SELECT * FROM proteinas")
             proteinas = cursor.fetchall()
 
+            # ====== GUARDAR PEDIDO ======
             if request.method == "POST":
-                fecha = request.form["fecha"]
+
+                fecha = request.form.get("fecha") or None
                 origen = request.form["origen"].strip().lower()
-                mesero = request.form["mesero"]
+                mesero = request.form.get("mesero", "")
                 metodo_pago = request.form["metodo_pago"]
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
 
-                productos_ids = request.form.getlist("producto_id")
-                cantidades = request.form.getlist("cantidad")
-                salsas_ids = request.form.getlist("salsa_id")
-                proteinas_ids = request.form.getlist("proteina_id")
+                productos_ids = request.form.getlist("producto_id[]")
+                cantidades = request.form.getlist("cantidad[]")
 
                 total = Decimal("0")
                 items = []
 
                 for i, prod_id in enumerate(productos_ids):
+
                     if not prod_id:
                         continue
 
-                    cant = int(cantidades[i] or 0)
+                    cant = int(cantidades[i])
                     if cant <= 0:
                         continue
 
+                    # Precio según origen (Uber o normal)
                     cursor.execute("""
                         SELECT
                             CASE
@@ -122,12 +127,14 @@ def nuevo_pedido():
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
-                        "salsa_id": salsas_ids[i] or None,
-                        "proteina_id": proteinas_ids[i] or None,
+                        "salsa_id": None,
+                        "proteina_id": None,
                     })
 
+                # Neto final
                 neto = total + monto_uber
 
+                # ====== INSERT PEDIDO ======
                 cursor.execute("""
                     INSERT INTO pedidos
                     (fecha, origen, mesero, metodo_pago, total, monto_uber, neto)
@@ -144,6 +151,7 @@ def nuevo_pedido():
 
                 pedido_id = cursor.lastrowid
 
+                # ====== INSERT ITEMS ======
                 for it in items:
                     cursor.execute("""
                         INSERT INTO pedido_items
