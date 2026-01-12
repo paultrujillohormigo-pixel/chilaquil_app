@@ -16,26 +16,13 @@ def money_format(value):
 
 # ================== PEDIDO ==================
 
-@app.route("/pedido/<int:pedido_id>", methods=["GET", "POST"])
-def ver_pedido(pedido_id):
+@app.route("/nuevo_pedido", methods=["GET", "POST"])
+def nuevo_pedido():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
 
-            cursor.execute("SELECT * FROM pedidos WHERE id=%s", (pedido_id,))
-            pedido = cursor.fetchone()
-            if not pedido or pedido["estado"] != "abierto":
-                flash("Pedido no disponible", "error")
-                return redirect(url_for("pedidos_abiertos"))
-
-            cursor.execute("""
-                SELECT pi.*, p.nombre
-                FROM pedido_items pi
-                JOIN productos p ON p.id = pi.producto_id
-                WHERE pi.pedido_id = %s
-            """, (pedido_id,))
-            items = cursor.fetchall()
-
+            # ====== CARGA CATÁLOGOS ======
             cursor.execute("""
                 SELECT * FROM productos
                 WHERE activo = 1
@@ -43,11 +30,26 @@ def ver_pedido(pedido_id):
             """)
             productos = cursor.fetchall()
 
+            cursor.execute("SELECT * FROM salsas")
+            salsas = cursor.fetchall()
+
+            cursor.execute("SELECT * FROM proteinas")
+            proteinas = cursor.fetchall()
+
+            # ====== GUARDAR PEDIDO ======
             if request.method == "POST":
+
+                fecha = request.form.get("fecha") or None
+                origen = request.form["origen"].strip().lower()
+                mesero = request.form.get("mesero", "")
+                metodo_pago = request.form["metodo_pago"]
+                monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
+
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
 
                 total = Decimal("0")
+                items = []
 
                 for i, prod_id in enumerate(productos_ids):
                     cant = int(cantidades[i])
@@ -55,43 +57,76 @@ def ver_pedido(pedido_id):
                         continue
 
                     cursor.execute("""
-                        SELECT precio FROM productos WHERE id=%s
-                    """, (prod_id,))
-                    precio = Decimal(cursor.fetchone()["precio"])
+                        SELECT
+                            CASE
+                                WHEN %s = 'uber' AND precio_uber IS NOT NULL
+                                    THEN precio_uber
+                                ELSE precio
+                            END AS precio_final
+                        FROM productos
+                        WHERE id = %s
+                    """, (origen, prod_id))
 
-                    subtotal = precio * cant
+                    row = cursor.fetchone()
+                    if not row:
+                        continue
+
+                    precio_unit = Decimal(row["precio_final"])
+                    subtotal = precio_unit * cant
                     total += subtotal
 
+                    items.append({
+                        "producto_id": prod_id,
+                        "cantidad": cant,
+                        "precio_unitario": precio_unit,
+                        "subtotal": subtotal,
+                    })
+
+                neto = total + monto_uber
+
+                # ====== INSERT PEDIDO (ABIERTO) ======
+                cursor.execute("""
+                    INSERT INTO pedidos
+                    (fecha, origen, mesero, metodo_pago, total, monto_uber, neto, estado)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,'abierto')
+                """, (
+                    fecha,
+                    origen,
+                    mesero,
+                    metodo_pago,
+                    total,
+                    monto_uber,
+                    neto
+                ))
+
+                pedido_id = cursor.lastrowid
+
+                # ====== INSERT ITEMS ======
+                for it in items:
                     cursor.execute("""
                         INSERT INTO pedido_items
                         (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
                         VALUES (%s,%s,%s,%s,%s)
                     """, (
                         pedido_id,
-                        prod_id,
-                        cant,
-                        precio,
-                        subtotal
+                        it["producto_id"],
+                        it["cantidad"],
+                        it["precio_unitario"],
+                        it["subtotal"],
                     ))
 
-                cursor.execute("""
-                    UPDATE pedidos
-                    SET total = total + %s,
-                        neto = neto + %s
-                    WHERE id = %s
-                """, (total, total, pedido_id))
-
                 conn.commit()
+                flash(f"Pedido #{pedido_id} creado y abierto", "success")
                 return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
     finally:
         conn.close()
 
     return render_template(
-        "pedido.html",
-        pedido=pedido,
-        items=items,
-        productos=productos
+        "nuevo_pedido.html",
+        productos=productos,
+        salsas=salsas,
+        proteinas=proteinas,
     )
 
 
@@ -114,6 +149,7 @@ def pedidos_abiertos():
         conn.close()
 
     return render_template("pedidos_abiertos.html", pedidos=pedidos)
+
 
 
 # ================== CERRAR PEDIDOS ==================
@@ -220,15 +256,10 @@ def nuevo_pedido():
                 items = []
 
                 for i, prod_id in enumerate(productos_ids):
-
-                    if not prod_id:
-                        continue
-
                     cant = int(cantidades[i])
                     if cant <= 0:
                         continue
 
-                    # Precio según origen (Uber o normal)
                     cursor.execute("""
                         SELECT
                             CASE
@@ -253,18 +284,15 @@ def nuevo_pedido():
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
-                        "salsa_id": None,
-                        "proteina_id": None,
                     })
 
-                # Neto final
                 neto = total + monto_uber
 
-                # ====== INSERT PEDIDO ======
+                # ====== INSERT PEDIDO (ABIERTO) ======
                 cursor.execute("""
                     INSERT INTO pedidos
-                    (fecha, origen, mesero, metodo_pago, total, monto_uber, neto)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                    (fecha, origen, mesero, metodo_pago, total, monto_uber, neto, estado)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,'abierto')
                 """, (
                     fecha,
                     origen,
@@ -281,22 +309,19 @@ def nuevo_pedido():
                 for it in items:
                     cursor.execute("""
                         INSERT INTO pedido_items
-                        (pedido_id, producto_id, salsa_id, proteina_id,
-                         cantidad, precio_unitario, subtotal)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s)
+                        (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+                        VALUES (%s,%s,%s,%s,%s)
                     """, (
                         pedido_id,
                         it["producto_id"],
-                        it["salsa_id"],
-                        it["proteina_id"],
                         it["cantidad"],
                         it["precio_unitario"],
                         it["subtotal"],
                     ))
 
                 conn.commit()
-                flash(f"Pedido #{pedido_id} registrado correctamente", "success")
-                return redirect(url_for("nuevo_pedido"))
+                flash(f"Pedido #{pedido_id} creado y abierto", "success")
+                return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
     finally:
         conn.close()
@@ -307,6 +332,7 @@ def nuevo_pedido():
         salsas=salsas,
         proteinas=proteinas,
     )
+
 
 
 # ================== COMPRAS ==================
