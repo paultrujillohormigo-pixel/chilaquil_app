@@ -149,4 +149,60 @@ function agregarProducto(id, nombre, precio) {
 function restarProducto(id) {
     if (!carrito[id]) return;
 
-    carrito[id].can
+    carrito[id].cantidad -= 1;
+
+    if (carrito[id].cantidad <= 0) {
+        delete carrito[id];
+    }
+
+    renderCarrito();
+}
+
+// ❌ Eliminar producto
+function eliminarProducto(id) {
+    delete carrito[id];
+    renderCarrito();
+}
+
+// 🧠 Render carrito + inputs
+function renderCarrito() {
+    const tbody = document.querySelector("#carritoTable tbody");
+    const hidden = document.getElementById("inputsHidden");
+
+    tbody.innerHTML = "";
+    hidden.innerHTML = "";
+
+    let total = 0;
+
+    for (const id in carrito) {
+        const item = carrito[id];
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td>
+                    <button type="button" class="btn btn-gray" onclick="restarProducto('${id}')">–</button>
+                    ${item.cantidad}
+                    <button type="button" class="btn btn-gray" onclick="agregarProducto('${id}','${item.nombre}',${item.precio})">+</button>
+                </td>
+                <td>$${item.precio.toFixed(2)}</td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-red" onclick="eliminarProducto('${id}')">X</button>
+                </td>
+            </tr>
+        `;
+
+        hidden.innerHTML += `
+            <input type="hidden" name="producto_id[]" value="${id}">
+            <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+        `;
+    }
+
+    document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
+}
+</script>
+
+{% endblock %}
