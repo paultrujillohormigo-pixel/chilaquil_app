@@ -14,6 +14,132 @@ def money_format(value):
     except:
         return value
 
+# ================== PEDIDO ==================
+
+@app.route("/pedido/<int:pedido_id>", methods=["GET", "POST"])
+def ver_pedido(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("SELECT * FROM pedidos WHERE id=%s", (pedido_id,))
+            pedido = cursor.fetchone()
+            if not pedido or pedido["estado"] != "abierto":
+                flash("Pedido no disponible", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            cursor.execute("""
+                SELECT pi.*, p.nombre
+                FROM pedido_items pi
+                JOIN productos p ON p.id = pi.producto_id
+                WHERE pi.pedido_id = %s
+            """, (pedido_id,))
+            items = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT * FROM productos
+                WHERE activo = 1
+                ORDER BY categoria, nombre
+            """)
+            productos = cursor.fetchall()
+
+            if request.method == "POST":
+                productos_ids = request.form.getlist("producto_id[]")
+                cantidades = request.form.getlist("cantidad[]")
+
+                total = Decimal("0")
+
+                for i, prod_id in enumerate(productos_ids):
+                    cant = int(cantidades[i])
+                    if cant <= 0:
+                        continue
+
+                    cursor.execute("""
+                        SELECT precio FROM productos WHERE id=%s
+                    """, (prod_id,))
+                    precio = Decimal(cursor.fetchone()["precio"])
+
+                    subtotal = precio * cant
+                    total += subtotal
+
+                    cursor.execute("""
+                        INSERT INTO pedido_items
+                        (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+                        VALUES (%s,%s,%s,%s,%s)
+                    """, (
+                        pedido_id,
+                        prod_id,
+                        cant,
+                        precio,
+                        subtotal
+                    ))
+
+                cursor.execute("""
+                    UPDATE pedidos
+                    SET total = total + %s,
+                        neto = neto + %s
+                    WHERE id = %s
+                """, (total, total, pedido_id))
+
+                conn.commit()
+                return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+    finally:
+        conn.close()
+
+    return render_template(
+        "pedido.html",
+        pedido=pedido,
+        items=items,
+        productos=productos
+    )
+
+
+
+# ================== PEDIDOS ABIERTOS ==================
+
+@app.route("/pedidos_abiertos")
+def pedidos_abiertos():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, mesa, mesero, total, fecha
+                FROM pedidos
+                WHERE estado = 'abierto'
+                ORDER BY fecha
+            """)
+            pedidos = cursor.fetchall()
+    finally:
+        conn.close()
+
+    return render_template("pedidos_abiertos.html", pedidos=pedidos)
+
+
+# ================== CERRAR PEDIDOS ==================
+
+
+@app.route("/cerrar_pedido/<int:pedido_id>", methods=["POST"])
+def cerrar_pedido(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE pedidos
+                SET estado = 'cerrado'
+                WHERE id = %s
+            """, (pedido_id,))
+            conn.commit()
+            flash("Pedido cerrado correctamente", "success")
+    finally:
+        conn.close()
+
+    return redirect(url_for("pedidos_abiertos"))
+
+
+
+
+
 
 # ================== HOME ==================
 @app.route("/")
