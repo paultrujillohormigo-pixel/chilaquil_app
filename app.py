@@ -684,24 +684,6 @@ def enviar_ticket_whatsapp(pedido_id):
     return redirect(f"https://wa.me/?text={mensaje}")
 
 
-from flask import jsonify
-import urllib.parse
-
-@app.route("/pedido/<int:pedido_id>/ticket_preview")
-def ticket_preview(pedido_id):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            texto = generar_ticket_texto(pedido_id, cursor)
-            mensaje = urllib.parse.quote(texto)
-    finally:
-        conn.close()
-
-    return jsonify({
-        "texto": texto,
-        "whatsapp_url": f"https://wa.me/?text={mensaje}"
-    })
-
 
 # ================== Preview ticket ==================
 
