@@ -544,6 +544,50 @@ def eliminar_item_pedido(pedido_id, item_id):
     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
 
+@app.route("/eliminar_pedido/<int:pedido_id>", methods=["POST"])
+def eliminar_pedido(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            # Verificar que el pedido exista y esté abierto
+            cursor.execute("""
+                SELECT estado
+                FROM pedidos
+                WHERE id = %s
+            """, (pedido_id,))
+            pedido = cursor.fetchone()
+
+            if not pedido:
+                flash("Pedido no encontrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            if pedido["estado"] != "abierto":
+                flash("No se puede eliminar un pedido cerrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            # Eliminar items
+            cursor.execute("""
+                DELETE FROM pedido_items
+                WHERE pedido_id = %s
+            """, (pedido_id,))
+
+            # Eliminar pedido
+            cursor.execute("""
+                DELETE FROM pedidos
+                WHERE id = %s
+            """, (pedido_id,))
+
+            conn.commit()
+            flash(f"Pedido #{pedido_id} eliminado correctamente", "success")
+
+    finally:
+        conn.close()
+
+    return redirect(url_for("pedidos_abiertos"))
+
+
+
 
 # ================== RUN ==================
 if __name__ == "__main__":
