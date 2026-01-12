@@ -1,1 +1,58 @@
 
+/* =========================
+   POS ESPECÍFICO
+========================= */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+  gap: 12px;
+}
+
+.product-btn {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.product-btn span {
+  display: block;
+  font-size: 13px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+
+.product-btn:active {
+  transform: scale(.97);
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.qty-controls button {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 18px;
+}
+
+.pos-footer {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+}
