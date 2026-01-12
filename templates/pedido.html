@@ -9,6 +9,12 @@
     Total actual: <strong>{{ pedido.total | money }}</strong>
 </p>
 
+<button type="button"
+        onclick="abrirTicketPreview({{ pedido.id }})"
+        style="background:#333;color:white;padding:8px;border-radius:6px;">
+    🧾 Ver ticket
+</button>
+
 <hr>
 
 <h3>Productos en el pedido</h3>
@@ -87,6 +93,40 @@
     <button type="submit">Agregar al pedido</button>
 </form>
 
+<!-- ================== MODAL TICKET ================== -->
+<div id="ticketModal"
+     style="display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,.6);
+            align-items:center; justify-content:center; z-index:999;">
+
+    <div style="background:white; padding:20px; width:320px;
+                border-radius:10px; font-family:monospace;">
+
+        <h3 style="text-align:center;">Preview del ticket</h3>
+
+        <pre id="ticketTexto"
+             style="background:#f4f4f4; padding:12px;
+                    white-space:pre-wrap; font-size:14px;"></pre>
+
+        <div style="display:flex; gap:10px; margin-top:12px;">
+            <a id="btnWhatsapp"
+               target="_blank"
+               style="flex:1; background:#25D366; color:white;
+                      text-align:center; padding:8px;
+                      border-radius:6px; text-decoration:none;">
+                📲 Enviar
+            </a>
+
+            <button type="button"
+                    onclick="cerrarTicketModal()"
+                    style="flex:1;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================== SCRIPTS ================== -->
 <script>
 let carrito = {};
 
@@ -140,15 +180,7 @@ function renderCarrito() {
         `;
     }
 }
-</script>
 
-<button type="button"
-        onclick="abrirTicketPreview({{ pedido.id }})"
-        style="background:#333;color:white;padding:8px;border-radius:6px;">
-    🧾 Ver ticket
-</button>
-
-<script>
 function abrirTicketPreview(pedidoId) {
     fetch(`/pedido/${pedidoId}/ticket_preview`)
         .then(res => res.json())
@@ -163,6 +195,5 @@ function cerrarTicketModal() {
     document.getElementById("ticketModal").style.display = "none";
 }
 </script>
-
 
 {% endblock %}
