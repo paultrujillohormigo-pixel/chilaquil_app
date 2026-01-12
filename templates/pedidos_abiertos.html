@@ -26,16 +26,27 @@
         {% endif %}
 
         Mesero: {{ p.mesero or '-' }}<br>
-        Total: <strong>{{ p.total | money }}</strong><br><br>
+        Total: <strong>{{ p.total | money }}</strong><br>
 
-        <!-- Entrar al pedido -->
+        <!-- ================= PREVIEW ITEMS ================= -->
+        {% if p.items_preview %}
+        <div style="margin:8px 0; font-size:14px; color:#444;">
+            <strong>Items:</strong>
+            <ul style="padding-left:16px; margin:4px 0;">
+                {% for it in p.items_preview %}
+                <li>{{ it.cantidad }} × {{ it.nombre }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- ================= ACCIONES ================= -->
         <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
            class="btn btn-primary"
            style="display:block; text-align:center; margin-bottom:6px;">
             ➕ Entrar al pedido
         </a>
 
-        <!-- Cerrar pedido -->
         <form method="post"
               action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}"
               style="margin-bottom:6px;">
@@ -46,7 +57,6 @@
             </button>
         </form>
 
-        <!-- Eliminar pedido -->
         <form method="post"
               action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}"
               onsubmit="return confirm('¿Eliminar este pedido?')">
