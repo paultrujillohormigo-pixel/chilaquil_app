@@ -215,7 +215,11 @@ def nuevo_pedido():
 
             if request.method == "POST":
 
-                fecha = request.form.get("fecha") or None
+                fecha = request.form.get("fecha")
+                if not fecha:
+                    cursor.execute("SELECT NOW() AS ahora")
+                    fecha = cursor.fetchone()["ahora"]
+
                 origen = request.form["origen"].strip().lower()
                 mesero = request.form.get("mesero", "")
                 metodo_pago = request.form["metodo_pago"]
