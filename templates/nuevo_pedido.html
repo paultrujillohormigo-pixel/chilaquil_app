@@ -58,9 +58,10 @@
         <thead>
             <tr>
                 <th>Producto</th>
-                <th>Cantidad</th>
+                <th>Cant.</th>
                 <th>Precio</th>
                 <th>Subtotal</th>
+                <th></th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -68,7 +69,7 @@
 
     <h3>Total del Pedido: <span id="totalPedido">$0.00</span></h3>
 
-    <!-- Inputs ocultos que se envían al backend -->
+    <!-- Inputs ocultos -->
     <div id="inputsHidden"></div>
 
     <button type="submit">Guardar pedido</button>
@@ -80,7 +81,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 12px;
-    margin-bottom: 20px;
 }
 
 .producto-card {
@@ -98,11 +98,6 @@
     transform: scale(1.03);
 }
 
-.producto-card .precio {
-    margin-top: 6px;
-    font-weight: bold;
-}
-
 #carritoTable {
     width: 100%;
     border-collapse: collapse;
@@ -114,18 +109,34 @@
     padding: 6px;
     text-align: center;
 }
+
+.btn {
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.btn-red {
+    background: #e74c3c;
+    color: white;
+    border: none;
+}
+
+.btn-gray {
+    background: #ddd;
+    border: none;
+}
 </style>
 
 <!-- ================== SCRIPT ================== -->
 <script>
 let carrito = {};
 
-// Agregar producto al carrito
+// ➕ Agregar producto
 function agregarProducto(id, nombre, precio) {
     if (!carrito[id]) {
         carrito[id] = {
-            nombre: nombre,
-            precio: precio,
+            nombre,
+            precio,
             cantidad: 1
         };
     } else {
@@ -134,43 +145,8 @@ function agregarProducto(id, nombre, precio) {
     renderCarrito();
 }
 
-// Renderiza tabla + inputs ocultos
-function renderCarrito() {
-    const tbody = document.querySelector("#carritoTable tbody");
-    const hidden = document.getElementById("inputsHidden");
+// ➖ Restar producto
+function restarProducto(id) {
+    if (!carrito[id]) return;
 
-    tbody.innerHTML = "";
-    hidden.innerHTML = "";
-
-    let total = 0;
-    let index = 0;
-
-    for (const id in carrito) {
-        const item = carrito[id];
-        const subtotal = item.precio * item.cantidad;
-        total += subtotal;
-
-        // Tabla
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.nombre}</td>
-                <td>${item.cantidad}</td>
-                <td>$${item.precio.toFixed(2)}</td>
-                <td>$${subtotal.toFixed(2)}</td>
-            </tr>
-        `;
-
-        // Inputs ocultos (backend friendly)
-        hidden.innerHTML += `
-            <input type="hidden" name="producto_id[]" value="${id}">
-            <input type="hidden" name="cantidad[]" value="${item.cantidad}">
-        `;
-
-        index++;
-    }
-
-    document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
-}
-</script>
-
-{% endblock %}
+    carrito[id].can
