@@ -9,21 +9,22 @@
         <div><strong>Total:</strong> {{ pedido.total | money }}</div>
     </div>
 
-    <div class="pedido-actions">
-        <button type="button"
-                class="btn-dark"
-                onclick="abrirTicketPreview({{ pedido.id }})">
-            🧾 Ver ticket
-        </button>
+<div class="pedido-actions">
+    <button type="button"
+            class="btn-primary"
+            onclick="abrirTicketPreview({{ pedido.id }})">
+        🧾 Ver ticket
+    </button>
 
-        {% if pedido.estado == 'abierto' %}
-        <button type="button"
-                class="btn-warning"
-                onclick="abrirCerrarPedido()">
-            ✅ Cerrar pedido
-        </button>
-        {% endif %}
-    </div>
+    {% if pedido.estado == 'abierto' %}
+    <button type="button"
+            class="btn-warning"
+            onclick="abrirCerrarPedido()">
+        ✅ Cerrar pedido
+    </button>
+    {% endif %}
+</div>
+
 </div>
 
 <div class="pos-layout">
