@@ -183,3 +183,116 @@ input, select {
 .btn-guardar:hover {
     background: #27ae60;
 }
+
+
+.pos-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    height: calc(100vh - 80px);
+    gap: 16px;
+}
+
+/* ===== PRODUCTOS ===== */
+.productos-panel {
+    overflow-y: auto;
+}
+
+.productos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+    gap: 14px;
+}
+
+.producto-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    font-size: 16px;
+    min-height: 110px;
+}
+
+.producto-card:active {
+    transform: scale(0.96);
+    background: #e8f6ff;
+}
+
+.producto-nombre {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.producto-precio {
+    font-size: 14px;
+    color: #666;
+}
+
+/* ===== CARRITO ===== */
+.carrito-panel {
+    background: #fafafa;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.carrito-items {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.carrito-row {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.carrito-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+.carrito-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    align-items: center;
+}
+
+.carrito-controls button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 18px;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+    border: none;
+}
+
+/* ===== TOTAL ===== */
+.total-box {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+#totalPedido {
+    font-size: 32px;
+    font-weight: 800;
+    margin-top: 6px;
+}
+
+/* ===== GUARDAR ===== */
+.btn-guardar {
+    background: #2ecc71;
+    color: white;
+    font-size: 20px;
+    padding: 18px;
+    border-radius: 14px;
+    border: none;
+    margin-top: 12px;
+}
