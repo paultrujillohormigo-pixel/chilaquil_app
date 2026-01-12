@@ -1,181 +1,193 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="app-header">
-    <div>🧾 Pedido #{{ pedido.id }}</div>
-    <div>
-        Estado: <strong>{{ pedido.estado }}</strong> ·
-        Total: <strong>{{ pedido.total | money }}</strong>
+<h2 class="pos-title">🧾 Pedido #{{ pedido.id }}</h2>
+
+<div class="pedido-header">
+    <div class="pedido-info">
+        <div><strong>Estado:</strong> {{ pedido.estado }}</div>
+        <div><strong>Total:</strong> {{ pedido.total | money }}</div>
     </div>
-</div>
 
-<div class="panel">
-
-    <div style="display:flex; gap:10px; margin-bottom:10px;">
+    <div class="pedido-actions">
         <button type="button"
-                class="btn btn-secondary"
+                class="btn-dark"
                 onclick="abrirTicketPreview({{ pedido.id }})">
             🧾 Ver ticket
         </button>
 
         {% if pedido.estado == 'abierto' %}
         <button type="button"
-                class="btn btn-warning"
+                class="btn-warning"
                 onclick="abrirCerrarPedido()">
             ✅ Cerrar pedido
         </button>
         {% endif %}
     </div>
+</div>
 
-    <hr>
+<div class="pos-layout">
 
-    <h3>Productos en el pedido</h3>
+    <!-- ================== PANEL IZQUIERDO ================== -->
+    <section class="pos-left">
 
-    {% if items %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for it in items %}
-            <tr>
-                <td>{{ it.nombre }}</td>
-                <td>{{ it.cantidad }}</td>
-                <td>{{ it.precio_unitario | money }}</td>
-                <td>{{ it.subtotal | money }}</td>
-                <td>
-                    {% if pedido.estado == 'abierto' %}
-                    <form method="post"
-                          action="{{ url_for('eliminar_item_pedido',
-                                              pedido_id=pedido.id,
-                                              item_id=it.id) }}"
-                          onsubmit="return confirm('¿Eliminar este producto?')">
-                        <button type="submit" class="btn btn-danger">❌</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No hay productos aún.</p>
-    {% endif %}
+        <!-- ================== ITEMS DEL PEDIDO ================== -->
+        <div class="card">
+            <div class="card-head">
+                <h3>Productos en el pedido</h3>
+            </div>
 
-    <hr>
-
-    <h3>Agregar más productos</h3>
-
-    <form method="post">
-
-        <div class="product-grid">
-            {% for p in productos %}
-            <button type="button"
-                    class="product-btn"
-                    onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
-                {{ p.nombre }}
-                <span>{{ p.precio | money }}</span>
-            </button>
-            {% endfor %}
+            {% if items %}
+            <table class="pedido-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for it in items %}
+                    <tr>
+                        <td class="td-left">{{ it.nombre }}</td>
+                        <td>{{ it.cantidad }}</td>
+                        <td>{{ it.precio_unitario | money }}</td>
+                        <td><strong>{{ it.subtotal | money }}</strong></td>
+                        <td>
+                            {% if pedido.estado == 'abierto' %}
+                            <form method="post"
+                                  action="{{ url_for('eliminar_item_pedido',
+                                                      pedido_id=pedido.id,
+                                                      item_id=it.id) }}"
+                                  onsubmit="return confirm('¿Eliminar este producto?')">
+                                <button type="submit" class="btn-red">✕</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No hay productos aún.</p>
+            {% endif %}
         </div>
 
-        <hr>
+        <!-- ================== AGREGAR MÁS ================== -->
+        {% if pedido.estado == 'abierto' %}
+        <div class="card">
+            <div class="card-head">
+                <h3>Agregar productos</h3>
+                <span class="hint">Toca para sumar</span>
+            </div>
 
-        <table id="carritoTable" class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Cant</th>
-                    <th>Precio</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+            <div class="productos-grid">
+                {% for p in productos %}
+                <button type="button"
+                        class="producto-card"
+                        onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
+                    <div class="producto-nombre">{{ p.nombre }}</div>
+                    <div class="producto-meta">
+                        <span class="categoria">{{ p.categoria }}</span>
+                        <span class="precio">{{ p.precio | money }}</span>
+                    </div>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
-        <div id="inputsHidden"></div>
+    </section>
 
-        <br>
-        <button type="submit" class="btn btn-success">
-            ➕ Agregar al pedido
-        </button>
-    </form>
+    <!-- ================== PANEL DERECHO ================== -->
+    {% if pedido.estado == 'abierto' %}
+    <aside class="pos-right">
+
+        <div class="card card-sticky">
+
+            <div class="card-head">
+                <h3>Carrito nuevo</h3>
+            </div>
+
+            <table id="carritoTable">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="total-box">
+                <div>Total agregado</div>
+                <div class="total-amount" id="totalPedido">$0.00</div>
+            </div>
+
+            <div id="inputsHidden"></div>
+
+            <form method="post">
+                <button type="submit" class="btn-guardar">
+                    ➕ Agregar al pedido
+                </button>
+            </form>
+
+        </div>
+
+    </aside>
+    {% endif %}
+
 </div>
 
 <!-- ================== MODAL TICKET ================== -->
-<div id="ticketModal" class="modal-backdrop">
-    <div class="modal">
+<div id="ticketModal" class="modal">
+    <div class="modal-box monospace">
 
-        <button type="button"
-                class="modal-close"
-                onclick="cerrarTicketModal()">
-            ✕
-        </button>
+        <button class="modal-close" onclick="cerrarTicketModal()">✕</button>
 
-        <h3 style="text-align:center;">Preview del ticket</h3>
+        <h3>Preview del ticket</h3>
 
-        <pre id="ticketTexto"
-             style="background:#f4f4f4; padding:12px;
-                    white-space:pre-wrap; font-size:14px;"></pre>
+        <pre id="ticketTexto" class="ticket-preview"></pre>
 
-        <div style="display:flex; gap:10px; margin-top:12px;">
-            <a id="btnWhatsapp"
-               target="_blank"
-               class="btn btn-success"
-               style="flex:1; text-align:center;">
-                📲 Enviar
-            </a>
-
-            <button type="button"
-                    class="btn btn-outline"
-                    style="flex:1;"
-                    onclick="cerrarTicketModal()">
-                Cancelar
-            </button>
-        </div>
+        <a id="btnWhatsapp"
+           target="_blank"
+           class="btn-whatsapp">
+            📲 Enviar por WhatsApp
+        </a>
     </div>
 </div>
 
 <!-- ================== MODAL CERRAR PEDIDO ================== -->
-<div id="cerrarModal" class="modal-backdrop">
-    <div class="modal">
+<div id="cerrarModal" class="modal">
+    <div class="modal-box">
 
-        <button type="button"
-                class="modal-close"
-                onclick="cerrarCerrarModal()">
-            ✕
-        </button>
+        <button class="modal-close" onclick="cerrarCerrarModal()">✕</button>
 
         <h3>Cerrar pedido</h3>
 
-        <label>Número de WhatsApp (opcional)</label>
-        <input type="text"
-               id="telefonoWhatsapp"
-               placeholder="Ej: 5214491234567"
-               style="width:100%; padding:6px; margin-top:4px;">
+        <label>Número WhatsApp (opcional)</label>
+        <input type="text" id="telefonoWhatsapp"
+               placeholder="5214491234567">
 
-        <p style="font-size:12px;color:#666;">
-            Si ingresas un número, se enviará el ticket por WhatsApp.
+        <p class="hint">
+            Si ingresas un número, se enviará el ticket.
         </p>
 
-        <div style="display:flex; gap:10px; margin-top:12px;">
+        <div class="modal-actions">
             <form method="post"
                   action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}">
-                <button type="submit" class="btn btn-secondary">
+                <button type="submit" class="btn-gray">
                     Cerrar sin enviar
                 </button>
             </form>
 
             <button type="button"
-                    class="btn btn-success"
+                    class="btn-whatsapp"
                     onclick="cerrarYEnviar()">
                 Cerrar y enviar
             </button>
@@ -183,16 +195,13 @@
     </div>
 </div>
 
-<!-- ================== SCRIPTS (SIN CAMBIOS) ================== -->
+<!-- ================== SCRIPT ================== -->
 <script>
 let carrito = {};
 
 function agregarProducto(id, nombre, precio) {
-    if (!carrito[id]) {
-        carrito[id] = { nombre, precio, cantidad: 1 };
-    } else {
-        carrito[id].cantidad += 1;
-    }
+    if (!carrito[id]) carrito[id] = { nombre, precio, cantidad: 1 };
+    else carrito[id].cantidad++;
     renderCarrito();
 }
 
@@ -213,61 +222,60 @@ function renderCarrito() {
     tbody.innerHTML = "";
     hidden.innerHTML = "";
 
+    let total = 0;
+
     for (const id in carrito) {
         const it = carrito[id];
+        const subtotal = it.precio * it.cantidad;
+        total += subtotal;
+
         tbody.innerHTML += `
             <tr>
-                <td>${it.nombre}</td>
+                <td class="td-left">${it.nombre}</td>
                 <td>
-                    <button type="button" onclick="restarProducto('${id}')">-</button>
+                    <button onclick="restarProducto('${id}')">–</button>
                     ${it.cantidad}
-                    <button type="button" onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
+                    <button onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
                 </td>
                 <td>$${it.precio.toFixed(2)}</td>
-                <td>$${(it.precio * it.cantidad).toFixed(2)}</td>
-                <td>
-                    <button type="button" onclick="eliminarProducto('${id}')">X</button>
-                </td>
+                <td><strong>$${subtotal.toFixed(2)}</strong></td>
+                <td><button onclick="eliminarProducto('${id}')">✕</button></td>
             </tr>
         `;
+
         hidden.innerHTML += `
             <input type="hidden" name="producto_id[]" value="${id}">
             <input type="hidden" name="cantidad[]" value="${it.cantidad}">
         `;
     }
+
+    document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
 }
 
-function abrirTicketPreview(pedidoId) {
-    fetch(`/pedido/${pedidoId}/ticket_preview`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("ticketTexto").innerText = data.texto;
-            document.getElementById("btnWhatsapp").href = data.whatsapp_url;
+/* ===== MODALES ===== */
+function abrirTicketPreview(id) {
+    fetch(`/pedido/${id}/ticket_preview`)
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("ticketTexto").innerText = d.texto;
+            document.getElementById("btnWhatsapp").href = d.whatsapp_url;
             document.getElementById("ticketModal").style.display = "flex";
         });
 }
-
 function cerrarTicketModal() {
     document.getElementById("ticketModal").style.display = "none";
 }
-
 function abrirCerrarPedido() {
     document.getElementById("cerrarModal").style.display = "flex";
 }
-
 function cerrarCerrarModal() {
     document.getElementById("cerrarModal").style.display = "none";
 }
-
 function cerrarYEnviar() {
     const tel = document.getElementById("telefonoWhatsapp").value;
-    if (!tel) {
-        alert("Ingresa un número o usa 'Cerrar sin enviar'");
-        return;
-    }
+    if (!tel) return alert("Ingresa un número");
 
     window.open(`/pedido/{{ pedido.id }}/whatsapp?tel=${tel}`, "_blank");
-
     fetch(`/cerrar_pedido/{{ pedido.id }}`, { method: "POST" })
         .then(() => location.href = "/pedidos_abiertos");
 }
