@@ -487,6 +487,59 @@ def dashboard():
     )
 
 
+# ================== DASHBOARD ==================
+
+
+
+@app.route("/pedido/<int:pedido_id>/eliminar_item/<int:item_id>", methods=["POST"])
+def eliminar_item_pedido(pedido_id, item_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            # Verificar pedido abierto y obtener subtotal
+            cursor.execute("""
+                SELECT pe.estado, pi.subtotal
+                FROM pedidos pe
+                JOIN pedido_items pi ON pi.pedido_id = pe.id
+                WHERE pe.id = %s AND pi.id = %s
+            """, (pedido_id, item_id))
+
+            row = cursor.fetchone()
+            if not row:
+                flash("Item no encontrado", "error")
+                return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+            if row["estado"] != "abierto":
+                flash("No se puede modificar un pedido cerrado", "error")
+                return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+            subtotal = Decimal(row["subtotal"])
+
+            # Eliminar item
+            cursor.execute("""
+                DELETE FROM pedido_items
+                WHERE id = %s AND pedido_id = %s
+            """, (item_id, pedido_id))
+
+            # Recalcular totales
+            cursor.execute("""
+                UPDATE pedidos
+                SET total = total - %s,
+                    neto = neto - %s
+                WHERE id = %s
+            """, (subtotal, subtotal, pedido_id))
+
+            conn.commit()
+            flash("Producto eliminado del pedido", "success")
+
+    finally:
+        conn.close()
+
+    return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+
+
 # ================== RUN ==================
 if __name__ == "__main__":
     app.run(debug=True)
