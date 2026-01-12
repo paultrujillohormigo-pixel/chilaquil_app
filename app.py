@@ -673,6 +673,12 @@ def generar_ticket_whatsapp(pedido_id, cursor):
 
 @app.route("/pedido/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
+    telefono = request.args.get("tel")  # 👈 viene del modal
+
+    if not telefono:
+        flash("Número no válido", "error")
+        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -680,8 +686,8 @@ def enviar_ticket_whatsapp(pedido_id):
     finally:
         conn.close()
 
-    # 👇 SIN número = WhatsApp pregunta a quién enviarlo
-    return redirect(f"https://wa.me/?text={mensaje}")
+    return redirect(f"https://wa.me/{telefono}?text={mensaje}")
+
 
 
 
