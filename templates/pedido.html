@@ -110,7 +110,15 @@
             align-items:center; justify-content:center; z-index:999;">
 
     <div style="background:white; padding:20px; width:320px;
-                border-radius:10px; font-family:monospace;">
+                border-radius:10px; font-family:monospace; position:relative;">
+
+        <!-- X cerrar -->
+        <button type="button"
+                onclick="cerrarTicketModal()"
+                style="position:absolute; top:8px; right:10px;
+                       background:none; border:none; font-size:20px; cursor:pointer;">
+            ✕
+        </button>
 
         <h3 style="text-align:center;">Preview del ticket</h3>
 
@@ -143,7 +151,15 @@
             align-items:center; justify-content:center; z-index:999;">
 
     <div style="background:white; padding:20px; width:320px;
-                border-radius:10px;">
+                border-radius:10px; position:relative;">
+
+        <!-- X cerrar -->
+        <button type="button"
+                onclick="cerrarCerrarModal()"
+                style="position:absolute; top:8px; right:10px;
+                       background:none; border:none; font-size:20px; cursor:pointer;">
+            ✕
+        </button>
 
         <h3>Cerrar pedido</h3>
 
@@ -218,7 +234,6 @@ function renderCarrito() {
                 </td>
             </tr>
         `;
-
         hidden.innerHTML += `
             <input type="hidden" name="producto_id[]" value="${id}">
             <input type="hidden" name="cantidad[]" value="${it.cantidad}">
@@ -242,6 +257,10 @@ function cerrarTicketModal() {
 
 function abrirCerrarPedido() {
     document.getElementById("cerrarModal").style.display = "flex";
+}
+
+function cerrarCerrarModal() {
+    document.getElementById("cerrarModal").style.display = "none";
 }
 
 function cerrarYEnviar() {
