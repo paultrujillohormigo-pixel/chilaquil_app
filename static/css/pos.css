@@ -439,3 +439,12 @@ small { color: #666; display:block; margin-top: 6px; }
 .btn-warning:active {
     transform: scale(0.97);
 }
+.modal {
+    display: none;              /* ← CLAVE */
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
