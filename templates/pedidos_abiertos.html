@@ -39,7 +39,15 @@
         🗑️ Eliminar pedido
     </button>
 </form>
-       
+
+    <a href="{{ url_for('enviar_ticket_whatsapp', pedido_id=pedido.id) }}"
+       target="_blank"
+       style="background:#25D366;color:white;padding:8px;border-radius:6px;">
+       📲 Enviar ticket por WhatsApp
+    </a>
+
+
+           
 </div>
      
 
