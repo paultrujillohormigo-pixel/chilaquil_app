@@ -544,6 +544,11 @@ def eliminar_item_pedido(pedido_id, item_id):
     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
 
+
+# ================== Eliminar pedido ==================
+
+
+
 @app.route("/eliminar_pedido/<int:pedido_id>", methods=["POST"])
 def eliminar_pedido(pedido_id):
     conn = get_connection()
@@ -585,6 +590,98 @@ def eliminar_pedido(pedido_id):
         conn.close()
 
     return redirect(url_for("pedidos_abiertos"))
+
+
+# ================== generar_ticket_texto ==================
+
+
+
+def generar_ticket_texto(pedido_id, cursor):
+    cursor.execute("""
+        SELECT p.nombre, pi.cantidad, pi.precio_unitario
+        FROM pedido_items pi
+        JOIN productos p ON p.id = pi.producto_id
+        WHERE pi.pedido_id = %s
+    """, (pedido_id,))
+    items = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT total
+        FROM pedidos
+        WHERE id = %s
+    """, (pedido_id,))
+    pedido = cursor.fetchone()
+
+    lines = []
+    lines.append("SEÑOR CHILAQUIL")
+    lines.append("------------------------")
+
+    for it in items:
+        subtotal = it["cantidad"] * it["precio_unitario"]
+        lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
+
+    lines.append("------------------------")
+    lines.append(f'TOTAL: ${pedido["total"]:.2f}')
+    lines.append("")
+    lines.append("¡Gracias por tu compra!")
+
+    return "\n".join(lines)
+
+
+
+# ================== generar ticket whats ==================
+
+
+import urllib.parse
+
+def generar_ticket_whatsapp(pedido_id, cursor):
+    cursor.execute("""
+        SELECT p.nombre, pi.cantidad, pi.precio_unitario
+        FROM pedido_items pi
+        JOIN productos p ON p.id = pi.producto_id
+        WHERE pi.pedido_id = %s
+    """, (pedido_id,))
+    items = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT total
+        FROM pedidos
+        WHERE id = %s
+    """, (pedido_id,))
+    pedido = cursor.fetchone()
+
+    lines = []
+    lines.append("Señor Chilaquil")
+    lines.append("--------------------")
+
+    for it in items:
+        subtotal = it["cantidad"] * it["precio_unitario"]
+        lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
+
+    lines.append("--------------------")
+    lines.append(f'Total: ${pedido["total"]:.2f}')
+    lines.append("")
+    lines.append("¡Gracias por tu compra!")
+
+    mensaje = "\n".join(lines)
+    return urllib.parse.quote(mensaje)
+
+
+
+# ================== enviar ticekt a whats ==================
+
+
+@app.route("/pedido/<int:pedido_id>/whatsapp")
+def enviar_ticket_whatsapp(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            mensaje = generar_ticket_whatsapp(pedido_id, cursor)
+    finally:
+        conn.close()
+
+    # 👇 SIN número = WhatsApp pregunta a quién enviarlo
+    return redirect(f"https://wa.me/?text={mensaje}")
 
 
 
