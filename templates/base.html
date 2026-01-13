@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pos.css') }}">
 
-
     <meta charset="UTF-8">
     <title>Señor Chilaquil - Sistema Ventas</title>
     <style>
@@ -24,8 +23,7 @@
 <body>
     <nav>
         <a href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
-        <a href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
-
+        <a href="/pedidos_abiertos">Pedidos abiertos</a>
         <a href="{{ url_for('productos') }}">Productos</a>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
     </nav>
