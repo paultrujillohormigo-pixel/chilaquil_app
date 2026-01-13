@@ -35,10 +35,9 @@ def ver_pedido(pedido_id):
 
             cursor.execute("""
                 SELECT pi.id, pi.cantidad, pi.precio_unitario, pi.subtotal, p.nombre
-                    FROM pedido_items pi
-                    JOIN productos p ON p.id = pi.producto_id
-                    WHERE pi.pedido_id = %s
-
+                FROM pedido_items pi
+                JOIN productos p ON p.id = pi.producto_id
+                WHERE pi.pedido_id = %s
             """, (pedido_id,))
             items = cursor.fetchall()
 
@@ -57,62 +56,58 @@ def ver_pedido(pedido_id):
                 total_agregado = Decimal("0")
 
                 for i, prod_id in enumerate(productos_ids):
-                cant = int(cantidades[i])
-                if cant <= 0:
-                    continue
-            
-                # Precio actual
-                cursor.execute("""
-                    SELECT precio FROM productos WHERE id = %s
-                """, (prod_id,))
-                row = cursor.fetchone()
-                if not row:
-                    continue
-            
-                precio = Decimal(row["precio"])
-            
-                # ¿Ya existe el producto en el pedido?
-                cursor.execute("""
-                    SELECT id, cantidad
-                    FROM pedido_items
-                    WHERE pedido_id = %s AND producto_id = %s
-                """, (pedido_id, prod_id))
-            
-                existente = cursor.fetchone()
-            
-                if existente:
-                    nueva_cantidad = existente["cantidad"] + cant
-                    nuevo_subtotal = nueva_cantidad * precio
-            
-                    cursor.execute("""
-                        UPDATE pedido_items
-                        SET cantidad = %s,
-                            subtotal = %s
-                        WHERE id = %s
-                    """, (
-                        nueva_cantidad,
-                        nuevo_subtotal,
-                        existente["id"]
-                    ))
-            
-                    total_agregado += precio * cant
-            
-                else:
-                    subtotal = precio * cant
-                    total_agregado += subtotal
-            
-                    cursor.execute("""
-                        INSERT INTO pedido_items
-                        (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
-                        VALUES (%s,%s,%s,%s,%s)
-                    """, (
-                        pedido_id,
-                        prod_id,
-                        cant,
-                        precio,
-                        subtotal
-                    ))
+                    cant = int(cantidades[i])
+                    if cant <= 0:
+                        continue
 
+                    cursor.execute("""
+                        SELECT precio FROM productos WHERE id = %s
+                    """, (prod_id,))
+                    row = cursor.fetchone()
+                    if not row:
+                        continue
+
+                    precio = Decimal(row["precio"])
+
+                    cursor.execute("""
+                        SELECT id, cantidad
+                        FROM pedido_items
+                        WHERE pedido_id = %s AND producto_id = %s
+                    """, (pedido_id, prod_id))
+                    existente = cursor.fetchone()
+
+                    if existente:
+                        nueva_cantidad = existente["cantidad"] + cant
+                        nuevo_subtotal = nueva_cantidad * precio
+
+                        cursor.execute("""
+                            UPDATE pedido_items
+                            SET cantidad = %s,
+                                subtotal = %s
+                            WHERE id = %s
+                        """, (
+                            nueva_cantidad,
+                            nuevo_subtotal,
+                            existente["id"]
+                        ))
+
+                        total_agregado += precio * cant
+
+                    else:
+                        subtotal = precio * cant
+                        total_agregado += subtotal
+
+                        cursor.execute("""
+                            INSERT INTO pedido_items
+                            (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+                            VALUES (%s,%s,%s,%s,%s)
+                        """, (
+                            pedido_id,
+                            prod_id,
+                            cant,
+                            precio,
+                            subtotal
+                        ))
 
                 cursor.execute("""
                     UPDATE pedidos
@@ -135,38 +130,6 @@ def ver_pedido(pedido_id):
     )
 
 
-# ================== PEDIDOS ABIERTOS ==================
-
-@app.route("/pedidos_abiertos")
-def pedidos_abiertos():
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-
-            # Pedidos abiertos
-            cursor.execute("""
-                SELECT id, mesa, mesero, total, fecha
-                FROM pedidos
-                WHERE estado = 'abierto'
-                ORDER BY fecha
-            """)
-            pedidos = cursor.fetchall()
-
-            # Preview de items por pedido (máx 4)
-            for p in pedidos:
-                cursor.execute("""
-                    SELECT pr.nombre, pi.cantidad
-                    FROM pedido_items pi
-                    JOIN productos pr ON pr.id = pi.producto_id
-                    WHERE pi.pedido_id = %s
-                    LIMIT 4
-                """, (p["id"],))
-                p["items_preview"] = cursor.fetchall()
-
-    finally:
-        conn.close()
-
-    return render_template("pedidos_abiertos.html", pedidos=pedidos)
 
 
 
