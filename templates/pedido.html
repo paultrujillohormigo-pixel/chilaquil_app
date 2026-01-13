@@ -9,22 +9,21 @@
         <div><strong>Total:</strong> {{ pedido.total | money }}</div>
     </div>
 
-<div class="pedido-actions">
-    <button type="button"
-            class="btn-primary"
-            onclick="abrirTicketPreview({{ pedido.id }})">
-        🧾 Ver ticket
-    </button>
+    <div class="pedido-actions">
+        <button type="button"
+                class="btn-primary"
+                onclick="abrirTicketPreview({{ pedido.id }})">
+            🧾 Ver ticket
+        </button>
 
-    {% if pedido.estado == 'abierto' %}
-    <button type="button"
-            class="btn-warning"
-            onclick="abrirCerrarPedido()">
-        ✅ Cerrar pedido
-    </button>
-    {% endif %}
-</div>
-
+        {% if pedido.estado == 'abierto' %}
+        <button type="button"
+                class="btn-warning"
+                onclick="abrirCerrarPedido()">
+            ✅ Cerrar pedido
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 <div class="pos-layout">
@@ -112,30 +111,34 @@
                 <h3>Carrito nuevo</h3>
             </div>
 
-            <table id="carritoTable">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Subtotal</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-
-            <div class="total-box">
-                <div>Total agregado</div>
-                <div class="total-amount" id="totalPedido">$0.00</div>
-            </div>
-
-            <div id="inputsHidden"></div>
-
+            <!-- 👇 FORM CORRECTAMENTE ENVOLVIENDO LOS INPUTS -->
             <form method="post">
+
+                <table id="carritoTable">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="total-box">
+                    <div>Total agregado</div>
+                    <div class="total-amount" id="totalPedido">$0.00</div>
+                </div>
+
+                <!-- 🔥 AHORA SÍ VIAJA EN EL POST -->
+                <div id="inputsHidden"></div>
+
                 <button type="submit" class="btn-guardar">
                     ➕ Agregar al pedido
                 </button>
+
             </form>
 
         </div>
@@ -234,13 +237,13 @@ function renderCarrito() {
             <tr>
                 <td class="td-left">${it.nombre}</td>
                 <td>
-                    <button onclick="restarProducto('${id}')">–</button>
+                    <button type="button" onclick="restarProducto('${id}')">–</button>
                     ${it.cantidad}
-                    <button onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
+                    <button type="button" onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
                 </td>
                 <td>$${it.precio.toFixed(2)}</td>
                 <td><strong>$${subtotal.toFixed(2)}</strong></td>
-                <td><button onclick="eliminarProducto('${id}')">✕</button></td>
+                <td><button type="button" onclick="eliminarProducto('${id}')">✕</button></td>
             </tr>
         `;
 
