@@ -6,6 +6,43 @@ app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
 
+# ================== PEDIDOS ABIERTOS ==================
+
+@app.route("/pedidos_abiertos")
+def pedidos_abiertos():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("""
+                SELECT id, fecha, origen, mesero, total
+                FROM pedidos
+                WHERE estado = 'abierto'
+                ORDER BY fecha DESC
+            """)
+            pedidos = cursor.fetchall()
+
+            for p in pedidos:
+                cursor.execute("""
+                    SELECT pr.nombre, pi.cantidad
+                    FROM pedido_items pi
+                    JOIN productos pr ON pr.id = pi.producto_id
+                    WHERE pi.pedido_id = %s
+                    LIMIT 4
+                """, (p["id"],))
+                p["items_preview"] = cursor.fetchall()
+
+    finally:
+        conn.close()
+
+    return render_template(
+        "pedidos_abiertos.html",
+        pedidos=pedidos
+    )
+
+
+
+
 # ================== FILTRO DE MONEDA ==================
 @app.template_filter("money")
 def money_format(value):
