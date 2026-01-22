@@ -91,7 +91,7 @@
                     <div class="hint">+ / – para ajustar</div>
                 </div>
 
-                <!-- NUEVO: vista cocina -->
+                <!-- vista cocina -->
                 <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
             </div>
 
@@ -128,8 +128,8 @@
 
 </form>
 
-<!-- ================== NUEVO: MODAL PERSONALIZACIÓN ================== -->
-<div id="customModal" class="modal" style="display:none;">
+<!-- ================== MODAL PERSONALIZACIÓN ================== -->
+<div id="customModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
 
         <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
@@ -160,8 +160,8 @@
     </div>
 </div>
 
-<!-- ================== NUEVO: VISTA COCINA (OVERLAY) ================== -->
-<div id="cocinaModal" class="modal" style="display:none;">
+<!-- ================== VISTA COCINA ================== -->
+<div id="cocinaModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
 
         <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
@@ -178,8 +178,35 @@
     </div>
 </div>
 
-<!-- ================== NUEVO: estilos mínimos para cocina/personalización ================== -->
+<!-- ================== ESTILOS (incluye FIX modal) ================== -->
 <style>
+/* FORZAR MODAL A MOSTRARSE ENCIMA (por si tu CSS lo escondía) */
+.modal{
+  position: fixed;
+  inset: 0;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,.45);
+  z-index: 99999;
+}
+.modal-box{
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  max-width: 560px;
+  width: 92%;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.modal-close{
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  float: right;
+}
+
+/* TUS ESTILOS */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -222,17 +249,6 @@
 
 <!-- ================== SCRIPT ================== -->
 <script>
-/**
- * CAMBIO PRINCIPAL:
- * - Guardamos por línea (uid) para permitir personalizaciones distintas del mismo producto.
- * - Mandamos arrays: producto_id[] / cantidad[] / proteina[] / sin[] / nota[]
- * - Backend (app.py) ya los guarda.
- *
- * No eliminamos nada de tu lógica, solo extendemos:
- * - agregarProducto ahora abre modal
- * - renderCarrito ahora incluye inputs extra
- */
-
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
@@ -241,18 +257,18 @@ let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 
 function escapeHtml(str){
   return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function uidLinea(producto_id){
   return `${producto_id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-// ➕ Agregar producto (ahora abre modal para personalizar)
+// ➕ Agregar producto (abre modal)
 function agregarProducto(id, nombre, precio) {
     const uid = uidLinea(id);
     modalState = { producto_id: id, nombre, precio, uid };
@@ -396,7 +412,7 @@ function renderCarrito() {
                         <button type="button" class="btn btn-gray" onclick="sumarProducto('${uid}')">+</button>
                     </div>
                 </td>
-                <td>$${item.precio.toFixed(2)}</td>
+                <td>$${Number(item.precio).toFixed(2)}</td>
                 <td><strong>$${subtotal.toFixed(2)}</strong></td>
                 <td>
                     <button type="button" class="btn btn-red" onclick="eliminarProducto('${uid}')">✕</button>
@@ -404,7 +420,6 @@ function renderCarrito() {
             </tr>
         `;
 
-        // ✅ Ahora viaja en el POST también proteina/sin/nota
         hidden.innerHTML += `
             <input type="hidden" name="producto_id[]" value="${escapeHtml(item.producto_id)}">
             <input type="hidden" name="cantidad[]" value="${escapeHtml(item.cantidad)}">
@@ -424,7 +439,7 @@ function toggleUberBox() {
     box.style.display = (origen === "uber") ? "block" : "none";
 }
 
-// NUEVO: Vista cocina
+// Vista cocina
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
