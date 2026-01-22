@@ -63,16 +63,20 @@
                 <div class="hint">Toca para agregar (+1)</div>
             </div>
 
-            <div class="productos-grid">
-                {% for p in productos %}
-                <button type="button"
-                        class="producto-card"
-                        onclick="agregarProducto('{{ p.id }}', {{ p.nombre|tojson }}, {{ p.precio }})">
-                    <div class="producto-nombre">{{ p.nombre }}</div>
-                    <div class="producto-meta">
-                        <span class="categoria">{{ p.categoria }}</span>
-                        <span class="precio">{{ p.precio | money }}</span>
-                    </div>
+                <div class="productos-grid">
+                    {% for p in productos %}
+                    <button type="button"
+                            class="producto-card"
+                            onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
+                        <div class="producto-nombre">{{ p.nombre }}</div>
+                        <div class="producto-meta">
+                            <span class="categoria">{{ p.categoria }}</span>
+                            <span class="precio">{{ p.precio | money }}</span>
+        </div>
+    </button>
+    {% endfor %}
+</div>
+
                 </button>
                 {% endfor %}
             </div>
