@@ -1,9 +1,25 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from decimal import Decimal
 from db import get_connection
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
+
+
+# =========================================================
+# NOTA IMPORTANTE (BD)
+# Para que esto funcione debes agregar columnas a pedido_items:
+#   proteina VARCHAR(60) NULL
+#   sin VARCHAR(255) NULL
+#   nota TEXT NULL
+#
+# SQL:
+# ALTER TABLE pedido_items
+#   ADD COLUMN proteina VARCHAR(60) NULL AFTER producto_id,
+#   ADD COLUMN sin VARCHAR(255) NULL AFTER proteina,
+#   ADD COLUMN nota TEXT NULL AFTER sin;
+# =========================================================
 
 
 # ================== PEDIDOS ABIERTOS ==================
@@ -24,10 +40,11 @@ def pedidos_abiertos():
 
             for p in pedidos:
                 cursor.execute("""
-                    SELECT pr.nombre, pi.cantidad
+                    SELECT pr.nombre, pi.cantidad, pi.proteina, pi.sin, pi.nota
                     FROM pedido_items pi
                     JOIN productos pr ON pr.id = pi.producto_id
                     WHERE pi.pedido_id = %s
+                    ORDER BY pi.id DESC
                     LIMIT 4
                 """, (p["id"],))
                 p["items_preview"] = cursor.fetchall()
@@ -41,8 +58,6 @@ def pedidos_abiertos():
     )
 
 
-
-
 # ================== FILTRO DE MONEDA ==================
 @app.template_filter("money")
 def money_format(value):
@@ -51,8 +66,8 @@ def money_format(value):
     except:
         return value
 
-# ================== PEDIDO ==================
 
+# ================== PEDIDO ==================
 
 @app.route("/pedido/<int:pedido_id>", methods=["GET", "POST"])
 def ver_pedido(pedido_id):
@@ -70,11 +85,15 @@ def ver_pedido(pedido_id):
                 flash("Pedido no disponible", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
+            # 👇 Ahora también trae personalización guardada
             cursor.execute("""
-                SELECT pi.id, pi.cantidad, pi.precio_unitario, pi.subtotal, p.nombre
+                SELECT pi.id, pi.cantidad, pi.precio_unitario, pi.subtotal,
+                       pi.proteina, pi.sin, pi.nota,
+                       p.nombre
                 FROM pedido_items pi
                 JOIN productos p ON p.id = pi.producto_id
                 WHERE pi.pedido_id = %s
+                ORDER BY pi.id DESC
             """, (pedido_id,))
             items = cursor.fetchall()
 
@@ -90,12 +109,24 @@ def ver_pedido(pedido_id):
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
 
+                # 👇 Nuevos campos (guardarlos)
+                proteinas_sel = request.form.getlist("proteina[]")
+                sin_sel = request.form.getlist("sin[]")
+                notas_sel = request.form.getlist("nota[]")
+
+                def safe_get(lst, i, default=""):
+                    return lst[i] if i < len(lst) else default
+
                 total_agregado = Decimal("0")
 
                 for i, prod_id in enumerate(productos_ids):
                     cant = int(cantidades[i])
                     if cant <= 0:
                         continue
+
+                    prot = safe_get(proteinas_sel, i, "")
+                    sin_txt = safe_get(sin_sel, i, "")
+                    nota = safe_get(notas_sel, i, "")
 
                     cursor.execute("""
                         SELECT precio FROM productos WHERE id = %s
@@ -106,11 +137,16 @@ def ver_pedido(pedido_id):
 
                     precio = Decimal(row["precio"])
 
+                    # ✅ Merge solo si coincide producto + personalización
                     cursor.execute("""
                         SELECT id, cantidad
                         FROM pedido_items
-                        WHERE pedido_id = %s AND producto_id = %s
-                    """, (pedido_id, prod_id))
+                        WHERE pedido_id = %s
+                          AND producto_id = %s
+                          AND (proteina <=> %s)
+                          AND (sin <=> %s)
+                          AND (nota <=> %s)
+                    """, (pedido_id, prod_id, prot, sin_txt, nota))
                     existente = cursor.fetchone()
 
                     if existente:
@@ -136,11 +172,14 @@ def ver_pedido(pedido_id):
 
                         cursor.execute("""
                             INSERT INTO pedido_items
-                            (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
-                            VALUES (%s,%s,%s,%s,%s)
+                            (pedido_id, producto_id, proteina, sin, nota, cantidad, precio_unitario, subtotal)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                         """, (
                             pedido_id,
                             prod_id,
+                            prot,
+                            sin_txt,
+                            nota,
                             cant,
                             precio,
                             subtotal
@@ -167,12 +206,7 @@ def ver_pedido(pedido_id):
     )
 
 
-
-
-
-
 # ================== CERRAR PEDIDOS ==================
-
 
 @app.route("/cerrar_pedido/<int:pedido_id>", methods=["POST"])
 def cerrar_pedido(pedido_id):
@@ -190,10 +224,6 @@ def cerrar_pedido(pedido_id):
         conn.close()
 
     return redirect(url_for("pedidos_abiertos"))
-
-
-
-
 
 
 # ================== HOME ==================
@@ -238,7 +268,6 @@ def productos():
 
 # ================== NUEVO PEDIDO ==================
 
-
 @app.route("/nuevo_pedido", methods=["GET", "POST"])
 def nuevo_pedido():
     conn = get_connection()
@@ -273,6 +302,14 @@ def nuevo_pedido():
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
 
+                # 👇 Nuevos campos (guardarlos)
+                proteinas_sel = request.form.getlist("proteina[]")
+                sin_sel = request.form.getlist("sin[]")
+                notas_sel = request.form.getlist("nota[]")
+
+                def safe_get(lst, i, default=""):
+                    return lst[i] if i < len(lst) else default
+
                 total = Decimal("0")
                 items = []
 
@@ -300,11 +337,18 @@ def nuevo_pedido():
                     subtotal = precio_unit * cant
                     total += subtotal
 
+                    prot = safe_get(proteinas_sel, i, "")
+                    sin_txt = safe_get(sin_sel, i, "")
+                    nota = safe_get(notas_sel, i, "")
+
                     items.append({
                         "producto_id": prod_id,
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
+                        "proteina": prot,
+                        "sin": sin_txt,
+                        "nota": nota,
                     })
 
                 neto = total + monto_uber
@@ -328,11 +372,14 @@ def nuevo_pedido():
                 for it in items:
                     cursor.execute("""
                         INSERT INTO pedido_items
-                        (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
-                        VALUES (%s,%s,%s,%s,%s)
+                        (pedido_id, producto_id, proteina, sin, nota, cantidad, precio_unitario, subtotal)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                     """, (
                         pedido_id,
                         it["producto_id"],
+                        it.get("proteina"),
+                        it.get("sin"),
+                        it.get("nota"),
                         it["cantidad"],
                         it["precio_unitario"],
                         it["subtotal"],
@@ -351,7 +398,6 @@ def nuevo_pedido():
         salsas=salsas,
         proteinas=proteinas,
     )
-
 
 
 # ================== COMPRAS ==================
@@ -537,9 +583,7 @@ def dashboard():
     )
 
 
-# ================== DASHBOARD ==================
-
-
+# ================== Eliminar item de pedido ==================
 
 @app.route("/pedido/<int:pedido_id>/eliminar_item/<int:item_id>", methods=["POST"])
 def eliminar_item_pedido(pedido_id, item_id):
@@ -547,7 +591,6 @@ def eliminar_item_pedido(pedido_id, item_id):
     try:
         with conn.cursor() as cursor:
 
-            # Verificar pedido abierto y obtener subtotal
             cursor.execute("""
                 SELECT pe.estado, pi.subtotal
                 FROM pedidos pe
@@ -566,13 +609,11 @@ def eliminar_item_pedido(pedido_id, item_id):
 
             subtotal = Decimal(row["subtotal"])
 
-            # Eliminar item
             cursor.execute("""
                 DELETE FROM pedido_items
                 WHERE id = %s AND pedido_id = %s
             """, (item_id, pedido_id))
 
-            # Recalcular totales
             cursor.execute("""
                 UPDATE pedidos
                 SET total = total - %s,
@@ -589,10 +630,7 @@ def eliminar_item_pedido(pedido_id, item_id):
     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
 
-
 # ================== Eliminar pedido ==================
-
-
 
 @app.route("/eliminar_pedido/<int:pedido_id>", methods=["POST"])
 def eliminar_pedido(pedido_id):
@@ -600,7 +638,6 @@ def eliminar_pedido(pedido_id):
     try:
         with conn.cursor() as cursor:
 
-            # Verificar que el pedido exista y esté abierto
             cursor.execute("""
                 SELECT estado
                 FROM pedidos
@@ -616,13 +653,11 @@ def eliminar_pedido(pedido_id):
                 flash("No se puede eliminar un pedido cerrado", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
-            # Eliminar items
             cursor.execute("""
                 DELETE FROM pedido_items
                 WHERE pedido_id = %s
             """, (pedido_id,))
 
-            # Eliminar pedido
             cursor.execute("""
                 DELETE FROM pedidos
                 WHERE id = %s
@@ -639,14 +674,13 @@ def eliminar_pedido(pedido_id):
 
 # ================== generar_ticket_texto ==================
 
-
-
 def generar_ticket_texto(pedido_id, cursor):
     cursor.execute("""
-        SELECT p.nombre, pi.cantidad, pi.precio_unitario
+        SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
         FROM pedido_items pi
         JOIN productos p ON p.id = pi.producto_id
         WHERE pi.pedido_id = %s
+        ORDER BY pi.id ASC
     """, (pedido_id,))
     items = cursor.fetchall()
 
@@ -665,6 +699,14 @@ def generar_ticket_texto(pedido_id, cursor):
         subtotal = it["cantidad"] * it["precio_unitario"]
         lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
 
+        # 👇 personalización en ticket (si existe)
+        if it.get("proteina"):
+            lines.append(f'  PROT: {it["proteina"]}')
+        if it.get("sin"):
+            lines.append(f'  SIN: {it["sin"]}')
+        if it.get("nota"):
+            lines.append(f'  NOTA: {it["nota"]}')
+
     lines.append("------------------------")
     lines.append(f'TOTAL: ${pedido["total"]:.2f}')
     lines.append("")
@@ -673,18 +715,15 @@ def generar_ticket_texto(pedido_id, cursor):
     return "\n".join(lines)
 
 
-
 # ================== generar ticket whats ==================
-
-
-import urllib.parse
 
 def generar_ticket_whatsapp(pedido_id, cursor):
     cursor.execute("""
-        SELECT p.nombre, pi.cantidad, pi.precio_unitario
+        SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
         FROM pedido_items pi
         JOIN productos p ON p.id = pi.producto_id
         WHERE pi.pedido_id = %s
+        ORDER BY pi.id ASC
     """, (pedido_id,))
     items = cursor.fetchall()
 
@@ -703,6 +742,13 @@ def generar_ticket_whatsapp(pedido_id, cursor):
         subtotal = it["cantidad"] * it["precio_unitario"]
         lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
 
+        if it.get("proteina"):
+            lines.append(f'  PROT: {it["proteina"]}')
+        if it.get("sin"):
+            lines.append(f'  SIN: {it["sin"]}')
+        if it.get("nota"):
+            lines.append(f'  NOTA: {it["nota"]}')
+
     lines.append("--------------------")
     lines.append(f'Total: ${pedido["total"]:.2f}')
     lines.append("")
@@ -712,9 +758,7 @@ def generar_ticket_whatsapp(pedido_id, cursor):
     return urllib.parse.quote(mensaje)
 
 
-
 # ================== enviar ticekt a whats ==================
-
 
 @app.route("/pedido/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
@@ -734,13 +778,7 @@ def enviar_ticket_whatsapp(pedido_id):
     return redirect(f"https://wa.me/{telefono}?text={mensaje}")
 
 
-
-
 # ================== Preview ticket ==================
-
-
-from flask import jsonify
-import urllib.parse
 
 @app.route("/pedido/<int:pedido_id>/ticket_preview")
 def ticket_preview(pedido_id):
