@@ -180,7 +180,6 @@
 
 <!-- ================== ESTILOS (incluye FIX modal) ================== -->
 <style>
-/* FORZAR MODAL A MOSTRARSE ENCIMA (por si tu CSS lo escondía) */
 .modal{
   position: fixed;
   inset: 0;
@@ -206,7 +205,6 @@
   float: right;
 }
 
-/* TUS ESTILOS */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -254,6 +252,7 @@ const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
 let carrito = {}; // carrito[uid] = {producto_id, nombre, precio, cantidad, custom:{proteina, sin[], nota}}
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+let editandoUid = null; // ✅ NUEVO: línea que se está personalizando/editando
 
 function escapeHtml(str){
   return String(str)
@@ -268,9 +267,27 @@ function uidLinea(producto_id){
   return `${producto_id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-// ➕ Agregar producto (abre modal)
+/* ✅ CAMBIO CLAVE:
+   Click en producto = se agrega AL INSTANTE al carrito (para que nunca “no pase”)
+   y luego se abre el modal para personalizar esa misma línea.
+*/
 function agregarProducto(id, nombre, precio) {
     const uid = uidLinea(id);
+
+    // 1) agrega inmediato (default)
+    carrito[uid] = {
+        producto_id: id,
+        nombre: nombre,
+        precio: precio,
+        cantidad: 1,
+        custom: { proteina: "", sin: [], nota: "" }
+    };
+
+    // 2) render inmediato
+    renderCarrito();
+
+    // 3) abre modal para editar ESA línea
+    editandoUid = uid;
     modalState = { producto_id: id, nombre, precio, uid };
     abrirCustomModal();
 }
@@ -309,6 +326,7 @@ function abrirCustomModal(){
 function cerrarCustomModal(){
   document.getElementById("customModal").style.display = "none";
   modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+  editandoUid = null;
 }
 
 function confirmarCustom(){
@@ -316,15 +334,20 @@ function confirmarCustom(){
   const sin = [...document.querySelectorAll("input[name='sin_check']:checked")].map(x => x.value);
   const nota = document.getElementById("notaInput").value || "";
 
-  const uid = modalState.uid;
-
-  carrito[uid] = {
-    producto_id: modalState.producto_id,
-    nombre: modalState.nombre,
-    precio: modalState.precio,
-    cantidad: 1,
-    custom: { proteina, sin, nota }
-  };
+  // ✅ actualiza la línea que se estaba editando
+  if (editandoUid && carrito[editandoUid]) {
+    carrito[editandoUid].custom = { proteina, sin, nota };
+  } else {
+    // fallback (por si algo raro pasa)
+    const uid = modalState.uid || uidLinea(modalState.producto_id);
+    carrito[uid] = {
+      producto_id: modalState.producto_id,
+      nombre: modalState.nombre,
+      precio: modalState.precio,
+      cantidad: 1,
+      custom: { proteina, sin, nota }
+    };
+  }
 
   cerrarCustomModal();
   renderCarrito();
@@ -353,6 +376,7 @@ function eliminarProducto(uid) {
 
 // Editar la personalización de una línea
 function editarLinea(uid){
+  editandoUid = uid; // ✅ importante
   const it = carrito[uid];
   if (!it) return;
 
@@ -381,7 +405,7 @@ function renderCarrito() {
 
     for (const uid in carrito) {
         const item = carrito[uid];
-        const subtotal = item.precio * item.cantidad;
+        const subtotal = Number(item.precio) * Number(item.cantidad);
         total += subtotal;
 
         const prot = item.custom?.proteina ? `PROT: ${item.custom.proteina}` : "";
@@ -484,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleUberBox();
     document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
-    // cerrar modales nuevos al click fuera
+    // cerrar modales al click fuera
     document.addEventListener("click", (e) => {
       const cm = document.getElementById("customModal");
       if (cm && cm.style.display === "flex" && e.target === cm) cerrarCustomModal();
