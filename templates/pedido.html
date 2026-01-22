@@ -51,7 +51,24 @@
                 <tbody>
                     {% for it in items %}
                     <tr>
-                        <td class="td-left">{{ it.nombre }}</td>
+                        <td class="td-left">
+                            {{ it.nombre }}
+
+                            {# === NUEVO: mostrar personalización guardada === #}
+                            {% if it.proteina or it.sin or it.nota %}
+                            <div class="cocina-meta">
+                                {% if it.proteina %}
+                                <div><span class="tag">PROT: {{ it.proteina }}</span></div>
+                                {% endif %}
+                                {% if it.sin %}
+                                <div><span class="tag tag-warn">SIN: {{ it.sin }}</span></div>
+                                {% endif %}
+                                {% if it.nota %}
+                                <div class="nota"><strong>NOTA:</strong> {{ it.nota }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
                         <td>{{ it.cantidad }}</td>
                         <td>{{ it.precio_unitario | money }}</td>
                         <td><strong>{{ it.subtotal | money }}</strong></td>
@@ -87,7 +104,7 @@
                 {% for p in productos %}
                 <button type="button"
                         class="producto-card"
-                        onclick="agregarProducto('{{ p.id }}','{{ p.nombre }}',{{ p.precio }})">
+                        onclick="agregarProducto('{{ p.id }}','{{ p.nombre|replace(\"'\",\"\\'\") }}',{{ p.precio }})">
                     <div class="producto-nombre">{{ p.nombre }}</div>
                     <div class="producto-meta">
                         <span class="categoria">{{ p.categoria }}</span>
@@ -107,8 +124,11 @@
 
         <div class="card card-sticky">
 
-            <div class="card-head">
-                <h3>Carrito nuevo</h3>
+            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <h3 style="margin:0;">Carrito nuevo</h3>
+
+                {# NUEVO: vista cocina (overlay) #}
+                <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
             </div>
 
             <!-- 👇 FORM CORRECTAMENTE ENVOLVIENDO LOS INPUTS -->
@@ -199,27 +219,233 @@
     </div>
 </div>
 
+<!-- ================== NUEVO: MODAL PERSONALIZACIÓN ================== -->
+<div id="customModal" class="modal" style="display:none;">
+    <div class="modal-box">
+
+        <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
+
+        <h3>Personalizar</h3>
+        <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
+
+        <div style="margin-top:10px;">
+            <label><strong>Proteína</strong></label>
+            <div id="proteinaRadios" class="custom-grid"></div>
+        </div>
+
+        <div style="margin-top:12px;">
+            <label><strong>Quitar</strong></label>
+            <div id="sinChecks" class="custom-grid"></div>
+            <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
+        </div>
+
+        <div style="margin-top:12px;">
+            <label><strong>Notas</strong></label>
+            <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
+        </div>
+
+        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="confirmarCustom()">Agregar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================== NUEVO: VISTA COCINA (OVERLAY) ================== -->
+<div id="cocinaModal" class="modal" style="display:none;">
+    <div class="modal-box">
+
+        <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
+
+        <h3>Comanda (Vista cocina)</h3>
+        <p class="hint">Pedido #{{ pedido.id }}</p>
+
+        <div id="cocinaBody"></div>
+
+        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
+            <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================== NUEVO: estilos mínimos para cocina/personalización ================== -->
+<style>
+.cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+.tag{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:8px;
+  background:#f3f3f3;
+  border:1px solid #ddd;
+  font-weight:700;
+  font-size:.85rem;
+}
+.tag-warn{
+  background:#fff3cd;
+  border-color:#f0c36d;
+}
+.nota{
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px dashed #bbb;
+  background:#fff;
+  font-size:.85rem;
+}
+.custom-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+.custom-pill{
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:8px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+@media (max-width: 520px){
+  .custom-grid{ grid-template-columns:1fr; }
+}
+</style>
+
 <!-- ================== SCRIPT ================== -->
 <script>
-let carrito = {};
+/**
+ * CAMBIO PRINCIPAL:
+ * - Ya no usamos carrito[idProducto] porque ahora se guardará personalización por línea.
+ * - Usamos carrito[uid] para permitir 2 chilaquiles con distinta personalización.
+ * - En el POST mandamos producto_id[] / cantidad[] / proteina[] / sin[] / nota[]
+ */
 
-function agregarProducto(id, nombre, precio) {
-    if (!carrito[id]) carrito[id] = { nombre, precio, cantidad: 1 };
-    else carrito[id].cantidad++;
+const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
+const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
+
+let carrito = {}; // carrito[uid] = {producto_id, nombre, precio, cantidad, custom:{proteina, sin[], nota}}
+let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function uidLinea(producto_id){
+  return `${producto_id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+/* ===== Agregar producto: ahora abre modal de personalización ===== */
+function agregarProducto(producto_id, nombre, precio) {
+    const uid = uidLinea(producto_id);
+    modalState = { producto_id, nombre, precio, uid };
+    abrirCustomModal();
+}
+
+/* ===== Modal personalización ===== */
+function abrirCustomModal(){
+  document.getElementById("customProductoNombre").innerText = modalState.nombre;
+
+  // Radios proteínas
+  const radios = document.getElementById("proteinaRadios");
+  radios.innerHTML = "";
+  PROTEINAS.forEach((p, idx) => {
+    radios.innerHTML += `
+      <label class="custom-pill">
+        <input type="radio" name="proteina_radio" value="${escapeHtml(p)}" ${idx===0 ? "checked" : ""}>
+        <span>${escapeHtml(p)}</span>
+      </label>
+    `;
+  });
+
+  // Checks sin
+  const checks = document.getElementById("sinChecks");
+  checks.innerHTML = "";
+  SIN_OPCIONES.forEach((s) => {
+    checks.innerHTML += `
+      <label class="custom-pill">
+        <input type="checkbox" name="sin_check" value="${escapeHtml(s)}">
+        <span>Sin ${escapeHtml(s)}</span>
+      </label>
+    `;
+  });
+
+  document.getElementById("notaInput").value = "";
+
+  document.getElementById("customModal").style.display = "flex";
+}
+
+function cerrarCustomModal(){
+  document.getElementById("customModal").style.display = "none";
+  modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+}
+
+function confirmarCustom(){
+  const proteina = document.querySelector("input[name='proteina_radio']:checked")?.value || "";
+  const sin = [...document.querySelectorAll("input[name='sin_check']:checked")].map(x => x.value);
+  const nota = document.getElementById("notaInput").value || "";
+
+  const uid = modalState.uid;
+
+  carrito[uid] = {
+    producto_id: modalState.producto_id,
+    nombre: modalState.nombre,
+    precio: modalState.precio,
+    cantidad: 1,
+    custom: { proteina, sin, nota }
+  };
+
+  cerrarCustomModal();
+  renderCarrito();
+}
+
+/* ===== Controles del carrito ===== */
+function restarProducto(uid) {
+    if (!carrito[uid]) return;
+    carrito[uid].cantidad--;
+    if (carrito[uid].cantidad <= 0) delete carrito[uid];
     renderCarrito();
 }
 
-function restarProducto(id) {
-    carrito[id].cantidad--;
-    if (carrito[id].cantidad <= 0) delete carrito[id];
+function sumarProducto(uid){
+  if (!carrito[uid]) return;
+  carrito[uid].cantidad++;
+  renderCarrito();
+}
+
+function eliminarProducto(uid) {
+    delete carrito[uid];
     renderCarrito();
 }
 
-function eliminarProducto(id) {
-    delete carrito[id];
-    renderCarrito();
+/* ===== Editar personalización de una línea ===== */
+function editarLinea(uid){
+  const it = carrito[uid];
+  if (!it) return;
+
+  modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
+
+  // Abrir modal y precargar valores
+  abrirCustomModal();
+
+  // Set proteina
+  const targetProt = it.custom?.proteina || "";
+  const protRadios = document.querySelectorAll("input[name='proteina_radio']");
+  protRadios.forEach(r => { r.checked = (r.value === targetProt) || (!targetProt && r === protRadios[0]); });
+
+  // Set sin
+  const setSin = new Set(it.custom?.sin || []);
+  document.querySelectorAll("input[name='sin_check']").forEach(c => { c.checked = setSin.has(c.value); });
+
+  // Nota
+  document.getElementById("notaInput").value = it.custom?.nota || "";
 }
 
+/* ===== Render + hidden inputs ===== */
 function renderCarrito() {
     const tbody = document.querySelector("#carritoTable tbody");
     const hidden = document.getElementById("inputsHidden");
@@ -228,35 +454,57 @@ function renderCarrito() {
 
     let total = 0;
 
-    for (const id in carrito) {
-        const it = carrito[id];
+    for (const uid in carrito) {
+        const it = carrito[uid];
         const subtotal = it.precio * it.cantidad;
         total += subtotal;
 
+        const prot = it.custom?.proteina ? `PROT: ${it.custom.proteina}` : "";
+        const sin = (it.custom?.sin && it.custom.sin.length) ? `SIN: ${it.custom.sin.join(", ")}` : "";
+        const nota = (it.custom?.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+
+        const cocinaHtml = (prot || sin || nota) ? `
+          <div class="cocina-meta">
+            ${prot ? `<div><span class="tag">${escapeHtml(prot)}</span></div>` : ""}
+            ${sin ? `<div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>` : ""}
+            ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
+          </div>
+        ` : "";
+
         tbody.innerHTML += `
             <tr>
-                <td class="td-left">${it.nombre}</td>
-                <td>
-                    <button type="button" onclick="restarProducto('${id}')">–</button>
-                    ${it.cantidad}
-                    <button type="button" onclick="agregarProducto('${id}','${it.nombre}',${it.precio})">+</button>
+                <td class="td-left">
+                  ${escapeHtml(it.nombre)}
+                  ${cocinaHtml}
+                  <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-gray" onclick="editarLinea('${uid}')">Editar</button>
+                  </div>
                 </td>
-                <td>$${it.precio.toFixed(2)}</td>
+                <td>
+                    <button type="button" onclick="restarProducto('${uid}')">–</button>
+                    ${it.cantidad}
+                    <button type="button" onclick="sumarProducto('${uid}')">+</button>
+                </td>
+                <td>$${Number(it.precio).toFixed(2)}</td>
                 <td><strong>$${subtotal.toFixed(2)}</strong></td>
-                <td><button type="button" onclick="eliminarProducto('${id}')">✕</button></td>
+                <td><button type="button" onclick="eliminarProducto('${uid}')">✕</button></td>
             </tr>
         `;
 
+        // ✅ Ahora mandamos personalización para que app.py la guarde
         hidden.innerHTML += `
-            <input type="hidden" name="producto_id[]" value="${id}">
-            <input type="hidden" name="cantidad[]" value="${it.cantidad}">
+            <input type="hidden" name="producto_id[]" value="${escapeHtml(it.producto_id)}">
+            <input type="hidden" name="cantidad[]" value="${escapeHtml(it.cantidad)}">
+            <input type="hidden" name="proteina[]" value="${escapeHtml(it.custom?.proteina || "")}">
+            <input type="hidden" name="sin[]" value="${escapeHtml((it.custom?.sin || []).join(","))}">
+            <input type="hidden" name="nota[]" value="${escapeHtml(it.custom?.nota || "")}">
         `;
     }
 
     document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
 }
 
-/* ===== MODALES ===== */
+/* ===== MODALES EXISTENTES ===== */
 function abrirTicketPreview(id) {
     fetch(`/pedido/${id}/ticket_preview`)
         .then(r => r.json())
@@ -283,6 +531,57 @@ function cerrarYEnviar() {
     fetch(`/cerrar_pedido/{{ pedido.id }}`, { method: "POST" })
         .then(() => location.href = "/pedidos_abiertos");
 }
+
+/* ===== NUEVO: VISTA COCINA ===== */
+function abrirVistaCocina(){
+  const modal = document.getElementById("cocinaModal");
+  const body = document.getElementById("cocinaBody");
+  const uids = Object.keys(carrito);
+
+  if (!uids.length){
+    body.innerHTML = "<p>No hay productos nuevos en el carrito.</p>";
+    modal.style.display = "flex";
+    return;
+  }
+
+  let html = "";
+  uids.forEach(uid => {
+    const it = carrito[uid];
+    const prot = it.custom?.proteina ? `PROT: ${it.custom.proteina}` : "PROT: —";
+    const sin = (it.custom?.sin && it.custom.sin.length) ? `SIN: ${it.custom.sin.join(", ")}` : "SIN: —";
+    const nota = (it.custom?.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+
+    html += `
+      <div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="font-size:1.05rem; font-weight:900;">${escapeHtml(it.nombre)}</div>
+          <div style="font-size:1.05rem; font-weight:900;">x${it.cantidad}</div>
+        </div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+          <div><span class="tag">${escapeHtml(prot)}</span></div>
+          <div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>
+          ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
+        </div>
+      </div>
+    `;
+  });
+
+  body.innerHTML = html;
+  modal.style.display = "flex";
+}
+
+function cerrarVistaCocina(){
+  document.getElementById("cocinaModal").style.display = "none";
+}
+
+/* UX: cerrar modal custom al click fuera (sin romper tus modales existentes) */
+document.addEventListener("click", (e) => {
+  const cm = document.getElementById("customModal");
+  if (cm && cm.style.display === "flex" && e.target === cm) cerrarCustomModal();
+
+  const km = document.getElementById("cocinaModal");
+  if (km && km.style.display === "flex" && e.target === km) cerrarVistaCocina();
+});
 </script>
 
 {% endblock %}
