@@ -5,10 +5,8 @@
 
 <form method="post" id="pedidoForm" class="pos-layout">
 
-    <!-- ================== PANEL IZQUIERDO ================== -->
     <section class="pos-left">
 
-        <!-- ================== DATOS GENERALES ================== -->
         <div class="card">
             <div class="card-head">
                 <h3>Datos del pedido</h3>
@@ -56,7 +54,6 @@
             </div>
         </div>
 
-        <!-- ================== PRODUCTOS ================== -->
         <div class="card">
             <div class="card-head">
                 <h3>Productos</h3>
@@ -80,7 +77,6 @@
 
     </section>
 
-    <!-- ================== PANEL DERECHO (CARRITO) ================== -->
     <aside class="pos-right">
 
         <div class="card card-sticky">
@@ -91,7 +87,6 @@
                     <div class="hint">+ / – para ajustar</div>
                 </div>
 
-                <!-- vista cocina -->
                 <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
             </div>
 
@@ -114,7 +109,6 @@
                     <div class="total-amount" id="totalPedido">$0.00</div>
                 </div>
 
-                <!-- Inputs ocultos -->
                 <div id="inputsHidden"></div>
 
                 <button type="submit" class="btn-guardar">
@@ -128,10 +122,8 @@
 
 </form>
 
-<!-- ================== MODAL PERSONALIZACIÓN ================== -->
 <div id="customModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
-
         <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
 
         <h3>Personalizar</h3>
@@ -160,10 +152,8 @@
     </div>
 </div>
 
-<!-- ================== VISTA COCINA ================== -->
 <div id="cocinaModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
-
         <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
 
         <h3>Comanda (Vista cocina)</h3>
@@ -178,7 +168,6 @@
     </div>
 </div>
 
-<!-- ================== ESTILOS (incluye FIX modal) ================== -->
 <style>
 .modal{
   position: fixed;
@@ -204,7 +193,6 @@
   cursor: pointer;
   float: right;
 }
-
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -245,12 +233,11 @@
 }
 </style>
 
-<!-- ================== SCRIPT ================== -->
 <script>
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-let carrito = {}; 
+let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 let editandoUid = null;
 
@@ -267,7 +254,6 @@ function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ✅ Click agrega inmediato al carrito y abre modal para editar */
 function agregarProducto(id, nombre, precio) {
   const uid = uidLinea(id);
 
@@ -325,8 +311,7 @@ function confirmarCustom(){
   const protEl = document.querySelector("input[name='proteina_radio']:checked");
   const proteina = protEl ? protEl.value : "";
   const sin = [];
-  const sinEls = document.querySelectorAll("input[name='sin_check']:checked");
-  sinEls.forEach(x => sin.push(x.value));
+  document.querySelectorAll("input[name='sin_check']:checked").forEach(x => sin.push(x.value));
   const nota = document.getElementById("notaInput").value || "";
 
   if (editandoUid && carrito[editandoUid]) {
@@ -405,19 +390,19 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
