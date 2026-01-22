@@ -104,7 +104,7 @@
                 {% for p in productos %}
                 <button type="button"
                         class="producto-card"
-                        onclick="agregarProducto('{{ p.id }}','{{ p.nombre|replace(\"'\",\"\\'\") }}',{{ p.precio }})">
+                        onclick="agregarProducto('{{ p.id }}', {{ p.nombre|tojson }}, {{ p.precio }})"
                     <div class="producto-nombre">{{ p.nombre }}</div>
                     <div class="producto-meta">
                         <span class="categoria">{{ p.categoria }}</span>
