@@ -63,20 +63,16 @@
                 <div class="hint">Toca para agregar (+1)</div>
             </div>
 
-                <div class="productos-grid">
-                    {% for p in productos %}
-                    <button type="button"
-                            class="producto-card"
-                            onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
-                        <div class="producto-nombre">{{ p.nombre }}</div>
-                        <div class="producto-meta">
-                            <span class="categoria">{{ p.categoria }}</span>
-                            <span class="precio">{{ p.precio | money }}</span>
-                            </div>
-                        </button>
-                        {% endfor %}
+            <div class="productos-grid">
+                {% for p in productos %}
+                <button type="button"
+                        class="producto-card"
+                        onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
+                    <div class="producto-nombre">{{ p.nombre }}</div>
+                    <div class="producto-meta">
+                        <span class="categoria">{{ p.categoria }}</span>
+                        <span class="precio">{{ p.precio | money }}</span>
                     </div>
-
                 </button>
                 {% endfor %}
             </div>
@@ -250,7 +246,6 @@
 </style>
 
 <!-- ================== SCRIPT ================== -->
-
 <script>
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
@@ -366,14 +361,12 @@ function editarLinea(uid){
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
   abrirCustomModal();
 
-  // set proteina
   const targetProt = it.custom && it.custom.proteina ? it.custom.proteina : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
   protRadios.forEach((r, idx) => {
     r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
   });
 
-  // set sin
   const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
 
@@ -412,19 +405,19 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
@@ -444,7 +437,6 @@ function toggleUberBox(){
   box.style.display = (origen === "uber") ? "block" : "none";
 }
 
-// Vista cocina (simple)
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
@@ -496,6 +488,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
-
 
 {% endblock %}
