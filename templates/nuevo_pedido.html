@@ -122,6 +122,7 @@
 
 </form>
 
+<!-- ================== MODAL PERSONALIZACIÓN ================== -->
 <div id="customModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
         <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
@@ -147,11 +148,12 @@
 
         <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
             <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar cambios</button>
+            <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
         </div>
     </div>
 </div>
 
+<!-- ================== VISTA COCINA ================== -->
 <div id="cocinaModal" class="modal" style="display:none; z-index:99999;">
     <div class="modal-box">
         <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
@@ -169,26 +171,16 @@
 </div>
 
 <style>
-/* ================== RESPONSIVE FIXES ================== */
-
-/* Layout general (desktop: 2 columnas / móvil-tablet: 1 columna) */
+/* ================== RESPONSIVE ================== */
 .pos-layout{
   display:grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 14px;
 }
 @media (max-width: 900px){
-  .pos-layout{
-    grid-template-columns: 1fr;
-  }
-  /* En móvil, el sticky suele estorbar */
-  .card-sticky{
-    position: static !important;
-    top: auto !important;
-  }
+  .pos-layout{ grid-template-columns: 1fr; }
+  .card-sticky{ position: static !important; top:auto !important; }
 }
-
-/* Form grid: evita que se peguen inputs */
 .form-grid{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -218,7 +210,6 @@
   width: 92%;
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
 
-  /* ✅ para que el modal no “se pierda” en celular */
   max-height: 88vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
@@ -229,14 +220,6 @@
   font-size: 18px;
   cursor: pointer;
   float: right;
-}
-
-/* ✅ si quieres que los botones queden siempre visibles */
-.modal-actions{
-  position: sticky;
-  bottom: 0;
-  background: #fff;
-  padding-top: 10px;
 }
 
 /* ================== DETALLES COCINA ================== */
@@ -262,7 +245,7 @@
   font-size:.85rem;
 }
 
-/* Opciones de modal */
+/* Opciones del modal */
 .custom-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -289,7 +272,7 @@ const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin prote�
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
 /* ✅ categorías donde NO debe abrir el modal */
-const CATEGORIAS_SIN_CUSTOM = new Set(["Bebidas", "Bebida", "Extras", "Extra"]);
+const CATEGORIAS_SIN_CUSTOM = new Set(["Bebidas","Bebida","Extras","Extra"]);
 
 let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
@@ -303,12 +286,11 @@ function escapeHtml(str){
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
 function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ✅ Click agrega al carrito; solo abre modal si NO es bebida/extra */
+/* ✅ Click agrega al carrito; solo abre modal si NO es Bebidas/Extras */
 function agregarProducto(id, nombre, precio, categoria) {
   const uid = uidLinea(id);
   const cat = (categoria || "").trim();
@@ -399,19 +381,17 @@ function eliminarProducto(uid){
 
 function editarLinea(uid){
   if (!carrito[uid]) return;
-  editandoUid = uid;
-  const it = carrito[uid];
 
-  /* ✅ si es bebida/extra, no abrir modal */
+  const it = carrito[uid];
   const cat = (it.categoria || "").trim();
   if (CATEGORIAS_SIN_CUSTOM.has(cat)) return;
 
+  editandoUid = uid;
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
   abrirCustomModal();
 
   const targetProt = it.custom && it.custom.proteina ? it.custom.proteina : "";
-  const protRadios = document.querySelectorAll("input[name='proteina_radio']");
-  protRadios.forEach((r, idx) => {
+  document.querySelectorAll("input[name='proteina_radio']").forEach((r, idx) => {
     r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
   });
 
