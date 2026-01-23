@@ -5,174 +5,174 @@
 
 <form method="post" id="pedidoForm" class="pos-layout">
 
-    <section class="pos-left">
+  <section class="pos-left">
 
-        <div class="card">
-            <div class="card-head">
-                <h3>Datos del pedido</h3>
-            </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>Datos del pedido</h3>
+      </div>
 
-            <div class="form-grid">
+      <div class="form-grid">
 
-                <div>
-                    <label>Fecha</label>
-                    <input type="datetime-local" name="fecha">
-                    <small>Vacío = ahora</small>
-                </div>
-
-                <div>
-                    <label>Origen</label>
-                    <select name="origen" id="origenSelect">
-                        <option value="mostrador">Mostrador</option>
-                        <option value="uber">Uber</option>
-                        <option value="didi">Didi</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label>Mesero</label>
-                    <input type="text" name="mesero" placeholder="Nombre">
-                </div>
-
-                <div>
-                    <label>Método de pago</label>
-                    <select name="metodo_pago">
-                        <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option>
-                        <option value="transfer">Transferencia</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-
-                <div class="uber-box" id="uberBox">
-                    <label>Monto Uber</label>
-                    <input type="number" name="monto_uber" step="0.01" value="0">
-                    <small>Negativo = comisión</small>
-                </div>
-
-            </div>
+        <div>
+          <label>Fecha</label>
+          <input type="datetime-local" name="fecha">
+          <small>Vacío = ahora</small>
         </div>
 
-        <div class="card">
-            <div class="card-head">
-                <h3>Productos</h3>
-                <div class="hint">Toca para agregar (+1)</div>
-            </div>
-
-            <div class="productos-grid">
-                {% for p in productos %}
-                <button type="button"
-                        class="producto-card"
-                        onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
-                    <div class="producto-nombre">{{ p.nombre }}</div>
-                    <div class="producto-meta">
-                        <span class="categoria">{{ p.categoria }}</span>
-                        <span class="precio">{{ p.precio | money }}</span>
-                    </div>
-                </button>
-                {% endfor %}
-            </div>
+        <div>
+          <label>Origen</label>
+          <select name="origen" id="origenSelect">
+            <option value="mostrador">Mostrador</option>
+            <option value="uber">Uber</option>
+            <option value="didi">Didi</option>
+            <option value="otro">Otro</option>
+          </select>
         </div>
 
-    </section>
-
-    <aside class="pos-right">
-
-        <div class="card card-sticky">
-
-            <div class="card-head carrito-head">
-                <div>
-                    <h3 class="carrito-title">Carrito</h3>
-                    <div class="hint">+ / – para ajustar</div>
-                </div>
-
-                <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-            </div>
-
-            <div class="carrito-wrap">
-                <table id="carritoTable">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cant.</th>
-                            <th>Precio</th>
-                            <th>Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-
-                <div class="total-box">
-                    <div>Total</div>
-                    <div class="total-amount" id="totalPedido">$0.00</div>
-                </div>
-
-                <div id="inputsHidden"></div>
-
-                <button type="submit" class="btn-guardar">
-                    💾 Guardar pedido
-                </button>
-            </div>
-
+        <div>
+          <label>Mesero</label>
+          <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-    </aside>
+        <div>
+          <label>Método de pago</label>
+          <select name="metodo_pago">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transfer">Transferencia</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="uber-box" id="uberBox">
+          <label>Monto Uber</label>
+          <input type="number" name="monto_uber" step="0.01" value="0">
+          <small>Negativo = comisión</small>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Productos</h3>
+        <div class="hint">Toca para agregar (+1)</div>
+      </div>
+
+      <div class="productos-grid">
+        {% for p in productos %}
+        <button type="button"
+                class="producto-card"
+                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
+          <div class="producto-nombre">{{ p.nombre }}</div>
+          <div class="producto-meta">
+            <span class="categoria">{{ p.categoria }}</span>
+            <span class="precio">{{ p.precio | money }}</span>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+  </section>
+
+  <aside class="pos-right">
+
+    <div class="card card-sticky">
+
+      <div class="card-head carrito-head">
+        <div>
+          <h3 class="carrito-title">Carrito</h3>
+          <div class="hint">+ / – para ajustar</div>
+        </div>
+
+        <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
+      </div>
+
+      <div class="carrito-wrap">
+        <table id="carritoTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="total-box">
+          <div>Total</div>
+          <div class="total-amount" id="totalPedido">$0.00</div>
+        </div>
+
+        <div id="inputsHidden"></div>
+
+        <button type="submit" class="btn-guardar">
+          💾 Guardar pedido
+        </button>
+      </div>
+
+    </div>
+
+  </aside>
 
 </form>
 
 <!-- ================== MODAL PERSONALIZACIÓN ================== -->
 <div id="customModal" class="modal">
-    <div class="modal-box">
+  <div class="modal-box">
 
-        <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
+    <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
 
-        <h3 style="margin-top:0;">Personalizar</h3>
-        <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
+    <h3 style="margin-top:0;">Personalizar</h3>
+    <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
 
-        <div class="custom-section">
-            <label><strong>Proteína</strong></label>
-            <div id="proteinaRadios" class="custom-grid"></div>
-        </div>
-
-        <div class="custom-section">
-            <label><strong>Quitar</strong></label>
-            <div id="sinChecks" class="custom-grid"></div>
-            <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
-        </div>
-
-        <div class="custom-section">
-            <label><strong>Notas</strong></label>
-            <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
-        </div>
-
-        <div class="modal-actions">
-            <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
-        </div>
+    <div class="custom-section">
+      <label><strong>Proteína</strong></label>
+      <div id="proteinaRadios" class="custom-grid"></div>
     </div>
+
+    <div class="custom-section">
+      <label><strong>Quitar</strong></label>
+      <div id="sinChecks" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
+    </div>
+
+    <div class="custom-section">
+      <label><strong>Notas</strong></label>
+      <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
+      <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ================== VISTA COCINA ================== -->
 <div id="cocinaModal" class="modal">
-    <div class="modal-box">
+  <div class="modal-box">
 
-        <button class="modal-close" type="button" onclick="cerrarVistaCocina()">✕</button>
+    <button class="modal-close" type="button" onclick="cerrarVistaCocina()">✕</button>
 
-        <h3 style="margin-top:0;">Comanda (Vista cocina)</h3>
-        <p class="hint">Se imprime/visualiza con los modificadores seleccionados.</p>
+    <h3 style="margin-top:0;">Comanda (Vista cocina)</h3>
+    <p class="hint">Se imprime/visualiza con los modificadores seleccionados.</p>
 
-        <div id="cocinaBody"></div>
+    <div id="cocinaBody"></div>
 
-        <div class="modal-actions">
-            <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
-            <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
-        </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
+      <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
     </div>
+  </div>
 </div>
 
-<!-- ================== ESTILOS RESPONSIVE (tablet/móvil) ================== -->
+<!-- ================== ESTILOS (tablet/móvil + modal iPad) ================== -->
 <style>
 /* Ajustes layout en tablet/móvil para que no se encime */
 @media (max-width: 1100px){
@@ -446,7 +446,6 @@ function abrirCustomModal(){
   document.getElementById("notaInput").value = "";
 
   setVH();
-
   document.body.style.overflow = "hidden";
   document.getElementById("customModal").classList.add("is-open");
 }
@@ -544,19 +543,19 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
