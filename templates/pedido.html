@@ -4,273 +4,289 @@
 <h2 class="pos-title">🧾 Pedido #{{ pedido.id }}</h2>
 
 <div class="pedido-header">
-    <div class="pedido-info">
-        <div><strong>Estado:</strong> {{ pedido.estado }}</div>
-        <div><strong>Total:</strong> {{ pedido.total | money }}</div>
-    </div>
+  <div class="pedido-info">
+    <div><strong>Estado:</strong> {{ pedido.estado }}</div>
+    <div><strong>Total:</strong> {{ pedido.total | money }}</div>
+  </div>
 
-    <div class="pedido-actions">
-        <button type="button"
-                class="btn-primary"
-                onclick="abrirTicketPreview({{ pedido.id }})">
-            🧾 Ver ticket
-        </button>
+  <div class="pedido-actions">
+    <button type="button" class="btn-primary" onclick="abrirTicketPreview({{ pedido.id }})">
+      🧾 Ver ticket
+    </button>
 
-        {% if pedido.estado == 'abierto' %}
-        <button type="button"
-                class="btn-warning"
-                onclick="abrirCerrarPedido()">
-            ✅ Cerrar pedido
-        </button>
-        {% endif %}
-    </div>
+    {% if pedido.estado == 'abierto' %}
+    <button type="button" class="btn-warning" onclick="abrirCerrarPedido()">
+      ✅ Cerrar pedido
+    </button>
+    {% endif %}
+  </div>
 </div>
 
 <div class="pos-layout">
 
-    <!-- ================== PANEL IZQUIERDO ================== -->
-    <section class="pos-left">
+  <!-- ================== PANEL IZQUIERDO ================== -->
+  <section class="pos-left">
 
-        <!-- ================== ITEMS DEL PEDIDO ================== -->
-        <div class="card">
-            <div class="card-head">
-                <h3>Productos en el pedido</h3>
-            </div>
+    <!-- ================== ITEMS DEL PEDIDO ================== -->
+    <div class="card">
+      <div class="card-head">
+        <h3>Productos en el pedido</h3>
+      </div>
 
-            {% if items %}
-            <table class="pedido-table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Subtotal</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for it in items %}
-                    <tr>
-                        <td class="td-left">
-                            {{ it.nombre }}
+      {% if items %}
+      <table class="pedido-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td class="td-left">
+              {{ it.nombre }}
 
-                            {# === NUEVO: mostrar personalización guardada === #}
-                            {% if it.proteina or it.sin or it.nota %}
-                            <div class="cocina-meta">
-                                {% if it.proteina %}
-                                <div><span class="tag">PROT: {{ it.proteina }}</span></div>
-                                {% endif %}
-                                {% if it.sin %}
-                                <div><span class="tag tag-warn">SIN: {{ it.sin }}</span></div>
-                                {% endif %}
-                                {% if it.nota %}
-                                <div class="nota"><strong>NOTA:</strong> {{ it.nota }}</div>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>{{ it.cantidad }}</td>
-                        <td>{{ it.precio_unitario | money }}</td>
-                        <td><strong>{{ it.subtotal | money }}</strong></td>
-                        <td>
-                            {% if pedido.estado == 'abierto' %}
-                            <form method="post"
-                                  action="{{ url_for('eliminar_item_pedido',
-                                                      pedido_id=pedido.id,
-                                                      item_id=it.id) }}"
-                                  onsubmit="return confirm('¿Eliminar este producto?')">
-                                <button type="submit" class="btn-red">✕</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No hay productos aún.</p>
-            {% endif %}
-        </div>
+              {# === mostrar personalización guardada === #}
+              {% if it.proteina or it.sin or it.nota %}
+              <div class="cocina-meta">
+                {% if it.proteina %}
+                <div><span class="tag">PROT: {{ it.proteina }}</span></div>
+                {% endif %}
+                {% if it.sin %}
+                <div><span class="tag tag-warn">SIN: {{ it.sin }}</span></div>
+                {% endif %}
+                {% if it.nota %}
+                <div class="nota"><strong>NOTA:</strong> {{ it.nota }}</div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </td>
+            <td>{{ it.cantidad }}</td>
+            <td>{{ it.precio_unitario | money }}</td>
+            <td><strong>{{ it.subtotal | money }}</strong></td>
+            <td>
+              {% if pedido.estado == 'abierto' %}
+              <form method="post"
+                    action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}"
+                    onsubmit="return confirm('¿Eliminar este producto?')">
+                <button type="submit" class="btn-red">✕</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No hay productos aún.</p>
+      {% endif %}
+    </div>
 
-        <!-- ================== AGREGAR MÁS ================== -->
-        {% if pedido.estado == 'abierto' %}
-        <div class="card">
-            <div class="card-head">
-                <h3>Agregar productos</h3>
-                <span class="hint">Toca para sumar</span>
-            </div>
-
-            <div class="productos-grid">
-                {% for p in productos %}
-                <button type="button"
-                        class="producto-card"
-                        onclick="agregarProducto('{{ p.id }}', {{ p.nombre|tojson }}, {{ p.precio }})"
-                    <div class="producto-nombre">{{ p.nombre }}</div>
-                    <div class="producto-meta">
-                        <span class="categoria">{{ p.categoria }}</span>
-                        <span class="precio">{{ p.precio | money }}</span>
-                    </div>
-                </button>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-    </section>
-
-    <!-- ================== PANEL DERECHO ================== -->
+    <!-- ================== AGREGAR MÁS ================== -->
     {% if pedido.estado == 'abierto' %}
-    <aside class="pos-right">
+    <div class="card">
+      <div class="card-head">
+        <h3>Agregar productos</h3>
+        <span class="hint">Toca para sumar</span>
+      </div>
 
-        <div class="card card-sticky">
+      <div class="productos-grid">
+        {% for p in productos %}
+        <button type="button"
+                class="producto-card"
+                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
+          <div class="producto-nombre">{{ p.nombre }}</div>
+          <div class="producto-meta">
+            <span class="categoria">{{ p.categoria }}</span>
+            <span class="precio">{{ p.precio | money }}</span>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
-            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <h3 style="margin:0;">Carrito nuevo</h3>
+  </section>
 
-                {# NUEVO: vista cocina (overlay) #}
-                <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-            </div>
+  <!-- ================== PANEL DERECHO ================== -->
+  {% if pedido.estado == 'abierto' %}
+  <aside class="pos-right">
 
-            <!-- 👇 FORM CORRECTAMENTE ENVOLVIENDO LOS INPUTS -->
-            <form method="post">
+    <div class="card card-sticky">
 
-                <table id="carritoTable">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cant.</th>
-                            <th>Precio</th>
-                            <th>Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+      <div class="card-head carrito-head">
+        <h3 style="margin:0;">Carrito nuevo</h3>
+        <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
+      </div>
 
-                <div class="total-box">
-                    <div>Total agregado</div>
-                    <div class="total-amount" id="totalPedido">$0.00</div>
-                </div>
+      <form method="post">
+        <table id="carritoTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
 
-                <!-- 🔥 AHORA SÍ VIAJA EN EL POST -->
-                <div id="inputsHidden"></div>
-
-                <button type="submit" class="btn-guardar">
-                    ➕ Agregar al pedido
-                </button>
-
-            </form>
-
+        <div class="total-box">
+          <div>Total agregado</div>
+          <div class="total-amount" id="totalPedido">$0.00</div>
         </div>
 
-    </aside>
-    {% endif %}
+        <div id="inputsHidden"></div>
+
+        <button type="submit" class="btn-guardar">
+          ➕ Agregar al pedido
+        </button>
+      </form>
+
+    </div>
+
+  </aside>
+  {% endif %}
 
 </div>
 
 <!-- ================== MODAL TICKET ================== -->
 <div id="ticketModal" class="modal">
-    <div class="modal-box monospace">
+  <div class="modal-box monospace">
+    <button type="button" class="modal-close" onclick="cerrarTicketModal()">✕</button>
+    <h3>Preview del ticket</h3>
+    <pre id="ticketTexto" class="ticket-preview"></pre>
 
-        <button class="modal-close" onclick="cerrarTicketModal()">✕</button>
-
-        <h3>Preview del ticket</h3>
-
-        <pre id="ticketTexto" class="ticket-preview"></pre>
-
-        <a id="btnWhatsapp"
-           target="_blank"
-           class="btn-whatsapp">
-            📲 Enviar por WhatsApp
-        </a>
-    </div>
+    <a id="btnWhatsapp" target="_blank" class="btn-whatsapp">
+      📲 Enviar por WhatsApp
+    </a>
+  </div>
 </div>
 
 <!-- ================== MODAL CERRAR PEDIDO ================== -->
 <div id="cerrarModal" class="modal">
-    <div class="modal-box">
+  <div class="modal-box">
+    <button type="button" class="modal-close" onclick="cerrarCerrarModal()">✕</button>
 
-        <button class="modal-close" onclick="cerrarCerrarModal()">✕</button>
+    <h3>Cerrar pedido</h3>
 
-        <h3>Cerrar pedido</h3>
+    <label>Número WhatsApp (opcional)</label>
+    <input type="text" id="telefonoWhatsapp" placeholder="5214491234567">
 
-        <label>Número WhatsApp (opcional)</label>
-        <input type="text" id="telefonoWhatsapp"
-               placeholder="5214491234567">
+    <p class="hint">Si ingresas un número, se enviará el ticket.</p>
 
-        <p class="hint">
-            Si ingresas un número, se enviará el ticket.
-        </p>
+    <div class="modal-actions">
+      <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}">
+        <button type="submit" class="btn-gray">Cerrar sin enviar</button>
+      </form>
 
-        <div class="modal-actions">
-            <form method="post"
-                  action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}">
-                <button type="submit" class="btn-gray">
-                    Cerrar sin enviar
-                </button>
-            </form>
-
-            <button type="button"
-                    class="btn-whatsapp"
-                    onclick="cerrarYEnviar()">
-                Cerrar y enviar
-            </button>
-        </div>
+      <button type="button" class="btn-whatsapp" onclick="cerrarYEnviar()">
+        Cerrar y enviar
+      </button>
     </div>
+  </div>
 </div>
 
-<!-- ================== NUEVO: MODAL PERSONALIZACIÓN ================== -->
-<div id="customModal" class="modal" style="display:none;">
-    <div class="modal-box">
+<!-- ================== MODAL PERSONALIZACIÓN ================== -->
+<div id="customModal" class="modal">
+  <div class="modal-box">
+    <button type="button" class="modal-close" onclick="cerrarCustomModal()">✕</button>
 
-        <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
+    <h3>Personalizar</h3>
+    <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
 
-        <h3>Personalizar</h3>
-        <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
-
-        <div style="margin-top:10px;">
-            <label><strong>Proteína</strong></label>
-            <div id="proteinaRadios" class="custom-grid"></div>
-        </div>
-
-        <div style="margin-top:12px;">
-            <label><strong>Quitar</strong></label>
-            <div id="sinChecks" class="custom-grid"></div>
-            <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
-        </div>
-
-        <div style="margin-top:12px;">
-            <label><strong>Notas</strong></label>
-            <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
-        </div>
-
-        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-            <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmarCustom()">Agregar</button>
-        </div>
+    <div class="custom-section">
+      <label><strong>Proteína</strong></label>
+      <div id="proteinaRadios" class="custom-grid"></div>
     </div>
+
+    <div class="custom-section">
+      <label><strong>Quitar</strong></label>
+      <div id="sinChecks" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
+    </div>
+
+    <div class="custom-section">
+      <label><strong>Notas</strong></label>
+      <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
+      <button type="button" class="btn-primary" onclick="confirmarCustom()">Agregar</button>
+    </div>
+  </div>
 </div>
 
-<!-- ================== NUEVO: VISTA COCINA (OVERLAY) ================== -->
-<div id="cocinaModal" class="modal" style="display:none;">
-    <div class="modal-box">
+<!-- ================== VISTA COCINA (OVERLAY) ================== -->
+<div id="cocinaModal" class="modal">
+  <div class="modal-box">
+    <button type="button" class="modal-close" onclick="cerrarVistaCocina()">✕</button>
 
-        <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
+    <h3>Comanda (Vista cocina)</h3>
+    <p class="hint">Pedido #{{ pedido.id }}</p>
 
-        <h3>Comanda (Vista cocina)</h3>
-        <p class="hint">Pedido #{{ pedido.id }}</p>
+    <div id="cocinaBody"></div>
 
-        <div id="cocinaBody"></div>
-
-        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-            <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
-            <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
-        </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
+      <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
     </div>
+  </div>
 </div>
 
-<!-- ================== NUEVO: estilos mínimos para cocina/personalización ================== -->
 <style>
+/* ====== Layout responsive (iPad) ====== */
+@media (max-width: 1100px){
+  .pos-layout{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .pos-left,.pos-right{ width:100%; }
+  .card-sticky{ position:static !important; top:auto !important; }
+}
+
+/* ====== Evitar que texto/tabla se salgan ====== */
+.pos-layout, .card, .carrito-wrap, #carritoTable, .modal-box{ max-width:100%; }
+body{ overflow-x:hidden; }
+
+#carritoTable, .pedido-table{
+  width:100%;
+  table-layout:fixed;
+}
+
+#carritoTable th,#carritoTable td,
+.pedido-table th,.pedido-table td{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  vertical-align:top;
+}
+
+#carritoTable td.td-left,
+#carritoTable td:first-child,
+.pedido-table td.td-left,
+.pedido-table td:first-child{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* ====== Header carrito ====== */
+.carrito-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+/* ====== Meta modificadores ====== */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -280,113 +296,184 @@
   border:1px solid #ddd;
   font-weight:700;
   font-size:.85rem;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
-.tag-warn{
-  background:#fff3cd;
-  border-color:#f0c36d;
-}
+.tag-warn{ background:#fff3cd; border-color:#f0c36d; }
 .nota{
   padding:6px 8px;
   border-radius:8px;
   border:1px dashed #bbb;
   background:#fff;
   font-size:.85rem;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
+
+/* ====== Grid personalización ====== */
+.custom-section{ margin-top:12px; }
 .custom-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:8px;
+  gap:10px;
   margin-top:8px;
 }
 .custom-pill{
   border:1px solid #ddd;
-  border-radius:10px;
-  padding:8px;
+  border-radius:12px;
+  padding:12px;
   display:flex;
   gap:10px;
   align-items:center;
 }
-@media (max-width: 520px){
+@media (max-width: 1100px){
   .custom-grid{ grid-template-columns:1fr; }
+}
+
+/* ====== Modal robusto (iPad) ====== */
+.modal{
+  position:fixed;
+  left:0; top:0;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,.45);
+  z-index:2147483647;
+  padding:14px;
+  box-sizing:border-box;
+  overscroll-behavior:contain;
+}
+.modal.is-open{ display:flex; }
+
+.modal-box{
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  width:min(640px, 94vw);
+  max-height: calc(var(--vh, 1vh) * 88);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  transform: translateZ(0);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+@media (max-width: 1100px){
+  .modal{ align-items:flex-end; padding:10px; }
+  .modal-box{
+    width:100%;
+    border-radius:18px 18px 14px 14px;
+    max-height: calc(var(--vh, 1vh) * 92);
+  }
+}
+.modal-close{
+  position:sticky;
+  top:0;
+  float:right;
+  border:0;
+  background:rgba(255,255,255,.88);
+  backdrop-filter: blur(6px);
+  font-size:18px;
+  cursor:pointer;
+  padding:6px 10px;
+  border-radius:10px;
+}
+.modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
+.modal-actions{
+  position:sticky;
+  bottom:0;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(6px);
+  padding-top:10px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
 }
 </style>
 
-<!-- ================== SCRIPT ================== -->
 <script>
-/**
- * CAMBIO PRINCIPAL:
- * - Ya no usamos carrito[idProducto] porque ahora se guardará personalización por línea.
- * - Usamos carrito[uid] para permitir 2 chilaquiles con distinta personalización.
- * - En el POST mandamos producto_id[] / cantidad[] / proteina[] / sin[] / nota[]
- */
+/* ===== Fix vh real en iPad/iPhone ===== */
+function setVH(){
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+setVH();
+window.addEventListener('resize', setVH);
+window.addEventListener('orientationchange', setVH);
 
+/* ===== Config modificadores ===== */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-let carrito = {}; // carrito[uid] = {producto_id, nombre, precio, cantidad, custom:{proteina, sin[], nota}}
+let carrito = {}; // carrito[uid]
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 
 function escapeHtml(str){
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  const s = String(str ?? "");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function uidLinea(producto_id){
-  return `${producto_id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ===== Agregar producto: ahora abre modal de personalización ===== */
-function agregarProducto(producto_id, nombre, precio) {
-    const uid = uidLinea(producto_id);
-    modalState = { producto_id, nombre, precio, uid };
-    abrirCustomModal();
+/* ===== Agregar producto (abre modal) ===== */
+function agregarProducto(producto_id, nombre, precio){
+  const uid = uidLinea(producto_id);
+  modalState = { producto_id, nombre, precio: Number(precio), uid };
+  abrirCustomModal();
 }
 
 /* ===== Modal personalización ===== */
 function abrirCustomModal(){
+  setVH();
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
-  // Radios proteínas
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
   PROTEINAS.forEach((p, idx) => {
-    radios.innerHTML += `
-      <label class="custom-pill">
-        <input type="radio" name="proteina_radio" value="${escapeHtml(p)}" ${idx===0 ? "checked" : ""}>
-        <span>${escapeHtml(p)}</span>
-      </label>
-    `;
+    radios.innerHTML +=
+      '<label class="custom-pill">' +
+        '<input type="radio" name="proteina_radio" value="' + escapeHtml(p) + '" ' + (idx===0 ? 'checked' : '') + '>' +
+        '<span>' + escapeHtml(p) + '</span>' +
+      '</label>';
   });
 
-  // Checks sin
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   SIN_OPCIONES.forEach((s) => {
-    checks.innerHTML += `
-      <label class="custom-pill">
-        <input type="checkbox" name="sin_check" value="${escapeHtml(s)}">
-        <span>Sin ${escapeHtml(s)}</span>
-      </label>
-    `;
+    checks.innerHTML +=
+      '<label class="custom-pill">' +
+        '<input type="checkbox" name="sin_check" value="' + escapeHtml(s) + '">' +
+        '<span>Sin ' + escapeHtml(s) + '</span>' +
+      '</label>';
   });
 
   document.getElementById("notaInput").value = "";
 
-  document.getElementById("customModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  document.getElementById("customModal").classList.add("is-open");
 }
 
 function cerrarCustomModal(){
-  document.getElementById("customModal").style.display = "none";
+  document.getElementById("customModal").classList.remove("is-open");
+  document.body.style.overflow = "";
   modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 }
 
 function confirmarCustom(){
-  const proteina = document.querySelector("input[name='proteina_radio']:checked")?.value || "";
-  const sin = [...document.querySelectorAll("input[name='sin_check']:checked")].map(x => x.value);
+  const protEl = document.querySelector("input[name='proteina_radio']:checked");
+  const proteina = protEl ? protEl.value : "";
+  const sin = [];
+  document.querySelectorAll("input[name='sin_check']:checked").forEach(x => sin.push(x.value));
   const nota = document.getElementById("notaInput").value || "";
 
   const uid = modalState.uid;
@@ -394,7 +481,7 @@ function confirmarCustom(){
   carrito[uid] = {
     producto_id: modalState.producto_id,
     nombre: modalState.nombre,
-    precio: modalState.precio,
+    precio: Number(modalState.precio),
     cantidad: 1,
     custom: { proteina, sin, nota }
   };
@@ -403,136 +490,135 @@ function confirmarCustom(){
   renderCarrito();
 }
 
-/* ===== Controles del carrito ===== */
-function restarProducto(uid) {
-    if (!carrito[uid]) return;
-    carrito[uid].cantidad--;
-    if (carrito[uid].cantidad <= 0) delete carrito[uid];
-    renderCarrito();
-}
-
-function sumarProducto(uid){
+/* ===== Controles carrito ===== */
+function restarProducto(uid){
   if (!carrito[uid]) return;
-  carrito[uid].cantidad++;
+  carrito[uid].cantidad -= 1;
+  if (carrito[uid].cantidad <= 0) delete carrito[uid];
   renderCarrito();
 }
-
-function eliminarProducto(uid) {
-    delete carrito[uid];
-    renderCarrito();
+function sumarProducto(uid){
+  if (!carrito[uid]) return;
+  carrito[uid].cantidad += 1;
+  renderCarrito();
 }
-
-/* ===== Editar personalización de una línea ===== */
+function eliminarProducto(uid){
+  delete carrito[uid];
+  renderCarrito();
+}
 function editarLinea(uid){
   const it = carrito[uid];
   if (!it) return;
 
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
-
-  // Abrir modal y precargar valores
   abrirCustomModal();
 
-  // Set proteina
-  const targetProt = it.custom?.proteina || "";
+  const targetProt = (it.custom && it.custom.proteina) ? it.custom.proteina : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
-  protRadios.forEach(r => { r.checked = (r.value === targetProt) || (!targetProt && r === protRadios[0]); });
+  protRadios.forEach((r, idx) => {
+    r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
+  });
 
-  // Set sin
-  const setSin = new Set(it.custom?.sin || []);
-  document.querySelectorAll("input[name='sin_check']").forEach(c => { c.checked = setSin.has(c.value); });
+  const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
+  document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
 
-  // Nota
-  document.getElementById("notaInput").value = it.custom?.nota || "";
+  document.getElementById("notaInput").value = (it.custom && it.custom.nota) ? it.custom.nota : "";
 }
 
 /* ===== Render + hidden inputs ===== */
-function renderCarrito() {
-    const tbody = document.querySelector("#carritoTable tbody");
-    const hidden = document.getElementById("inputsHidden");
-    tbody.innerHTML = "";
-    hidden.innerHTML = "";
+function renderCarrito(){
+  const tbody = document.querySelector("#carritoTable tbody");
+  const hidden = document.getElementById("inputsHidden");
+  tbody.innerHTML = "";
+  hidden.innerHTML = "";
 
-    let total = 0;
+  let total = 0;
 
-    for (const uid in carrito) {
-        const it = carrito[uid];
-        const subtotal = it.precio * it.cantidad;
-        total += subtotal;
+  Object.keys(carrito).forEach(uid => {
+    const it = carrito[uid];
+    const subtotal = Number(it.precio) * Number(it.cantidad);
+    total += subtotal;
 
-        const prot = it.custom?.proteina ? `PROT: ${it.custom.proteina}` : "";
-        const sin = (it.custom?.sin && it.custom.sin.length) ? `SIN: ${it.custom.sin.join(", ")}` : "";
-        const nota = (it.custom?.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+    const prot = (it.custom && it.custom.proteina) ? ("PROT: " + it.custom.proteina) : "";
+    const sin  = (it.custom && it.custom.sin && it.custom.sin.length) ? ("SIN: " + it.custom.sin.join(", ")) : "";
+    const nota = (it.custom && it.custom.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
 
-        const cocinaHtml = (prot || sin || nota) ? `
-          <div class="cocina-meta">
-            ${prot ? `<div><span class="tag">${escapeHtml(prot)}</span></div>` : ""}
-            ${sin ? `<div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>` : ""}
-            ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
-          </div>
-        ` : "";
-
-        tbody.innerHTML += `
-            <tr>
-                <td class="td-left">
-                  ${escapeHtml(it.nombre)}
-                  ${cocinaHtml}
-                  <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <button type="button" class="btn-gray" onclick="editarLinea('${uid}')">Editar</button>
-                  </div>
-                </td>
-                <td>
-                    <button type="button" onclick="restarProducto('${uid}')">–</button>
-                    ${it.cantidad}
-                    <button type="button" onclick="sumarProducto('${uid}')">+</button>
-                </td>
-                <td>$${Number(it.precio).toFixed(2)}</td>
-                <td><strong>$${subtotal.toFixed(2)}</strong></td>
-                <td><button type="button" onclick="eliminarProducto('${uid}')">✕</button></td>
-            </tr>
-        `;
-
-        // ✅ Ahora mandamos personalización para que app.py la guarde
-        hidden.innerHTML += `
-            <input type="hidden" name="producto_id[]" value="${escapeHtml(it.producto_id)}">
-            <input type="hidden" name="cantidad[]" value="${escapeHtml(it.cantidad)}">
-            <input type="hidden" name="proteina[]" value="${escapeHtml(it.custom?.proteina || "")}">
-            <input type="hidden" name="sin[]" value="${escapeHtml((it.custom?.sin || []).join(","))}">
-            <input type="hidden" name="nota[]" value="${escapeHtml(it.custom?.nota || "")}">
-        `;
+    let cocinaHtml = "";
+    if (prot || sin || nota){
+      cocinaHtml += '<div class="cocina-meta">';
+      if (prot) cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
+      if (sin)  cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
+      if (nota) cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
+      cocinaHtml += '</div>';
     }
 
-    document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
+    tbody.innerHTML +=
+      '<tr>' +
+        '<td class="td-left">' +
+          escapeHtml(it.nombre) +
+          cocinaHtml +
+          '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
+            '<button type="button" class="btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+          '</div>' +
+        '</td>' +
+        '<td>' +
+          '<div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">' +
+            '<button type="button" class="btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<span style="min-width:22px; text-align:center;">' + it.cantidad + '</span>' +
+            '<button type="button" class="btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+          '</div>' +
+        '</td>' +
+        '<td>$' + Number(it.precio).toFixed(2) + '</td>' +
+        '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
+        '<td><button type="button" class="btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+      '</tr>';
+
+    hidden.innerHTML +=
+      '<input type="hidden" name="producto_id[]" value="' + escapeHtml(it.producto_id) + '">' +
+      '<input type="hidden" name="cantidad[]" value="' + escapeHtml(it.cantidad) + '">' +
+      '<input type="hidden" name="proteina[]" value="' + escapeHtml(it.custom ? (it.custom.proteina || "") : "") + '">' +
+      '<input type="hidden" name="sin[]" value="' + escapeHtml(it.custom && it.custom.sin ? it.custom.sin.join(",") : "") + '">' +
+      '<input type="hidden" name="nota[]" value="' + escapeHtml(it.custom ? (it.custom.nota || "") : "") + '">';
+  });
+
+  document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
 }
 
-/* ===== MODALES EXISTENTES ===== */
-function abrirTicketPreview(id) {
-    fetch(`/pedido/${id}/ticket_preview`)
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById("ticketTexto").innerText = d.texto;
-            document.getElementById("btnWhatsapp").href = d.whatsapp_url;
-            document.getElementById("ticketModal").style.display = "flex";
-        });
+/* ===== Modales ticket/cerrar ===== */
+function abrirTicketPreview(id){
+  fetch(`/pedido/${id}/ticket_preview`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById("ticketTexto").innerText = d.texto;
+      document.getElementById("btnWhatsapp").href = d.whatsapp_url;
+      setVH();
+      document.body.style.overflow = "hidden";
+      document.getElementById("ticketModal").classList.add("is-open");
+    });
 }
-function cerrarTicketModal() {
-    document.getElementById("ticketModal").style.display = "none";
+function cerrarTicketModal(){
+  document.getElementById("ticketModal").classList.remove("is-open");
+  document.body.style.overflow = "";
 }
-function abrirCerrarPedido() {
-    document.getElementById("cerrarModal").style.display = "flex";
+function abrirCerrarPedido(){
+  setVH();
+  document.body.style.overflow = "hidden";
+  document.getElementById("cerrarModal").classList.add("is-open");
 }
-function cerrarCerrarModal() {
-    document.getElementById("cerrarModal").style.display = "none";
+function cerrarCerrarModal(){
+  document.getElementById("cerrarModal").classList.remove("is-open");
+  document.body.style.overflow = "";
 }
-function cerrarYEnviar() {
-    const tel = document.getElementById("telefonoWhatsapp").value;
-    if (!tel) return alert("Ingresa un número");
+function cerrarYEnviar(){
+  const tel = document.getElementById("telefonoWhatsapp").value;
+  if (!tel) return alert("Ingresa un número");
 
-    window.open(`/pedido/{{ pedido.id }}/whatsapp?tel=${tel}`, "_blank");
-    fetch(`/cerrar_pedido/{{ pedido.id }}`, { method: "POST" })
-        .then(() => location.href = "/pedidos_abiertos");
+  window.open(`/pedido/{{ pedido.id }}/whatsapp?tel=${encodeURIComponent(tel)}`, "_blank");
+  fetch(`/cerrar_pedido/{{ pedido.id }}`, { method: "POST" })
+    .then(() => location.href = "/pedidos_abiertos");
 }
 
-/* ===== NUEVO: VISTA COCINA ===== */
+/* ===== Vista cocina ===== */
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
@@ -540,47 +626,54 @@ function abrirVistaCocina(){
 
   if (!uids.length){
     body.innerHTML = "<p>No hay productos nuevos en el carrito.</p>";
-    modal.style.display = "flex";
+    setVH();
+    document.body.style.overflow = "hidden";
+    modal.classList.add("is-open");
     return;
   }
 
   let html = "";
   uids.forEach(uid => {
     const it = carrito[uid];
-    const prot = it.custom?.proteina ? `PROT: ${it.custom.proteina}` : "PROT: —";
-    const sin = (it.custom?.sin && it.custom.sin.length) ? `SIN: ${it.custom.sin.join(", ")}` : "SIN: —";
-    const nota = (it.custom?.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+    const prot = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
+    const sin  = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
+    const nota = it.custom && it.custom.nota && it.custom.nota.trim() ? it.custom.nota.trim() : "";
 
-    html += `
-      <div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">
-        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-          <div style="font-size:1.05rem; font-weight:900;">${escapeHtml(it.nombre)}</div>
-          <div style="font-size:1.05rem; font-weight:900;">x${it.cantidad}</div>
-        </div>
-        <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
-          <div><span class="tag">${escapeHtml(prot)}</span></div>
-          <div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>
-          ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
-        </div>
-      </div>
-    `;
+    html +=
+      '<div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">' +
+        '<div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">' +
+          '<div style="font-size:1.05rem; font-weight:900;">' + escapeHtml(it.nombre) + '</div>' +
+          '<div style="font-size:1.05rem; font-weight:900;">x' + it.cantidad + '</div>' +
+        '</div>' +
+        '<div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">' +
+          '<div><span class="tag">' + escapeHtml(prot) + '</span></div>' +
+          '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>' +
+          (nota ? '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>' : "") +
+        '</div>' +
+      '</div>';
   });
 
   body.innerHTML = html;
-  modal.style.display = "flex";
+  setVH();
+  document.body.style.overflow = "hidden";
+  modal.classList.add("is-open");
 }
-
 function cerrarVistaCocina(){
-  document.getElementById("cocinaModal").style.display = "none";
+  document.getElementById("cocinaModal").classList.remove("is-open");
+  document.body.style.overflow = "";
 }
 
-/* UX: cerrar modal custom al click fuera (sin romper tus modales existentes) */
+/* ===== Cerrar al click fuera (todos) ===== */
 document.addEventListener("click", (e) => {
-  const cm = document.getElementById("customModal");
-  if (cm && cm.style.display === "flex" && e.target === cm) cerrarCustomModal();
-
-  const km = document.getElementById("cocinaModal");
-  if (km && km.style.display === "flex" && e.target === km) cerrarVistaCocina();
+  ["customModal","cocinaModal","ticketModal","cerrarModal"].forEach(id => {
+    const m = document.getElementById(id);
+    if (m && m.classList.contains("is-open") && e.target === m){
+      if (id === "customModal") cerrarCustomModal();
+      if (id === "cocinaModal") cerrarVistaCocina();
+      if (id === "ticketModal") cerrarTicketModal();
+      if (id === "cerrarModal") cerrarCerrarModal();
+    }
+  });
 });
 </script>
 
