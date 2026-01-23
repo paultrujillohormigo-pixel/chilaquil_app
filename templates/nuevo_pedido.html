@@ -64,7 +64,7 @@
                 {% for p in productos %}
                 <button type="button"
                         class="producto-card"
-                        onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
+                        onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
                     <div class="producto-nombre">{{ p.nombre }}</div>
                     <div class="producto-meta">
                         <span class="categoria">{{ p.categoria }}</span>
@@ -147,7 +147,7 @@
 
         <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
             <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmarCustom()">Agregar</button>
+            <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar cambios</button>
         </div>
     </div>
 </div>
@@ -157,7 +157,7 @@
         <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
 
         <h3>Comanda (Vista cocina)</h3>
-        <p class="hint">Solo informativo (igual se guardará al enviar)</p>
+        <p class="hint">Solo informativo (se guardará al enviar)</p>
 
         <div id="cocinaBody"></div>
 
@@ -169,6 +169,36 @@
 </div>
 
 <style>
+/* ================== RESPONSIVE FIXES ================== */
+
+/* Layout general (desktop: 2 columnas / móvil-tablet: 1 columna) */
+.pos-layout{
+  display:grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 900px){
+  .pos-layout{
+    grid-template-columns: 1fr;
+  }
+  /* En móvil, el sticky suele estorbar */
+  .card-sticky{
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+/* Form grid: evita que se peguen inputs */
+.form-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
+
+/* ================== MODALES ================== */
 .modal{
   position: fixed;
   inset: 0;
@@ -177,6 +207,8 @@
   align-items: center;
   background: rgba(0,0,0,.45);
   z-index: 99999;
+  padding: 14px;
+  box-sizing: border-box;
 }
 .modal-box{
   background: #fff;
@@ -185,6 +217,11 @@
   max-width: 560px;
   width: 92%;
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
+
+  /* ✅ para que el modal no “se pierda” en celular */
+  max-height: 88vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .modal-close{
   border: 0;
@@ -193,6 +230,16 @@
   cursor: pointer;
   float: right;
 }
+
+/* ✅ si quieres que los botones queden siempre visibles */
+.modal-actions{
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding-top: 10px;
+}
+
+/* ================== DETALLES COCINA ================== */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -214,6 +261,8 @@
   background:#fff;
   font-size:.85rem;
 }
+
+/* Opciones de modal */
 .custom-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -230,12 +279,17 @@
 }
 @media (max-width: 520px){
   .custom-grid{ grid-template-columns:1fr; }
+  .modal-box{ width: 94%; }
 }
 </style>
 
 <script>
+/* ================== CONFIG ================== */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
+
+/* ✅ categorías donde NO debe abrir el modal */
+const CATEGORIAS_SIN_CUSTOM = new Set(["Bebidas", "Bebida", "Extras", "Extra"]);
 
 let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
@@ -254,18 +308,23 @@ function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-function agregarProducto(id, nombre, precio) {
+/* ✅ Click agrega al carrito; solo abre modal si NO es bebida/extra */
+function agregarProducto(id, nombre, precio, categoria) {
   const uid = uidLinea(id);
+  const cat = (categoria || "").trim();
 
   carrito[uid] = {
     producto_id: id,
     nombre: nombre,
     precio: Number(precio),
     cantidad: 1,
+    categoria: cat,
     custom: { proteina: "", sin: [], nota: "" }
   };
 
   renderCarrito();
+
+  if (CATEGORIAS_SIN_CUSTOM.has(cat)) return;
 
   editandoUid = uid;
   modalState = { producto_id: id, nombre: nombre, precio: Number(precio), uid: uid };
@@ -343,6 +402,10 @@ function editarLinea(uid){
   editandoUid = uid;
   const it = carrito[uid];
 
+  /* ✅ si es bebida/extra, no abrir modal */
+  const cat = (it.categoria || "").trim();
+  if (CATEGORIAS_SIN_CUSTOM.has(cat)) return;
+
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
   abrirCustomModal();
 
@@ -384,25 +447,28 @@ function renderCarrito(){
       cocinaHtml += '</div>';
     }
 
+    const cat = (item.categoria || "").trim();
+    const showEditar = !CATEGORIAS_SIN_CUSTOM.has(cat);
+
     tbody.innerHTML +=
       '<tr>' +
         '<td class="td-left">' +
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+            (showEditar ? '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' : '') +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
