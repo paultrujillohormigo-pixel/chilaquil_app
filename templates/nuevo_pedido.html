@@ -5,182 +5,179 @@
 
 <form method="post" id="pedidoForm" class="pos-layout">
 
-    <section class="pos-left">
+  <section class="pos-left">
 
-        <div class="card">
-            <div class="card-head">
-                <h3>Datos del pedido</h3>
-            </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>Datos del pedido</h3>
+      </div>
 
-            <div class="form-grid">
-
-                <div>
-                    <label>Fecha</label>
-                    <input type="datetime-local" name="fecha">
-                    <small>Vacío = ahora</small>
-                </div>
-
-                <div>
-                    <label>Origen</label>
-                    <select name="origen" id="origenSelect">
-                        <option value="mostrador">Mostrador</option>
-                        <option value="uber">Uber</option>
-                        <option value="didi">Didi</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label>Mesero</label>
-                    <input type="text" name="mesero" placeholder="Nombre">
-                </div>
-
-                <div>
-                    <label>Método de pago</label>
-                    <select name="metodo_pago">
-                        <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option>
-                        <option value="transfer">Transferencia</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-
-                <div class="uber-box" id="uberBox">
-                    <label>Monto Uber</label>
-                    <input type="number" name="monto_uber" step="0.01" value="0">
-                    <small>Negativo = comisión</small>
-                </div>
-
-            </div>
+      <div class="form-grid">
+        <div>
+          <label>Fecha</label>
+          <input type="datetime-local" name="fecha">
+          <small>Vacío = ahora</small>
         </div>
 
-        <div class="card">
-            <div class="card-head">
-                <h3>Productos</h3>
-                <div class="hint">Toca para agregar (+1)</div>
-            </div>
-
-            <div class="productos-grid">
-                {% for p in productos %}
-                <button type="button"
-                        class="producto-card"
-                        onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
-                    <div class="producto-nombre">{{ p.nombre }}</div>
-                    <div class="producto-meta">
-                        <span class="categoria">{{ p.categoria }}</span>
-                        <span class="precio">{{ p.precio | money }}</span>
-                    </div>
-                </button>
-                {% endfor %}
-            </div>
+        <div>
+          <label>Origen</label>
+          <select name="origen" id="origenSelect">
+            <option value="mostrador">Mostrador</option>
+            <option value="uber">Uber</option>
+            <option value="didi">Didi</option>
+            <option value="otro">Otro</option>
+          </select>
         </div>
 
-    </section>
-
-    <aside class="pos-right">
-
-        <div class="card card-sticky">
-
-            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <div>
-                    <h3 style="margin:0;">Carrito</h3>
-                    <div class="hint">+ / – para ajustar</div>
-                </div>
-
-                <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-            </div>
-
-            <div class="carrito-wrap">
-                <table id="carritoTable">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cant.</th>
-                            <th>Precio</th>
-                            <th>Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-
-                <div class="total-box">
-                    <div>Total</div>
-                    <div class="total-amount" id="totalPedido">$0.00</div>
-                </div>
-
-                <div id="inputsHidden"></div>
-
-                <button type="submit" class="btn-guardar">
-                    💾 Guardar pedido
-                </button>
-            </div>
-
+        <div>
+          <label>Mesero</label>
+          <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-    </aside>
+        <div>
+          <label>Método de pago</label>
+          <select name="metodo_pago">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transfer">Transferencia</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="uber-box" id="uberBox">
+          <label>Monto Uber</label>
+          <input type="number" name="monto_uber" step="0.01" value="0">
+          <small>Negativo = comisión</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Productos</h3>
+        <div class="hint">Toca para agregar (+1)</div>
+      </div>
+
+      <div class="productos-grid">
+        {% for p in productos %}
+        <button type="button"
+                class="producto-card"
+                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
+          <div class="producto-nombre">{{ p.nombre }}</div>
+          <div class="producto-meta">
+            <span class="categoria">{{ p.categoria }}</span>
+            <span class="precio">{{ p.precio | money }}</span>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+  </section>
+
+  <aside class="pos-right">
+    <div class="card card-sticky">
+
+      <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <h3 style="margin:0;">Carrito</h3>
+          <div class="hint">+ / – para ajustar</div>
+        </div>
+
+        <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
+      </div>
+
+      <div class="carrito-wrap">
+        <table id="carritoTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="total-box">
+          <div>Total</div>
+          <div class="total-amount" id="totalPedido">$0.00</div>
+        </div>
+
+        <div id="inputsHidden"></div>
+
+        <button type="submit" class="btn-guardar">
+          💾 Guardar pedido
+        </button>
+      </div>
+
+    </div>
+  </aside>
 
 </form>
 
 <!-- ================== MODAL PERSONALIZACIÓN ================== -->
 <div id="customModal" class="modal" style="display:none; z-index:99999;">
-    <div class="modal-box">
-        <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
+  <div class="modal-box">
+    <button class="modal-close" onclick="cerrarCustomModal()">✕</button>
 
-        <h3>Personalizar</h3>
-        <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
+    <h3>Personalizar</h3>
+    <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
 
-        <div style="margin-top:10px;">
-            <label><strong>Proteína</strong></label>
-            <div id="proteinaRadios" class="custom-grid"></div>
-        </div>
-
-        <div style="margin-top:12px;">
-            <label><strong>Quitar</strong></label>
-            <div id="sinChecks" class="custom-grid"></div>
-            <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
-        </div>
-
-        <div style="margin-top:12px;">
-            <label><strong>Notas</strong></label>
-            <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
-        </div>
-
-        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-            <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
-        </div>
+    <div style="margin-top:10px;">
+      <label><strong>Proteína</strong></label>
+      <div id="proteinaRadios" class="custom-grid"></div>
     </div>
+
+    <div style="margin-top:12px;">
+      <label><strong>Quitar</strong></label>
+      <div id="sinChecks" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label><strong>Notas</strong></label>
+      <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
+    </div>
+
+    <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
+      <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ================== VISTA COCINA ================== -->
 <div id="cocinaModal" class="modal" style="display:none; z-index:99999;">
-    <div class="modal-box">
-        <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
+  <div class="modal-box">
+    <button class="modal-close" onclick="cerrarVistaCocina()">✕</button>
 
-        <h3>Comanda (Vista cocina)</h3>
-        <p class="hint">Solo informativo (se guardará al enviar)</p>
+    <h3>Comanda (Vista cocina)</h3>
+    <p class="hint">Solo informativo (se guardará al enviar)</p>
 
-        <div id="cocinaBody"></div>
+    <div id="cocinaBody"></div>
 
-        <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-            <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
-            <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
-        </div>
+    <div class="modal-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
+      <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
     </div>
+  </div>
 </div>
 
 <style>
-/* ================== RESPONSIVE ================== */
+/* Layout responsive */
 .pos-layout{
   display:grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1.35fr 1fr;
   gap: 14px;
 }
 @media (max-width: 900px){
   .pos-layout{ grid-template-columns: 1fr; }
   .card-sticky{ position: static !important; top:auto !important; }
 }
+
 .form-grid{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -190,7 +187,7 @@
   .form-grid{ grid-template-columns: 1fr; }
 }
 
-/* ================== MODALES ================== */
+/* Modales */
 .modal{
   position: fixed;
   inset: 0;
@@ -222,7 +219,6 @@
   float: right;
 }
 
-/* ================== DETALLES COCINA ================== */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -244,8 +240,6 @@
   background:#fff;
   font-size:.85rem;
 }
-
-/* Opciones del modal */
 .custom-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -262,7 +256,6 @@
 }
 @media (max-width: 520px){
   .custom-grid{ grid-template-columns:1fr; }
-  .modal-box{ width: 94%; }
 }
 </style>
 
@@ -271,7 +264,7 @@
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-/* ✅ categorías donde NO debe abrir el modal */
+/* categorías donde NO debe abrir modal */
 const CATEGORIAS_SIN_CUSTOM = new Set(["Bebidas","Bebida","Extras","Extra"]);
 
 let carrito = {};
@@ -290,7 +283,7 @@ function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ✅ Click agrega al carrito; solo abre modal si NO es Bebidas/Extras */
+/* ✅ AGREGA SIEMPRE AL CARRITO; SOLO ABRE MODAL SI NO ES BEBIDAS/EXTRAS */
 function agregarProducto(id, nombre, precio, categoria) {
   const uid = uidLinea(id);
   const cat = (categoria || "").trim();
@@ -313,6 +306,7 @@ function agregarProducto(id, nombre, precio, categoria) {
   abrirCustomModal();
 }
 
+/* ================== MODAL ================== */
 function abrirCustomModal(){
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
@@ -320,22 +314,24 @@ function abrirCustomModal(){
   radios.innerHTML = "";
   for (let i=0; i<PROTEINAS.length; i++){
     const p = PROTEINAS[i];
-    radios.innerHTML +=
-      '<label class="custom-pill">' +
-        '<input type="radio" name="proteina_radio" value="' + escapeHtml(p) + '" ' + (i===0 ? "checked" : "") + '>' +
-        '<span>' + escapeHtml(p) + '</span>' +
-      '</label>';
+    radios.innerHTML += `
+      <label class="custom-pill">
+        <input type="radio" name="proteina_radio" value="${escapeHtml(p)}" ${i===0 ? "checked" : ""}>
+        <span>${escapeHtml(p)}</span>
+      </label>
+    `;
   }
 
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   for (let i=0; i<SIN_OPCIONES.length; i++){
     const s = SIN_OPCIONES[i];
-    checks.innerHTML +=
-      '<label class="custom-pill">' +
-        '<input type="checkbox" name="sin_check" value="' + escapeHtml(s) + '">' +
-        '<span>Sin ' + escapeHtml(s) + '</span>' +
-      '</label>';
+    checks.innerHTML += `
+      <label class="custom-pill">
+        <input type="checkbox" name="sin_check" value="${escapeHtml(s)}">
+        <span>Sin ${escapeHtml(s)}</span>
+      </label>
+    `;
   }
 
   document.getElementById("notaInput").value = "";
@@ -356,13 +352,14 @@ function confirmarCustom(){
   const nota = document.getElementById("notaInput").value || "";
 
   if (editandoUid && carrito[editandoUid]) {
-    carrito[editandoUid].custom = { proteina: proteina, sin: sin, nota: nota };
+    carrito[editandoUid].custom = { proteina, sin, nota };
   }
 
   cerrarCustomModal();
   renderCarrito();
 }
 
+/* ================== ACCIONES CARRITO ================== */
 function restarProducto(uid){
   if (!carrito[uid]) return;
   carrito[uid].cantidad -= 1;
@@ -387,20 +384,21 @@ function editarLinea(uid){
   if (CATEGORIAS_SIN_CUSTOM.has(cat)) return;
 
   editandoUid = uid;
-  modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
+  modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid };
   abrirCustomModal();
 
-  const targetProt = it.custom && it.custom.proteina ? it.custom.proteina : "";
+  const targetProt = it.custom?.proteina || "";
   document.querySelectorAll("input[name='proteina_radio']").forEach((r, idx) => {
     r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
   });
 
-  const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
+  const setSin = new Set(it.custom?.sin || []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
 
-  document.getElementById("notaInput").value = (it.custom && it.custom.nota) ? it.custom.nota : "";
+  document.getElementById("notaInput").value = it.custom?.nota || "";
 }
 
+/* ================== RENDER SIN ESCAPES PELIGROSOS ================== */
 function renderCarrito(){
   const tbody = document.querySelector("#carritoTable tbody");
   const hidden = document.getElementById("inputsHidden");
@@ -414,60 +412,63 @@ function renderCarrito(){
     const subtotal = Number(item.precio) * Number(item.cantidad);
     total += subtotal;
 
-    const prot = (item.custom && item.custom.proteina) ? ("PROT: " + item.custom.proteina) : "";
-    const sin = (item.custom && item.custom.sin && item.custom.sin.length) ? ("SIN: " + item.custom.sin.join(", ")) : "";
-    const nota = (item.custom && item.custom.nota && item.custom.nota.trim()) ? item.custom.nota.trim() : "";
-
-    let cocinaHtml = "";
-    if (prot || sin || nota){
-      cocinaHtml += '<div class="cocina-meta">';
-      if (prot) cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
-      if (sin)  cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
-      if (nota) cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
-      cocinaHtml += '</div>';
-    }
+    const prot = item.custom?.proteina ? `PROT: ${item.custom.proteina}` : "";
+    const sin  = item.custom?.sin?.length ? `SIN: ${item.custom.sin.join(", ")}` : "";
+    const nota = item.custom?.nota?.trim() ? item.custom.nota.trim() : "";
 
     const cat = (item.categoria || "").trim();
     const showEditar = !CATEGORIAS_SIN_CUSTOM.has(cat);
 
-    tbody.innerHTML +=
-      '<tr>' +
-        '<td class="td-left">' +
-          escapeHtml(item.nombre) +
-          cocinaHtml +
-          '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            (showEditar ? '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' : '') +
-          '</div>' +
-        '</td>' +
-        '<td>' +
-          '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
-            '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
-          '</div>' +
-        '</td>' +
-        '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
-        '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
-      '</tr>';
+    const cocinaHtml = (prot || sin || nota) ? `
+      <div class="cocina-meta">
+        ${prot ? `<div><span class="tag">${escapeHtml(prot)}</span></div>` : ""}
+        ${sin  ? `<div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>` : ""}
+        ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
+      </div>
+    ` : "";
 
-    hidden.innerHTML +=
-      '<input type="hidden" name="producto_id[]" value="' + escapeHtml(item.producto_id) + '">' +
-      '<input type="hidden" name="cantidad[]" value="' + escapeHtml(item.cantidad) + '">' +
-      '<input type="hidden" name="proteina[]" value="' + escapeHtml(item.custom ? (item.custom.proteina || "") : "") + '">' +
-      '<input type="hidden" name="sin[]" value="' + escapeHtml(item.custom && item.custom.sin ? item.custom.sin.join(",") : "") + '">' +
-      '<input type="hidden" name="nota[]" value="' + escapeHtml(item.custom ? (item.custom.nota || "") : "") + '">';
+    tbody.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td class="td-left">
+          ${escapeHtml(item.nombre)}
+          ${cocinaHtml}
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            ${showEditar ? `<button type="button" class="btn btn-gray" onclick="editarLinea('${uid}')">Editar</button>` : ""}
+          </div>
+        </td>
+        <td>
+          <div class="qty-controls">
+            <button type="button" class="btn btn-gray" onclick="restarProducto('${uid}')">–</button>
+            <span class="qty">${item.cantidad}</span>
+            <button type="button" class="btn btn-gray" onclick="sumarProducto('${uid}')">+</button>
+          </div>
+        </td>
+        <td>$${Number(item.precio).toFixed(2)}</td>
+        <td><strong>$${subtotal.toFixed(2)}</strong></td>
+        <td><button type="button" class="btn btn-red" onclick="eliminarProducto('${uid}')">✕</button></td>
+      </tr>
+    `);
+
+    hidden.insertAdjacentHTML("beforeend", `
+      <input type="hidden" name="producto_id[]" value="${escapeHtml(item.producto_id)}">
+      <input type="hidden" name="cantidad[]" value="${escapeHtml(item.cantidad)}">
+      <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom?.proteina || "")}">
+      <input type="hidden" name="sin[]" value="${escapeHtml((item.custom?.sin || []).join(","))}">
+      <input type="hidden" name="nota[]" value="${escapeHtml(item.custom?.nota || "")}">
+    `);
   });
 
   document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
 }
 
+/* ================== UX ================== */
 function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   const box = document.getElementById("uberBox");
   box.style.display = (origen === "uber") ? "block" : "none";
 }
 
+/* Vista cocina */
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
@@ -482,22 +483,23 @@ function abrirVistaCocina(){
   let html = "";
   uids.forEach(uid => {
     const it = carrito[uid];
-    const prot = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
-    const sin  = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
-    const nota = it.custom && it.custom.nota && it.custom.nota.trim() ? it.custom.nota.trim() : "";
+    const prot = it.custom?.proteina ? `PROT: ${it.custom.proteina}` : "PROT: —";
+    const sin  = it.custom?.sin?.length ? `SIN: ${it.custom.sin.join(", ")}` : "SIN: —";
+    const nota = it.custom?.nota?.trim() ? it.custom.nota.trim() : "";
 
-    html +=
-      '<div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">' +
-        '<div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">' +
-          '<div style="font-size:1.05rem; font-weight:900;">' + escapeHtml(it.nombre) + '</div>' +
-          '<div style="font-size:1.05rem; font-weight:900;">x' + it.cantidad + '</div>' +
-        '</div>' +
-        '<div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">' +
-          '<div><span class="tag">' + escapeHtml(prot) + '</span></div>' +
-          '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>' +
-          (nota ? '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>' : "") +
-        '</div>' +
-      '</div>';
+    html += `
+      <div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="font-size:1.05rem; font-weight:900;">${escapeHtml(it.nombre)}</div>
+          <div style="font-size:1.05rem; font-weight:900;">x${it.cantidad}</div>
+        </div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+          <div><span class="tag">${escapeHtml(prot)}</span></div>
+          <div><span class="tag tag-warn">${escapeHtml(sin)}</span></div>
+          ${nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(nota)}</div>` : ""}
+        </div>
+      </div>
+    `;
   });
 
   body.innerHTML = html;
