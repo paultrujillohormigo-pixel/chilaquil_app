@@ -339,6 +339,75 @@
 @supports (-webkit-touch-callout: none) {
   .modal { -webkit-transform: translateZ(0); }
 }
+
+/* ================== FIX: texto se sale a la derecha (iPad) ================== */
+
+/* evita scroll horizontal por elementos largos */
+.pos-layout,
+.card,
+.carrito-wrap,
+#carritoTable,
+.modal-box{
+  max-width: 100%;
+}
+
+/* si algo empuja, esto lo contiene */
+body{
+  overflow-x: hidden;
+}
+
+/* tabla: no crecer más que el contenedor */
+#carritoTable{
+  width: 100%;
+  table-layout: fixed;   /* CLAVE: evita que una celda estire toda la tabla */
+}
+
+/* celdas: permitir romper texto */
+#carritoTable th,
+#carritoTable td{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+
+/* la celda del producto suele ser la que rompe */
+#carritoTable td.td-left,
+#carritoTable td:first-child{
+  white-space: normal;
+  overflow-wrap: anywhere;   /* CLAVE: rompe palabras largas */
+  word-break: break-word;
+}
+
+/* tags y nota: que no se salgan */
+.tag,
+.nota,
+.cocina-meta{
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* botones y controles dentro de la tabla: que no empujen */
+.qty-controls{
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;  /* por si en iPad no cabe horizontal */
+  justify-content: center;
+}
+
+/* en pantallas pequeñas, hacemos la tabla más compacta */
+@media (max-width: 1100px){
+  #carritoTable th:nth-child(3),
+  #carritoTable td:nth-child(3),
+  #carritoTable th:nth-child(4),
+  #carritoTable td:nth-child(4){
+    font-size: 0.9rem;
+  }
+}
+
+
+
+  
 </style>
 
 <script>
