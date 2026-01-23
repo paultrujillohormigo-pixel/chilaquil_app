@@ -98,7 +98,7 @@
         {% for p in productos %}
         <button type="button"
                 class="producto-card"
-                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }})'>
+                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
           <div class="producto-nombre">{{ p.nombre }}</div>
           <div class="producto-meta">
             <span class="categoria">{{ p.categoria }}</span>
@@ -408,6 +408,37 @@ window.addEventListener('orientationchange', setVH);
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
+/* ===== NO personalizar en bebidas/extras ===== */
+const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
+const NO_MOD_KEYWORDS = [
+  "coca", "refresco", "agua", "café", "cafe", "chai",
+  "capuccino", "capuchino", "jugo", "jarrito", "boing"
+];
+
+function normaliza(str){
+  return (str || "").toString().trim().toLowerCase();
+}
+
+function productoTieneModificadores(nombre, categoria){
+  const cat = normaliza(categoria);
+  const nom = normaliza(nombre);
+
+  // match por categoría exacta
+  if (NO_MOD_CATEGORIAS.includes(cat)) return false;
+
+  // match flexible por si te llega "Bebidas frías", "Extras 1", etc.
+  for (const c of NO_MOD_CATEGORIAS){
+    if (cat.includes(c)) return false;
+  }
+
+  // keyword en nombre
+  for (const kw of NO_MOD_KEYWORDS){
+    if (nom.includes(kw)) return false;
+  }
+
+  return true;
+}
+
 let carrito = {}; // carrito[uid]
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 
@@ -425,9 +456,22 @@ function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ===== Agregar producto (abre modal) ===== */
-function agregarProducto(producto_id, nombre, precio){
+/* ===== Agregar producto (si es bebida/extra NO abre modal) ===== */
+function agregarProducto(producto_id, nombre, precio, categoria){
   const uid = uidLinea(producto_id);
+
+  if (!productoTieneModificadores(nombre, categoria)){
+    carrito[uid] = {
+      producto_id: producto_id,
+      nombre: nombre,
+      precio: Number(precio),
+      cantidad: 1,
+      custom: { proteina: "", sin: [], nota: "" }
+    };
+    renderCarrito();
+    return;
+  }
+
   modalState = { producto_id, nombre, precio: Number(precio), uid };
   abrirCustomModal();
 }
@@ -510,6 +554,7 @@ function editarLinea(uid){
   const it = carrito[uid];
   if (!it) return;
 
+  // editar siempre abre modal (si quieres bloquear edición también en bebidas/extras, dímelo)
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
   abrirCustomModal();
 
