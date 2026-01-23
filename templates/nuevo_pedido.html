@@ -123,7 +123,7 @@
 </form>
 
 <!-- ================== MODAL PERSONALIZACIÓN ================== -->
-<div id="customModal" class="modal" style="display:none;">
+<div id="customModal" class="modal">
     <div class="modal-box">
 
         <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
@@ -155,7 +155,7 @@
 </div>
 
 <!-- ================== VISTA COCINA ================== -->
-<div id="cocinaModal" class="modal" style="display:none;">
+<div id="cocinaModal" class="modal">
     <div class="modal-box">
 
         <button class="modal-close" type="button" onclick="cerrarVistaCocina()">✕</button>
@@ -175,7 +175,7 @@
 <!-- ================== ESTILOS RESPONSIVE (tablet/móvil) ================== -->
 <style>
 /* Ajustes layout en tablet/móvil para que no se encime */
-@media (max-width: 1024px){
+@media (max-width: 1100px){
   .pos-layout{
     display: flex;
     flex-direction: column;
@@ -188,7 +188,6 @@
     position: static !important; /* evita overlays raros en iPad */
     top: auto !important;
   }
-  /* tabla carrito más legible */
   #carritoTable th, #carritoTable td{
     font-size: 0.95rem;
   }
@@ -206,27 +205,38 @@
 /* ===== Modal robusto (desktop + iPad + móvil) ===== */
 .modal{
   position: fixed;
-  inset: 0;
-  display: none;
+  left: 0; top: 0;
+  width: 100vw;
+  height: 100vh;        /* fallback */
+  height: 100dvh;       /* iOS moderno */
+  display: none;        /* se activa con .is-open */
   justify-content: center;
   align-items: center;
   background: rgba(0,0,0,.45);
-  z-index: 99999;
+  z-index: 2147483647;
   padding: 14px;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: auto;
+  overscroll-behavior: contain;
 }
 
-/* usa vh real (fix iOS) */
+.modal.is-open{
+  display: flex;
+}
+
+/* caja del modal */
 .modal-box{
   background: #fff;
   border-radius: 14px;
   padding: 16px;
   width: min(640px, 94vw);
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
+
   max-height: calc(var(--vh, 1vh) * 88);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+
+  transform: translateZ(0);
 }
 
 /* cerrar sticky */
@@ -252,7 +262,7 @@
 }
 
 /* Tablet/móvil: bottom-sheet */
-@media (max-width: 1024px){
+@media (max-width: 1100px){
   .modal{
     align-items: flex-end;
     padding: 10px;
@@ -274,7 +284,7 @@
   gap: 10px;
   margin-top: 8px;
 }
-@media (max-width: 1024px){
+@media (max-width: 1100px){
   .custom-grid{
     grid-template-columns: 1fr;
   }
@@ -324,6 +334,11 @@
   gap:10px;
   justify-content:flex-end;
 }
+
+/* iOS específico */
+@supports (-webkit-touch-callout: none) {
+  .modal { -webkit-transform: translateZ(0); }
+}
 </style>
 
 <script>
@@ -336,9 +351,7 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
-/* ========= Config modificadores =========
-   Nota: puedes ajustar esta lista y/o lógica.
-*/
+/* ========= Config modificadores ========= */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
@@ -404,7 +417,7 @@ function agregarProducto(id, nombre, precio, categoria) {
   }
 }
 
-/* Modal open/close */
+/* Modal open/close (por clase) */
 function abrirCustomModal(){
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
@@ -432,12 +445,14 @@ function abrirCustomModal(){
 
   document.getElementById("notaInput").value = "";
 
+  setVH();
+
   document.body.style.overflow = "hidden";
-  document.getElementById("customModal").style.display = "flex";
+  document.getElementById("customModal").classList.add("is-open");
 }
 
 function cerrarCustomModal(){
-  document.getElementById("customModal").style.display = "none";
+  document.getElementById("customModal").classList.remove("is-open");
   document.body.style.overflow = "";
   modalState = { producto_id:null, nombre:"", precio:0, uid:null };
   editandoUid = null;
@@ -529,19 +544,19 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
@@ -570,8 +585,9 @@ function abrirVistaCocina(){
 
   if (!uids.length){
     body.innerHTML = "<p>No hay productos en el carrito.</p>";
+    setVH();
     document.body.style.overflow = "hidden";
-    modal.style.display = "flex";
+    modal.classList.add("is-open");
     return;
   }
 
@@ -597,11 +613,13 @@ function abrirVistaCocina(){
   });
 
   body.innerHTML = html;
+  setVH();
   document.body.style.overflow = "hidden";
-  modal.style.display = "flex";
+  modal.classList.add("is-open");
 }
+
 function cerrarVistaCocina(){
-  document.getElementById("cocinaModal").style.display = "none";
+  document.getElementById("cocinaModal").classList.remove("is-open");
   document.body.style.overflow = "";
 }
 
@@ -612,10 +630,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener("click", (e) => {
     const cm = document.getElementById("customModal");
-    if (cm && cm.style.display === "flex" && e.target === cm) cerrarCustomModal();
+    if (cm && cm.classList.contains("is-open") && e.target === cm) cerrarCustomModal();
 
     const km = document.getElementById("cocinaModal");
-    if (km && km.style.display === "flex" && e.target === km) cerrarVistaCocina();
+    if (km && km.classList.contains("is-open") && e.target === km) cerrarVistaCocina();
   });
 });
 </script>
