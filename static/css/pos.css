@@ -1,7 +1,21 @@
-
 /* =========================
    POS ESPECÍFICO
 ========================= */
+
+/* ===== PATCHES iPad/Safari (NO REMUEVE NADA, SOLO ESTABILIZA) ===== */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-size: 16px;
+  line-height: 1.25;
+}
 
 .product-grid {
   display: grid;
@@ -190,6 +204,13 @@ input, select {
     grid-template-columns: 2fr 1fr;
     height: calc(100vh - 80px);
     gap: 16px;
+}
+
+/* ===== PATCH iPad viewport dinámico (mantiene tu línea anterior y la mejora) ===== */
+@supports (height: 100dvh) {
+  .pos-layout {
+    height: calc(100dvh - 80px);
+  }
 }
 
 /* ===== PRODUCTOS ===== */
@@ -450,13 +471,27 @@ small { color: #666; display:block; margin-top: 6px; }
     align-items: center;
     justify-content: center;
     z-index: 9999;
+
+    /* PATCH iPad: evita recortes / desfaces por viewport */
+    padding: 16px;
+}
+
+/* PATCH opcional (si puedes): cuando abras modal, agrega clase is-open */
+.modal.is-open {
+    display: flex;
 }
 
 .modal-box {
     background: #ffffff;         /* ← ESTO ES LO QUE NO SE VEÍA */
     color: #222;
-    width: 360px;
+
+    /* PATCH iPad: tamaño/scroll estable */
+    width: min(520px, 92%);
     max-width: 92%;
+    max-height: min(80vh, 720px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
     padding: 20px;
     border-radius: 18px;
     position: relative;
@@ -515,4 +550,3 @@ small { color: #666; display:block; margin-top: 6px; }
         opacity: 1;
     }
 }
-
