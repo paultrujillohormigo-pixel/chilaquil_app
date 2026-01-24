@@ -173,7 +173,18 @@
 </div>
 
 <!-- ================== ESTILOS (tablet/móvil + modal iPad) ================== -->
+
+
 <style>
+/* ====== FIXES BASE iPad/Safari (no rompe desktop) ====== */
+html{
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
 /* Ajustes layout en tablet/móvil para que no se encime */
 @media (max-width: 1100px){
   .pos-layout{
@@ -283,6 +294,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 8px;
+
+  /* ===== FIX iPad: items estables y alineados ===== */
+  align-items: stretch;
 }
 @media (max-width: 1100px){
   .custom-grid{
@@ -295,9 +309,46 @@
   border:1px solid #ddd;
   border-radius:12px;
   padding: 12px;
+
   display:flex;
   gap:10px;
   align-items:center;
+
+  /* ===== FIX iPad: que no “bailen” ni se corran ===== */
+  width: 100%;
+  min-height: 48px;
+  justify-content: flex-start;
+  line-height: 1.2;
+  background: #fff;
+  cursor: pointer;
+
+  /* evita que el texto empuje el grid */
+  overflow: hidden;
+}
+
+/* ===== FIX iPad: normaliza radio/checkbox (Safari mueve por default) ===== */
+.custom-pill input[type="radio"],
+.custom-pill input[type="checkbox"]{
+  margin: 0;                 /* CLAVE: Safari mete margen raro */
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  transform: translateY(0);  /* evita “offset” visual */
+}
+
+/* el texto dentro del pill */
+.custom-pill span{
+  flex: 1;
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* (opcional pero recomendado) feedback al tocar */
+.custom-pill:active{
+  transform: scale(.99);
+  background: #f6f6f6;
 }
 
 /* resumen modificadores dentro del carrito */
@@ -404,11 +455,19 @@ body{
     font-size: 0.9rem;
   }
 }
-
-
-
-  
 </style>
+
+
+
+
+
+
+
+
+
+
+<!-- ================== ESTILOS (tablet/móvil + modal iPad) ================== -->
+
 
 <script>
 /* Fix vh real en iPad/iPhone (Safari) */
