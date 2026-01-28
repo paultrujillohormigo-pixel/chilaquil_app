@@ -1,0 +1,75 @@
+<h2>Receta: {{ platillo.nombre }}</h2>
+
+<form method="post">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Insumo</th>
+        <th>Cantidad</th>
+        <th>Unidad</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="rows">
+      {% for r in receta %}
+      <tr>
+        <td>
+          <select name="insumo_id[]">
+            {% for i in insumos %}
+              <option value="{{ i.id }}" {% if i.id == r.insumo_id %}selected{% endif %}>
+                {{ i.nombre }}
+              </option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><input type="number" step="0.01" min="0" name="cantidad_base[]" value="{{ r.cantidad_base }}"></td>
+        <td class="unidad">{{ r.unidad_base }}</td>
+        <td><button type="button" class="btn" onclick="removeRow(this)">Quitar</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="button" class="btn" onclick="addRow()">+ Agregar ingrediente</button>
+  <button type="submit" class="btn btn-primary">Guardar receta</button>
+</form>
+
+<hr>
+
+<h3>Desglose (automático)</h3>
+{% if costeo %}
+  <ul>
+    <li><strong>Costo insumos:</strong> ${{ costeo.costo_insumos }}</li>
+    <li><strong>Costos operativos (75%):</strong> ${{ costeo.costo_operativo }}</li>
+    <li><strong>Costo total:</strong> ${{ costeo.costo_total }}</li>
+    <li><strong>Ganancia sugerida (margen 80%):</strong> ${{ costeo.ganancia_sugerida }}</li>
+    <li><strong>Precio sugerido:</strong> ${{ costeo.precio_sugerido }}</li>
+    {% if costeo.precio_actual %}
+      <li><strong>Precio actual:</strong> ${{ costeo.precio_actual }}</li>
+    {% endif %}
+  </ul>
+{% else %}
+  <p>No hay costeo aún (falta costo vigente de algún insumo o receta vacía).</p>
+{% endif %}
+
+<script>
+  const insumos = {{ insumos|tojson }};
+
+  function addRow(){
+    const tbody = document.getElementById("rows");
+    const tr = document.createElement("tr");
+
+    const options = insumos.map(i => `<option value="${i.id}">${i.nombre}</option>`).join("");
+    tr.innerHTML = `
+      <td><select name="insumo_id[]">${options}</select></td>
+      <td><input type="number" step="0.01" min="0" name="cantidad_base[]" value=""></td>
+      <td class="unidad">—</td>
+      <td><button type="button" class="btn" onclick="removeRow(this)">Quitar</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function removeRow(btn){
+    btn.closest("tr").remove();
+  }
+</script>
