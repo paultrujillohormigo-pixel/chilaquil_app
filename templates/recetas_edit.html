@@ -1,3 +1,8 @@
+<div style="display:flex; gap:10px; margin-bottom:12px;">
+  <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_index') }}">← Recetas</a>
+  <a class="btn btn-secondary" href="{{ url_for('costeo.costeo_index') }}">📊 Costeo</a>
+</div>
+
 <h2>Receta: {{ platillo.nombre }}</h2>
 
 <form method="post">
