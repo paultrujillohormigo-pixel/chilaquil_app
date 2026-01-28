@@ -22,6 +22,13 @@ app.secret_key = "super_secret_key"  # cámbiala en prod
 # =========================================================
 
 
+# ================== COSTEO ==================
+
+
+app.register_blueprint(costeo_bp)
+
+
+
 # ================== PEDIDOS ABIERTOS ==================
 
 @app.route("/pedidos_abiertos")
