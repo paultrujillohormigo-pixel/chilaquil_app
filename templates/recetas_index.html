@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <h2>📌 Recetas</h2>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="{{ url_for('costeo.costeo_index') }}">📊 Ver costeo</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Platillos</h3>
+    <p class="muted">Selecciona un platillo para capturar o editar su receta.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th>Platillo</th>
+          <th style="width: 220px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in platillos %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.nombre }}</td>
+          <td>
+            <a class="btn btn-primary"
+               href="{{ url_for('costeo.recetas_edit', platillo_id=p.id) }}">
+              ✏️ Editar receta
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .page-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
+  .card-head h3{margin:0 0 6px 0}
+  .muted{opacity:.7;margin:0}
+  .table-wrap{overflow:auto;margin-top:10px}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd}
+  .btn-primary{background:#111;color:#fff;border-color:#111}
+  .btn-secondary{background:#f6f6f6;color:#111}
+</style>
+
+{% endblock %}
