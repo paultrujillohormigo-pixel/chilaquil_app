@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from decimal import Decimal
 from db import get_connection
+from costeo import costeo_bp
+
 import urllib.parse
 
 app = Flask(__name__)
