@@ -122,23 +122,31 @@ def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, e
     return row["totopos_balance"] if row else 0
 
 
-# ================== ICONOS SEGUROS (BMP ONLY) ==================
-# BMP = caracteres <= U+FFFF (no usan "surrogate pairs") => NO se vuelven �
+# ================== ICONOS ASCII (100% SEGUROS) ==================
 E = {
-    "title": "\u2605",   # ★
-    "receipt": "\u2116", # №
-    "pay": "\u0024",     # $
-    "check": "\u2705",   # ✅
-    "pin": "\u2022",     # •
-    "gift": "\u2605",    # ★
-    "drink": "\u2615",   # ☕  (como bebida genérica)
-    "plate": "\u25CF",   # ●  (plato genérico)
-    "arrow": "\u27A1",   # ➡
+    "title": "*",     # título
+    "receipt": "#",   # pedido
+    "pay": "$",       # pago
+    "check": "OK",    # check
+    "pin": "-",       # bullet
+    "gift": "*",      # sección
+    "drink": "DRINK", # bebida
+    "plate": "PLATE", # plato
+    "arrow": "->",    # flecha
 }
 
-# Barras seguras (BMP)
-BAR_ON = "\u25A0"   # ■
-BAR_OFF = "\u25A1"  # □
+BAR_ON = "#"     # progreso
+BAR_OFF = "-"    # restante
+
+
+def make_bar(balance: int, goal: int) -> str:
+    if goal <= 0:
+        return ""
+    prog = balance % goal
+    if prog == 0 and balance > 0:
+        prog = goal
+    filled = min(prog, goal)
+    return (BAR_ON * filled) + (BAR_OFF * (goal - filled))
 
 
 def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -> str:
@@ -152,17 +160,17 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -
         canje.append(f"{E['check']} Ya puedes canjear una bebida (excepto chai).")
     if f10 == 0:
         canje.append(f"{E['check']} Ya puedes canjear un plato fuerte.")
-    canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos ;)"
+    canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos :)"
 
-    # OJO: aquí ya NO hay emojis fuera de BMP => no habrá �
+    # TODO ASCII => cero �
     return (
-        f"{E['title']} Senor Chilaquil — Totopos\n\n"
-        f"{E['receipt']} Pedido #{pedido_id}   {E['pay']} Total: ${float(total):.2f}\n"
+        f"{E['title']} SENOR CHILAQUIL - TOTOPOS {E['title']}\n\n"
+        f"{E['receipt']} Pedido {pedido_id}   {E['pay']} Total: {float(total):.2f}\n"
         f"{E['check']} Ganaste hoy: +{earned} totopo(s)\n"
         f"{E['pin']} Totopos acumulados: {balance}\n\n"
         f"{E['gift']} Recompensas\n"
-        f"{E['drink']} Bebida (excepto chai): {balance}/5  {bar5}\n"
-        f"{E['plate']} Plato fuerte:          {balance}/10 {bar10}\n\n"
+        f"{E['drink']}: {balance}/5  {bar5}\n"
+        f"{E['plate']}: {balance}/10 {bar10}\n\n"
         "Te faltan:\n"
         f"{E['arrow']} {f5} para bebida\n"
         f"{E['arrow']} {f10} para plato\n\n"
