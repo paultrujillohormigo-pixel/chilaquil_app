@@ -774,26 +774,31 @@ def eliminar_pedido(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (pedido_id,))
+            cursor.execute("SELECT id, estado FROM pedidos WHERE id = %s", (pedido_id,))
             pedido = cursor.fetchone()
 
             if not pedido:
                 flash("Pedido no encontrado", "error")
-                return redirect(url_for("pedidos_abiertos"))
+                return redirect(url_for("borrar_pedidos"))
 
-            if pedido["estado"] != "abierto":
-                flash("No se puede eliminar un pedido cerrado", "error")
-                return redirect(url_for("pedidos_abiertos"))
+            # ✅ Si tienes loyalty_tx referenciando pedido_id, hay que borrar eso primero
+            cursor.execute("DELETE FROM loyalty_tx WHERE pedido_id = %s", (pedido_id,))
 
+            # Borra items primero (FK safety)
             cursor.execute("DELETE FROM pedido_items WHERE pedido_id = %s", (pedido_id,))
             cursor.execute("DELETE FROM pedidos WHERE id = %s", (pedido_id,))
 
             conn.commit()
-            flash(f"Pedido #{pedido_id} eliminado correctamente", "success")
+            flash(f"Pedido #{pedido_id} eliminado correctamente (abierto o cerrado).", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error eliminando pedido #{pedido_id}: {e}", "error")
     finally:
         conn.close()
 
-    return redirect(url_for("pedidos_abiertos"))
+    # ✅ Regresa a la pantalla de borrar pedidos
+    return redirect(url_for("borrar_pedidos"))
 
 
 # ================== generar_ticket_texto ==================
