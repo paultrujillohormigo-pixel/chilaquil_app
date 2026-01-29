@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='pos.css') }}">
+    
 
     <meta charset="UTF-8">
     <title>Señor Chilaquil - Sistema Ventas</title>
@@ -26,6 +27,8 @@
         <a href="/pedidos_abiertos">Pedidos abiertos</a>
         <a href="{{ url_for('productos') }}">Productos</a>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('borrar_pedidos') }}">🗑️ Borrar pedidos</a>
+
     </nav>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
