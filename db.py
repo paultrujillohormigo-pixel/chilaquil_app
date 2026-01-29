@@ -14,11 +14,12 @@ def get_connection():
         autocommit=False,
     )
 
-    # CLAVE: forzar charset/collation por sesión
+    # Fuerza sesión a utf8mb4 + collation de MySQL 8
     with conn.cursor() as cur:
-        cur.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;")
+        cur.execute("SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;")
         cur.execute("SET character_set_client = utf8mb4;")
         cur.execute("SET character_set_connection = utf8mb4;")
         cur.execute("SET character_set_results = utf8mb4;")
+        cur.execute("SET collation_connection = 'utf8mb4_0900_ai_ci';")
 
     return conn
