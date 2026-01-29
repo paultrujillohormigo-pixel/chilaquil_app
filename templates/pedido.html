@@ -7,6 +7,11 @@
   <div class="pedido-info">
     <div><strong>Estado:</strong> {{ pedido.estado }}</div>
     <div><strong>Total:</strong> {{ pedido.total | money }}</div>
+    {% if pedido.telefono_whatsapp %}
+      <div><strong>WhatsApp:</strong> {{ pedido.telefono_whatsapp }}</div>
+    {% else %}
+      <div class="hint">WhatsApp: —</div>
+    {% endif %}
   </div>
 
   <div class="pedido-actions">
@@ -15,9 +20,23 @@
     </button>
 
     {% if pedido.estado == 'abierto' %}
-    <button type="button" class="btn-warning" onclick="abrirCerrarPedido()">
-      ✅ Cerrar pedido
-    </button>
+      <!-- ✅ Cerrar SIN enviar -->
+      <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" style="display:inline;">
+        <button type="submit" class="btn-gray" onclick="return confirm('¿Cerrar pedido sin enviar WhatsApp?')">
+          ✅ Cerrar (sin enviar)
+        </button>
+      </form>
+
+      <!-- ✅ Cerrar + WhatsApp + Totopos (usa teléfono guardado en pedido) -->
+      <form method="post"
+            action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}"
+            style="display:inline;">
+        <button type="submit"
+                class="btn-whatsapp"
+                onclick="return confirmarCerrarWhatsApp();">
+          📲 Cerrar y mandar WhatsApp + Totopos
+        </button>
+      </form>
     {% endif %}
   </div>
 </div>
@@ -166,30 +185,6 @@
     <a id="btnWhatsapp" target="_blank" class="btn-whatsapp">
       📲 Enviar por WhatsApp
     </a>
-  </div>
-</div>
-
-<!-- ================== MODAL CERRAR PEDIDO ================== -->
-<div id="cerrarModal" class="modal">
-  <div class="modal-box">
-    <button type="button" class="modal-close" onclick="cerrarCerrarModal()">✕</button>
-
-    <h3>Cerrar pedido</h3>
-
-    <label>Número WhatsApp (opcional)</label>
-    <input type="text" id="telefonoWhatsapp" placeholder="5214491234567">
-
-    <p class="hint">Si ingresas un número, se enviará el ticket.</p>
-
-    <div class="modal-actions">
-      <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}">
-        <button type="submit" class="btn-gray">Cerrar sin enviar</button>
-      </form>
-
-      <button type="button" class="btn-whatsapp" onclick="cerrarYEnviar()">
-        Cerrar y enviar
-      </button>
-    </div>
   </div>
 </div>
 
@@ -404,6 +399,16 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
+/* ===== Confirmar cierre con WhatsApp ===== */
+function confirmarCerrarWhatsApp(){
+  const tel = "{{ (pedido.telefono_whatsapp or '')|e }}";
+  if (!tel){
+    alert("Este pedido no tiene WhatsApp. Agrega el teléfono al crear el pedido.");
+    return false;
+  }
+  return confirm("¿Cerrar pedido y mandar WhatsApp con ticket + totopos?");
+}
+
 /* ===== Config modificadores ===== */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
@@ -423,19 +428,13 @@ function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
 
-  // match por categoría exacta
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
-
-  // match flexible por si te llega "Bebidas frías", "Extras 1", etc.
   for (const c of NO_MOD_CATEGORIAS){
     if (cat.includes(c)) return false;
   }
-
-  // keyword en nombre
   for (const kw of NO_MOD_KEYWORDS){
     if (nom.includes(kw)) return false;
   }
-
   return true;
 }
 
@@ -456,7 +455,7 @@ function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ===== Agregar producto (si es bebida/extra NO abre modal) ===== */
+/* ===== Agregar producto ===== */
 function agregarProducto(producto_id, nombre, precio, categoria){
   const uid = uidLinea(producto_id);
 
@@ -554,7 +553,6 @@ function editarLinea(uid){
   const it = carrito[uid];
   if (!it) return;
 
-  // editar siempre abre modal (si quieres bloquear edición también en bebidas/extras, dímelo)
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
   abrirCustomModal();
 
@@ -603,19 +601,19 @@ function renderCarrito(){
           escapeHtml(it.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+            '<button type="button" class="btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">' +
-            '<button type="button" class="btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<button type="button" class="btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
             '<span style="min-width:22px; text-align:center;">' + it.cantidad + '</span>' +
-            '<button type="button" class="btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+            '<button type="button" class="btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(it.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+        '<td><button type="button" class="btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
 
     hidden.innerHTML +=
@@ -629,7 +627,7 @@ function renderCarrito(){
   document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
 }
 
-/* ===== Modales ticket/cerrar ===== */
+/* ===== Ticket modal ===== */
 function abrirTicketPreview(id){
   fetch(`/pedido/${id}/ticket_preview`)
     .then(r => r.json())
@@ -644,23 +642,6 @@ function abrirTicketPreview(id){
 function cerrarTicketModal(){
   document.getElementById("ticketModal").classList.remove("is-open");
   document.body.style.overflow = "";
-}
-function abrirCerrarPedido(){
-  setVH();
-  document.body.style.overflow = "hidden";
-  document.getElementById("cerrarModal").classList.add("is-open");
-}
-function cerrarCerrarModal(){
-  document.getElementById("cerrarModal").classList.remove("is-open");
-  document.body.style.overflow = "";
-}
-function cerrarYEnviar(){
-  const tel = document.getElementById("telefonoWhatsapp").value;
-  if (!tel) return alert("Ingresa un número");
-
-  window.open(`/pedido/{{ pedido.id }}/whatsapp?tel=${encodeURIComponent(tel)}`, "_blank");
-  fetch(`/cerrar_pedido/{{ pedido.id }}`, { method: "POST" })
-    .then(() => location.href = "/pedidos_abiertos");
 }
 
 /* ===== Vista cocina ===== */
@@ -710,13 +691,12 @@ function cerrarVistaCocina(){
 
 /* ===== Cerrar al click fuera (todos) ===== */
 document.addEventListener("click", (e) => {
-  ["customModal","cocinaModal","ticketModal","cerrarModal"].forEach(id => {
+  ["customModal","cocinaModal","ticketModal"].forEach(id => {
     const m = document.getElementById(id);
     if (m && m.classList.contains("is-open") && e.target === m){
       if (id === "customModal") cerrarCustomModal();
       if (id === "cocinaModal") cerrarVistaCocina();
       if (id === "ticketModal") cerrarTicketModal();
-      if (id === "cerrarModal") cerrarCerrarModal();
     }
   });
 });
