@@ -10,6 +10,7 @@ import re
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
+
 # ================== COSTEO ==================
 app.register_blueprint(costeo_bp)
 
@@ -17,6 +18,25 @@ app.register_blueprint(costeo_bp)
 # =========================================================
 # ================== LOYALTY (TOTOPOS) ====================
 # =========================================================
+
+# ================== EMOJIS (UNICODE ESCAPES) ==================
+# Esto evita que el deploy/editor "rompa" emojis y terminen como �
+E = {
+    "pepper": "\U0001F336",   # 🌶
+    "receipt": "\U0001F9FE",  # 🧾
+    "card": "\U0001F4B3",     # 💳
+    "check": "\u2705",        # ✅
+    "pin": "\U0001F4CC",      # 📌
+    "gift": "\U0001F381",     # 🎁
+    "drink": "\U0001F964",    # 🥤
+    "plate": "\U0001F37D",    # 🍽  (sin variation selector)
+    "arrow": "\u27A1",        # ➡
+}
+
+# Barras seguras (BMP, súper compatibles)
+BAR_ON = "\u25A0"   # ■
+BAR_OFF = "\u25A1"  # □
+
 
 def normalize_phone_mx(raw: str) -> str | None:
     """
@@ -67,7 +87,7 @@ def make_bar(balance: int, goal: int) -> str:
     if prog == 0 and balance > 0:
         prog = goal
     filled = min(prog, goal)
-    return "🟨" * filled + "⬜" * (goal - filled)
+    return (BAR_ON * filled) + (BAR_OFF * (goal - filled))
 
 
 def faltan_para(balance: int, goal: int) -> int:
@@ -128,22 +148,22 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -
 
     canje = []
     if f5 == 0:
-        canje.append("🥤 Ya puedes canjear una bebida (excepto chai).")
+        canje.append(f"{E['drink']} Ya puedes canjear una bebida (excepto chai).")
     if f10 == 0:
-        canje.append("🍽️ Ya puedes canjear un plato fuerte.")
+        canje.append(f"{E['plate']} Ya puedes canjear un plato fuerte.")
     canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos 😉"
 
     return (
-        "🌶️ Señor Chilaquil — Totopos 🟨🟥\n\n"
-        f"🧾 Pedido #{pedido_id}   💳 Total: ${float(total):.2f}\n"
-        f"✅ Ganaste hoy: +{earned} totopo(s) 🟨\n"
-        f"📌 Totopos acumulados: {balance} 🟨\n\n"
-        "🎁 Recompensas\n"
-        f"🥤 Bebida (excepto chai): {balance}/5  {bar5}\n"
-        f"🍽️ Plato fuerte:          {balance}/10 {bar10}\n\n"
+        f"{E['pepper']} Señor Chilaquil — Totopos\n\n"
+        f"{E['receipt']} Pedido #{pedido_id}   {E['card']} Total: ${float(total):.2f}\n"
+        f"{E['check']} Ganaste hoy: +{earned} totopo(s)\n"
+        f"{E['pin']} Totopos acumulados: {balance}\n\n"
+        f"{E['gift']} Recompensas\n"
+        f"{E['drink']} Bebida (excepto chai): {balance}/5  {bar5}\n"
+        f"{E['plate']} Plato fuerte:          {balance}/10 {bar10}\n\n"
         "Te faltan:\n"
-        f"➡️ {f5} para bebida 🥤\n"
-        f"➡️ {f10} para plato 🍽️\n\n"
+        f"{E['arrow']} {f5} para bebida {E['drink']}\n"
+        f"{E['arrow']} {f10} para plato {E['plate']}\n\n"
         f"{canje_txt}\n"
     )
 
