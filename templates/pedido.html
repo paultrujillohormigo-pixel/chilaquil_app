@@ -595,26 +595,30 @@ function renderCarrito(){
       cocinaHtml += '</div>';
     }
 
-    tbody.innerHTML +=
-      '<tr>' +
-        '<td class="td-left">' +
-          escapeHtml(it.nombre) +
-          cocinaHtml +
-          '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
-          '</div>' +
-        '</td>' +
-        '<td>' +
-          '<div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">' +
-            '<button type="button" class="btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
-            '<span style="min-width:22px; text-align:center;">' + it.cantidad + '</span>' +
-            '<button type="button" class="btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
-          '</div>' +
-        '</td>' +
-        '<td>$' + Number(it.precio).toFixed(2) + '</td>' +
-        '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
-      '</tr>';
+tbody.innerHTML += `
+  <tr>
+    <td class="td-left">
+      ${escapeHtml(it.nombre)}
+      ${cocinaHtml}
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn-gray" onclick="editarLinea('${uid}')">Editar</button>
+      </div>
+    </td>
+
+    <td>
+      <div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+        <button type="button" class="btn-gray" onclick="restarProducto('${uid}')">–</button>
+        <span style="min-width:22px; text-align:center;">${it.cantidad}</span>
+        <button type="button" class="btn-gray" onclick="sumarProducto('${uid}')">+</button>
+      </div>
+    </td>
+
+    <td>$${Number(it.precio).toFixed(2)}</td>
+    <td><strong>$${subtotal.toFixed(2)}</strong></td>
+    <td><button type="button" class="btn-red" onclick="eliminarProducto('${uid}')">✕</button></td>
+  </tr>
+`;
+
 
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(it.producto_id) + '">' +
