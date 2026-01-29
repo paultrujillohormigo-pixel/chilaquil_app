@@ -13,4 +13,3 @@ def get_connection():
         use_unicode=True,
         autocommit=False,
     )
-
