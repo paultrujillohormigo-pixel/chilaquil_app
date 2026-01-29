@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="pos-title">🗑️ Borrar pedidos</h2>
+<p class="hint">Usa con cuidado. Eliminar borra el pedido y sus items.</p>
+
+<div class="card">
+  <div class="card-head" style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+    <h3 style="margin:0;">Filtros</h3>
+
+    <!-- Acciones peligrosas -->
+    <form method="post"
+          action="{{ url_for('borrar_pedidos_bulk') }}"
+          onsubmit="return confirm('¿Seguro? Esto borrará TODOS los pedidos ABIERTOS.');"
+          style="margin:0;">
+      <input type="hidden" name="modo" value="borrar_todos_abiertos">
+      <button type="submit" class="btn-red">Eliminar TODOS los abiertos</button>
+    </form>
+  </div>
+
+  <form method="get" class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap:12px;">
+    <div>
+      <label>Estado</label>
+      <select name="estado">
+        <option value=""  {% if not estado %}selected{% endif %}>Todos</option>
+        <option value="abierto" {% if estado=='abierto' %}selected{% endif %}>Abierto</option>
+        <option value="cerrado" {% if estado=='cerrado' %}selected{% endif %}>Cerrado</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Origen</label>
+      <input type="text" name="origen" value="{{ origen or '' }}" placeholder="uber / mostrador / didi">
+    </div>
+
+    <div>
+      <label>Mesero</label>
+      <input type="text" name="mesero" value="{{ mesero or '' }}" placeholder="Nombre">
+    </div>
+
+    <div>
+      <label>ID pedido</label>
+      <input type="number" name="pedido_id" value="{{ pedido_id or '' }}" placeholder="Ej. 269">
+    </div>
+
+    <div style="grid-column: span 2;">
+      <label>Fecha (desde)</label>
+      <input type="date" name="desde" value="{{ desde or '' }}">
+    </div>
+
+    <div style="grid-column: span 2;">
+      <label>Fecha (hasta)</label>
+      <input type="date" name="hasta" value="{{ hasta or '' }}">
+    </div>
+
+    <div style="grid-column: span 4; display:flex; gap:10px; justify-content:flex-end;">
+      <a class="btn-gray" href="{{ url_for('borrar_pedidos') }}">Limpiar</a>
+      <button type="submit" class="btn-primary">Buscar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+    <h3 style="margin:0;">Resultados ({{ pedidos|length }})</h3>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button type="button" class="btn-gray" onclick="selectAll(true)">Seleccionar todo</button>
+      <button type="button" class="btn-gray" onclick="selectAll(false)">Quitar selección</button>
+    </div>
+  </div>
+
+  {% if pedidos %}
+  <form method="post"
+        action="{{ url_for('borrar_pedidos_bulk') }}"
+        onsubmit="return confirm('¿Eliminar los pedidos seleccionados? Esta acción no se puede deshacer.');">
+
+    <div style="overflow:auto;">
+      <table class="pedido-table" style="width:100%; table-layout:fixed;">
+        <thead>
+          <tr>
+            <th style="width:55px;">Sel.</th>
+            <th style="width:90px;">ID</th>
+            <th style="width:140px;">Fecha</th>
+            <th style="width:120px;">Estado</th>
+            <th style="width:140px;">Origen</th>
+            <th>Mesero</th>
+            <th style="width:130px;">Total</th>
+            <th style="width:120px;">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr>
+            <td style="text-align:center;">
+              <input type="checkbox" name="pedido_ids[]" value="{{ p.id }}" class="chk-pedido">
+            </td>
+            <td><strong>#{{ p.id }}</strong></td>
+            <td>{{ p.fecha }}</td>
+            <td>
+              {% if p.estado == 'abierto' %}
+                <span class="tag tag-warn">abierto</span>
+              {% else %}
+                <span class="tag">cerrado</span>
+              {% endif %}
+            </td>
+            <td>{{ p.origen }}</td>
+            <td class="td-left">{{ p.mesero or '—' }}</td>
+            <td><strong>{{ p.total | money }}</strong></td>
+            <td>
+              <form method="post"
+                    action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}"
+                    onsubmit="return confirm('¿Eliminar el pedido #{{ p.id }}?');"
+                    style="margin:0;">
+                <button type="submit" class="btn-red">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+      <input type="hidden" name="modo" value="borrar_seleccion">
+      <button type="submit" class="btn-red">Eliminar seleccionados</button>
+    </div>
+
+  </form>
+  {% else %}
+    <p>No hay pedidos con esos filtros.</p>
+  {% endif %}
+</div>
+
+<style>
+/* mini estilos seguros */
+.tag{ display:inline-block; padding:4px 8px; border-radius:8px; border:1px solid #ddd; background:#f3f3f3; font-weight:700; font-size:.85rem; }
+.tag-warn{ background:#fff3cd; border-color:#f0c36d; }
+.td-left{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+</style>
+
+<script>
+function selectAll(flag){
+  document.querySelectorAll(".chk-pedido").forEach(chk => chk.checked = flag);
+}
+</script>
+
+{% endblock %}
