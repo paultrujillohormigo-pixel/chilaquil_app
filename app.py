@@ -48,12 +48,19 @@ def normalize_phone_mx(raw: str) -> str | None:
     return None
 
 
+
+
 def wa_me_link(phone_e164: str, message_text: str) -> str:
-    """
-    wa.me NO quiere el '+'. Ej: +52449... -> 52449...
-    """
     phone = phone_e164.replace("+", "")
-    return f"https://wa.me/{phone}?text={urllib.parse.quote(message_text)}"
+
+    # 1) Fuerza UTF-8 real (si hay algo inválido, truena aquí y lo detectas)
+    msg_bytes = message_text.encode("utf-8", "strict")
+
+    # 2) URL-encode sobre BYTES UTF-8
+    msg_q = urllib.parse.quote_from_bytes(msg_bytes)
+
+    return f"https://wa.me/{phone}?text={msg_q}"
+
 
 
 def make_bar(balance: int, goal: int) -> str:
