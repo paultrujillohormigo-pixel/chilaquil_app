@@ -27,11 +27,7 @@ def normalize_phone_mx(raw: str) -> str | None:
         return None
 
     s = re.sub(r"[^\d+]", "", raw).strip()
-
-    if s.startswith("+"):
-        s_digits = re.sub(r"\D", "", s)
-    else:
-        s_digits = re.sub(r"\D", "", s)
+    s_digits = re.sub(r"\D", "", s)
 
     # 10 dígitos -> +52
     if len(s_digits) == 10:
@@ -48,19 +44,20 @@ def normalize_phone_mx(raw: str) -> str | None:
     return None
 
 
-
-
 def wa_me_link(phone_e164: str, message_text: str) -> str:
-    phone = phone_e164.replace("+", "")
+    """
+    wa.me NO quiere el '+'. Además: encode/quote correcto en UTF-8 bytes
+    para evitar caracteres � en WhatsApp.
+    """
+    phone = (phone_e164 or "").replace("+", "")
 
-    # 1) Fuerza UTF-8 real (si hay algo inválido, truena aquí y lo detectas)
+    # Fuerza UTF-8 válido (si truena aquí, hay un bug en tu string)
     msg_bytes = message_text.encode("utf-8", "strict")
 
-    # 2) URL-encode sobre BYTES UTF-8
+    # URL-encode sobre bytes UTF-8 (más robusto que quote(str))
     msg_q = urllib.parse.quote_from_bytes(msg_bytes)
 
     return f"https://wa.me/{phone}?text={msg_q}"
-
 
 
 def make_bar(balance: int, goal: int) -> str:
@@ -68,7 +65,7 @@ def make_bar(balance: int, goal: int) -> str:
         return ""
     prog = balance % goal
     if prog == 0 and balance > 0:
-        prog = goal  # listo
+        prog = goal
     filled = min(prog, goal)
     return "🟨" * filled + "⬜" * (goal - filled)
 
@@ -119,7 +116,8 @@ def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, e
     """, (customer_id, pedido_id, earned))
 
     cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
-    return cursor.fetchone()["totopos_balance"]
+    row = cursor.fetchone()
+    return row["totopos_balance"] if row else 0
 
 
 def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -> str:
@@ -364,7 +362,7 @@ def cerrar_pedido_whatsapp(pedido_id):
             customer_id = loyalty_get_or_create_customer(cursor, phone)
             balance = loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, earned)
 
-            # 3) Ticket + totopos
+            # 3) Ticket + totopos (TEXTO CRUDO, SIN QUOTE)
             ticket_text = generar_ticket_texto(pedido_id, cursor)
             msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(pedido["total"]))
             full_message = ticket_text + "\n\n" + msg_loyalty
@@ -804,29 +802,29 @@ def generar_ticket_texto(pedido_id, cursor):
     return "\n".join(lines)
 
 
-# ================== generar ticket whats ==================
+# ================== generar ticket whats (SIN QUOTE) ==================
 def generar_ticket_whatsapp(pedido_id, cursor):
-    texto = generar_ticket_texto(pedido_id, cursor)
-    return urllib.parse.quote(texto)
+    return generar_ticket_texto(pedido_id, cursor)
 
 
 # ================== enviar ticket a whats (LEGACY) ==================
 @app.route("/pedido/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
-    telefono = request.args.get("tel")
+    tel_raw = request.args.get("tel", "").strip()
+    telefono_e164 = normalize_phone_mx(tel_raw)
 
-    if not telefono:
+    if not telefono_e164:
         flash("Número no válido", "error")
         return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            mensaje = generar_ticket_whatsapp(pedido_id, cursor)
+            texto = generar_ticket_whatsapp(pedido_id, cursor)  # TEXTO CRUDO
     finally:
         conn.close()
 
-    return redirect(f"https://wa.me/{telefono}?text={mensaje}")
+    return redirect(wa_me_link(telefono_e164, texto))
 
 
 # ================== Preview ticket ==================
@@ -836,13 +834,15 @@ def ticket_preview(pedido_id):
     try:
         with conn.cursor() as cursor:
             texto = generar_ticket_texto(pedido_id, cursor)
-            mensaje = urllib.parse.quote(texto)
     finally:
         conn.close()
 
+    # URL para WhatsApp sin número (solo preview)
+    msg_q = urllib.parse.quote_from_bytes(texto.encode("utf-8", "strict"))
+
     return jsonify({
         "texto": texto,
-        "whatsapp_url": f"https://wa.me/?text={mensaje}"
+        "whatsapp_url": f"https://wa.me/?text={msg_q}"
     })
 
 
