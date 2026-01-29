@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <h2>🧾 Insumos</h2>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="{{ url_for('costeo.platillos_index') }}">🍽️ Platillos</a>
+    <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_index') }}">📌 Recetas</a>
+    <a class="btn btn-secondary" href="{{ url_for('costeo.costeo_index') }}">📊 Costeo</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Agregar insumo</h3>
+    <p class="muted">Crea tu catálogo de insumos para poder armar recetas (g, ml o pza).</p>
+  </div>
+
+  <form method="post" action="{{ url_for('costeo.insumos_create') }}" class="form-grid-3">
+    <div>
+      <label>Nombre</label>
+      <input type="text" name="nombre" placeholder="Ej. Queso Oaxaca" required>
+    </div>
+
+    <div>
+      <label>Unidad base</label>
+      <select name="unidad_base" required>
+        <option value="g">g (gramos)</option>
+        <option value="ml">ml (mililitros)</option>
+        <option value="pza">pza (piezas)</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Merma % (opcional)</label>
+      <input type="number" step="0.01" min="0" name="merma_pct" placeholder="Ej. 5">
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3>Lista</h3>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:80px;">ID</th>
+          <th>Insumo</th>
+          <th style="width:100px;">Unidad</th>
+          <th style="width:120px;">Merma</th>
+          <th style="width:100px;">Activo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in insumos %}
+        <tr>
+          <td>{{ i.id }}</td>
+          <td><strong>{{ i.nombre }}</strong></td>
+          <td>{{ i.unidad_base }}</td>
+          <td>{{ "%.2f"|format(i.merma_pct or 0) }}%</td>
+          <td>{{ "Sí" if i.activo == 1 else "No" }}</td>
+        </tr>
+        {% endfor %}
+
+        {% if not insumos %}
+        <tr>
+          <td colspan="5" class="muted">No hay insumos todavía. Agrega el primero arriba.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .page-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
+  .card-head h3{margin:0 0 6px 0}
+  .muted{opacity:.7;margin:0}
+  .table-wrap{overflow:auto;margin-top:10px}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle;white-space:nowrap}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  input, select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;background:#fff}
+  .form-grid-3{display:grid;grid-template-columns:1fr 220px 220px;gap:12px;align-items:end}
+  .form-actions{display:flex;justify-content:flex-end}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd;cursor:pointer}
+  .btn-primary{background:#111;color:#fff;border-color:#111}
+  .btn-secondary{background:#f6f6f6;color:#111}
+</style>
+
+{% endblock %}
