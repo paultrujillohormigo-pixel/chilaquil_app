@@ -877,6 +877,137 @@ def ticket_preview(pedido_id):
     })
 
 
+# ================== BORRAR PEDIDOS (UI + ACCIONES) ==================
+# Pega TODO este bloque en app.py (por ejemplo, antes de "# ================== RUN ==================")
+
+@app.route("/borrar_pedidos", methods=["GET"])
+def borrar_pedidos():
+    """
+    Pantalla para listar pedidos y permitir borrarlos (individual o bulk).
+    Filtros por querystring:
+      estado, origen, mesero, pedido_id, desde, hasta
+    """
+    estado = (request.args.get("estado") or "").strip().lower()
+    origen = (request.args.get("origen") or "").strip().lower()
+    mesero = (request.args.get("mesero") or "").strip()
+    pedido_id = (request.args.get("pedido_id") or "").strip()
+    desde = (request.args.get("desde") or "").strip()  # YYYY-MM-DD
+    hasta = (request.args.get("hasta") or "").strip()  # YYYY-MM-DD
+
+    where = []
+    params = []
+
+    if estado in ("abierto", "cerrado"):
+        where.append("estado = %s")
+        params.append(estado)
+
+    if origen:
+        where.append("LOWER(origen) LIKE %s")
+        params.append(f"%{origen}%")
+
+    if mesero:
+        where.append("mesero LIKE %s")
+        params.append(f"%{mesero}%")
+
+    if pedido_id.isdigit():
+        where.append("id = %s")
+        params.append(int(pedido_id))
+
+    if desde:
+        where.append("DATE(fecha) >= %s")
+        params.append(desde)
+
+    if hasta:
+        where.append("DATE(fecha) <= %s")
+        params.append(hasta)
+
+    filtro_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(f"""
+                SELECT id, fecha, origen, mesero, total, estado
+                FROM pedidos
+                {filtro_sql}
+                ORDER BY fecha DESC
+                LIMIT 300
+            """, params)
+            pedidos = cursor.fetchall()
+    finally:
+        conn.close()
+
+    return render_template(
+        "borrar_pedidos.html",
+        pedidos=pedidos,
+        estado=estado or "",
+        origen=origen or "",
+        mesero=mesero or "",
+        pedido_id=pedido_id or "",
+        desde=desde or "",
+        hasta=hasta or "",
+    )
+
+
+@app.route("/borrar_pedidos_bulk", methods=["POST"])
+def borrar_pedidos_bulk():
+    """
+    POST handler para:
+      - borrar seleccionados (pedido_ids[])
+      - borrar todos los abiertos
+    """
+    modo = (request.form.get("modo") or "").strip()
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            if modo == "borrar_todos_abiertos":
+                # 1) borra items de pedidos abiertos
+                cursor.execute("""
+                    DELETE pi
+                    FROM pedido_items pi
+                    JOIN pedidos pe ON pe.id = pi.pedido_id
+                    WHERE pe.estado = 'abierto'
+                """)
+                # 2) borra pedidos abiertos
+                cursor.execute("DELETE FROM pedidos WHERE estado = 'abierto'")
+                conn.commit()
+                flash("Se borraron TODOS los pedidos abiertos.", "success")
+                return redirect(url_for("borrar_pedidos", estado="abierto"))
+
+            # default: borrar seleccionados
+            ids = request.form.getlist("pedido_ids[]")
+            ids_int = []
+            for x in ids:
+                x = (x or "").strip()
+                if x.isdigit():
+                    ids_int.append(int(x))
+
+            if not ids_int:
+                flash("No seleccionaste pedidos para borrar.", "error")
+                return redirect(url_for("borrar_pedidos"))
+
+            # Borra items primero (FK safety)
+            placeholders = ",".join(["%s"] * len(ids_int))
+
+            cursor.execute(
+                f"DELETE FROM pedido_items WHERE pedido_id IN ({placeholders})",
+                ids_int
+            )
+            cursor.execute(
+                f"DELETE FROM pedidos WHERE id IN ({placeholders})",
+                ids_int
+            )
+
+            conn.commit()
+            flash(f"Se borraron {len(ids_int)} pedido(s).", "success")
+            return redirect(url_for("borrar_pedidos"))
+    finally:
+        conn.close()
+
+
+
+
 # ================== RUN ==================
 if __name__ == "__main__":
     app.run(debug=True)
