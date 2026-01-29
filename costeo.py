@@ -49,6 +49,88 @@ def execute_many(sql, rows):
 
 
 # =========================
+# Platillos (alta + lista)
+# =========================
+@costeo_bp.get("/platillos")
+def platillos_index():
+    platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
+    return render_template("admin/platillos_index.html", platillos=platillos)
+
+
+@costeo_bp.post("/platillos")
+def platillos_create():
+    nombre = (request.form.get("nombre") or "").strip()
+    precio = request.form.get("precio_actual")
+
+    if not nombre:
+        flash("El nombre del platillo es obligatorio.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    precio_val = None
+    try:
+        if precio not in (None, "", " "):
+            precio_val = Decimal(precio)
+    except:
+        flash("Precio inválido.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    try:
+        execute("INSERT INTO platillos (nombre, precio_actual) VALUES (%s,%s)", (nombre, precio_val))
+        flash("Platillo guardado.", "success")
+    except Exception as e:
+        flash(f"No se pudo guardar el platillo: {e}", "error")
+
+    return redirect(url_for("costeo.platillos_index"))
+
+
+# =========================
+# Insumos (alta + lista)
+# =========================
+@costeo_bp.get("/insumos")
+def insumos_index():
+    insumos = query_all("""
+        SELECT id, nombre, unidad_base, merma_pct, activo
+        FROM insumos
+        ORDER BY nombre
+    """)
+    return render_template("admin/insumos_index.html", insumos=insumos)
+
+
+@costeo_bp.post("/insumos")
+def insumos_create():
+    nombre = (request.form.get("nombre") or "").strip()
+    unidad_base = (request.form.get("unidad_base") or "").strip()
+    merma = request.form.get("merma_pct")
+
+    if not nombre:
+        flash("El nombre del insumo es obligatorio.", "error")
+        return redirect(url_for("costeo.insumos_index"))
+
+    if unidad_base not in ("g", "ml", "pza"):
+        flash("Unidad base inválida (g, ml, pza).", "error")
+        return redirect(url_for("costeo.insumos_index"))
+
+    merma_val = Decimal("0")
+    try:
+        if merma not in (None, "", " "):
+            merma_val = Decimal(merma)
+    except:
+        flash("Merma inválida. Usa un número (ej. 5 o 12.5).", "error")
+        return redirect(url_for("costeo.insumos_index"))
+
+    try:
+        execute(
+            "INSERT INTO insumos (nombre, unidad_base, merma_pct, activo) VALUES (%s,%s,%s,1)",
+            (nombre, unidad_base, merma_val)
+        )
+        flash("Insumo guardado.", "success")
+    except Exception as e:
+        flash(f"No se pudo guardar el insumo: {e}", "error")
+
+    return redirect(url_for("costeo.insumos_index"))
+
+
+# =========================
 # Recetas
 # =========================
 @costeo_bp.get("/recetas")
@@ -64,19 +146,42 @@ def recetas_edit(platillo_id):
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
 
-    insumos = query_all("SELECT id, nombre, unidad_base FROM insumos WHERE activo=1 ORDER BY nombre")
+    # Trae catálogo de insumos con costo vigente
+    insumos = query_all("""
+        SELECT
+          i.id,
+          i.nombre,
+          i.unidad_base,
+          i.merma_pct,
+          cv.costo_unitario
+        FROM insumos i
+        LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = i.id
+        WHERE i.activo=1
+        ORDER BY i.nombre
+    """)
 
+    # Trae receta con costo unitario + subtotal por ingrediente (incluye merma)
     receta = query_all("""
-        SELECT r.id, r.insumo_id, i.nombre AS insumo_nombre,
-               i.unidad_base, r.cantidad_base
+        SELECT
+          r.id,
+          r.insumo_id,
+          i.nombre AS insumo_nombre,
+          i.unidad_base,
+          i.merma_pct,
+          r.cantidad_base,
+          cv.costo_unitario,
+          ROUND(
+            r.cantidad_base * cv.costo_unitario * (1 + (i.merma_pct/100)),
+            2
+          ) AS subtotal
         FROM recetas r
         JOIN insumos i ON i.id = r.insumo_id
+        LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = r.insumo_id
         WHERE r.platillo_id=%s
         ORDER BY i.nombre
     """, (platillo_id,))
 
-    # Si todavía no existe la vista v_costeo_platillos, esto tronará.
-    # Lo dejo protegido para que no se caiga tu pantalla.
+    # Costeo total (si existe la vista)
     costeo = None
     try:
         costeo = query_one("SELECT * FROM v_costeo_platillos WHERE platillo_id=%s", (platillo_id,))
@@ -132,96 +237,6 @@ def costeo_index():
         data = query_all("SELECT * FROM v_costeo_platillos ORDER BY platillo")
     except Exception:
         data = []
-        flash("No se pudo cargar el costeo: falta crear la vista v_costeo_platillos o falta costo vigente.", "error")
+        flash("No se pudo cargar el costeo: falta crear v_costeo_platillos o falta costo vigente.", "error")
 
     return render_template("admin/costeo_index.html", data=data)
-
-
-
-# =========================
-# Platillos (alta + lista)
-# =========================
-@costeo_bp.get("/platillos")
-def platillos_index():
-    platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
-    return render_template("admin/platillos_index.html", platillos=platillos)
-
-
-@costeo_bp.post("/platillos")
-def platillos_create():
-    nombre = (request.form.get("nombre") or "").strip()
-    precio = request.form.get("precio_actual")  # puede venir vacío
-
-    if not nombre:
-        flash("El nombre del platillo es obligatorio.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    # precio puede ser null
-    precio_val = None
-    try:
-        if precio not in (None, "", " "):
-            precio_val = Decimal(precio)
-    except:
-        flash("Precio inválido.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    try:
-        execute(
-            "INSERT INTO platillos (nombre, precio_actual) VALUES (%s,%s)",
-            (nombre, precio_val)
-        )
-        flash("Platillo guardado.", "success")
-    except Exception as e:
-        # por si tienes unique o algo raro
-        flash(f"No se pudo guardar el platillo: {e}", "error")
-
-    return redirect(url_for("costeo.platillos_index"))
-
-
-# =========================
-# Insumos (alta + lista)
-# =========================
-@costeo_bp.get("/insumos")
-def insumos_index():
-    insumos = query_all("""
-        SELECT id, nombre, unidad_base, merma_pct, activo
-        FROM insumos
-        ORDER BY nombre
-    """)
-    return render_template("admin/insumos_index.html", insumos=insumos)
-
-
-@costeo_bp.post("/insumos")
-def insumos_create():
-    nombre = (request.form.get("nombre") or "").strip()
-    unidad_base = (request.form.get("unidad_base") or "").strip()
-    merma = request.form.get("merma_pct")
-
-    if not nombre:
-        flash("El nombre del insumo es obligatorio.", "error")
-        return redirect(url_for("costeo.insumos_index"))
-
-    if unidad_base not in ("g", "ml", "pza"):
-        flash("Unidad base inválida (g, ml, pza).", "error")
-        return redirect(url_for("costeo.insumos_index"))
-
-    merma_val = Decimal("0")
-    try:
-        if merma not in (None, "", " "):
-            merma_val = Decimal(merma)
-    except:
-        flash("Merma inválida. Usa un número (ej. 5 o 12.5).", "error")
-        return redirect(url_for("costeo.insumos_index"))
-
-    try:
-        execute(
-            "INSERT INTO insumos (nombre, unidad_base, merma_pct, activo) VALUES (%s,%s,%s,1)",
-            (nombre, unidad_base, merma_val)
-        )
-        flash("Insumo guardado.", "success")
-    except Exception as e:
-        # tienes UNIQUE(nombre) en insumos, aquí caerá si duplicas
-        flash(f"No se pudo guardar el insumo: {e}", "error")
-
-    return redirect(url_for("costeo.insumos_index"))
-
