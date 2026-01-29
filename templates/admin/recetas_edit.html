@@ -42,7 +42,11 @@
 
       <td class="costo_unitario">
         {% if r.costo_unitario is not none %}
-          ${{ "%.4f"|format(r.costo_unitario) }}
+{% if r.get('costo_unitario') is not none %}
+  ${{ "%.4f"|format(r.get('costo_unitario')) }}
+{% else %}
+  <span class="muted">Sin costo</span>
+{% endif %}
         {% else %}
           <span class="muted">Sin costo</span>
         {% endif %}
