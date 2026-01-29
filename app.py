@@ -4,41 +4,160 @@ from db import get_connection
 from costeo import costeo_bp
 
 import urllib.parse
+import re
+
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
-
-# =========================================================
-# NOTA IMPORTANTE (BD)
-# Para que esto funcione debes agregar columnas a pedido_items:
-#   proteina VARCHAR(60) NULL
-#   sin VARCHAR(255) NULL
-#   nota TEXT NULL
-#
-# SQL:
-# ALTER TABLE pedido_items
-#   ADD COLUMN proteina VARCHAR(60) NULL AFTER producto_id,
-#   ADD COLUMN sin VARCHAR(255) NULL AFTER proteina,
-#   ADD COLUMN nota TEXT NULL AFTER sin;
-# =========================================================
-
-
 # ================== COSTEO ==================
-
-
 app.register_blueprint(costeo_bp)
 
 
+# =========================================================
+# ================== LOYALTY (TOTOPOS) ====================
+# =========================================================
+
+def normalize_phone_mx(raw: str) -> str | None:
+    """
+    Acepta: '449 741 9166', '524497419166', '+52 4497419166'
+    Devuelve: '+524497419166' o None si no es válido.
+    """
+    if not raw:
+        return None
+
+    s = re.sub(r"[^\d+]", "", raw).strip()
+
+    if s.startswith("+"):
+        s_digits = re.sub(r"\D", "", s)
+    else:
+        s_digits = re.sub(r"\D", "", s)
+
+    # 10 dígitos -> +52
+    if len(s_digits) == 10:
+        return "+52" + s_digits
+
+    # 12 dígitos empezando con 52 -> +52...
+    if len(s_digits) == 12 and s_digits.startswith("52"):
+        return "+" + s_digits
+
+    # 13 dígitos empezando con 521 (a veces)
+    if len(s_digits) == 13 and s_digits.startswith("521"):
+        return "+" + s_digits
+
+    return None
+
+
+def wa_me_link(phone_e164: str, message_text: str) -> str:
+    """
+    wa.me NO quiere el '+'. Ej: +52449... -> 52449...
+    """
+    phone = phone_e164.replace("+", "")
+    return f"https://wa.me/{phone}?text={urllib.parse.quote(message_text)}"
+
+
+def make_bar(balance: int, goal: int) -> str:
+    if goal <= 0:
+        return ""
+    prog = balance % goal
+    if prog == 0 and balance > 0:
+        prog = goal  # listo
+    filled = min(prog, goal)
+    return "🟨" * filled + "⬜" * (goal - filled)
+
+
+def faltan_para(balance: int, goal: int) -> int:
+    if goal <= 0:
+        return 0
+    r = balance % goal
+    return 0 if (r == 0 and balance > 0) else (goal - r)
+
+
+def loyalty_get_or_create_customer(cursor, phone_e164: str) -> int:
+    cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164=%s", (phone_e164,))
+    row = cursor.fetchone()
+
+    if row:
+        return row["id"]
+
+    cursor.execute(
+        "INSERT INTO loyalty_customers (phone_e164) VALUES (%s)",
+        (phone_e164,)
+    )
+    customer_id = cursor.lastrowid
+
+    cursor.execute(
+        "INSERT INTO loyalty_accounts (customer_id, totopos_balance, totopos_lifetime) VALUES (%s,0,0)",
+        (customer_id,)
+    )
+    return customer_id
+
+
+def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, earned: int) -> int:
+    if earned <= 0:
+        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
+        row = cursor.fetchone()
+        return row["totopos_balance"] if row else 0
+
+    cursor.execute("""
+        UPDATE loyalty_accounts
+        SET totopos_balance = totopos_balance + %s,
+            totopos_lifetime = totopos_lifetime + %s
+        WHERE customer_id=%s
+    """, (earned, earned, customer_id))
+
+    cursor.execute("""
+        INSERT INTO loyalty_tx (customer_id, pedido_id, delta, reason)
+        VALUES (%s,%s,%s,'purchase')
+    """, (customer_id, pedido_id, earned))
+
+    cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
+    return cursor.fetchone()["totopos_balance"]
+
+
+def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -> str:
+    bar5 = make_bar(balance, 5)
+    bar10 = make_bar(balance, 10)
+    f5 = faltan_para(balance, 5)
+    f10 = faltan_para(balance, 10)
+
+    canje = []
+    if f5 == 0:
+        canje.append("🥤 Ya puedes canjear una bebida (excepto chai).")
+    if f10 == 0:
+        canje.append("🍽️ Ya puedes canjear un plato fuerte.")
+    canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos 😉"
+
+    return (
+        "🌶️ Señor Chilaquil — Totopos 🟨🟥\n\n"
+        f"🧾 Pedido #{pedido_id}   💳 Total: ${float(total):.2f}\n"
+        f"✅ Ganaste hoy: +{earned} totopo(s) 🟨\n"
+        f"📌 Totopos acumulados: {balance} 🟨\n\n"
+        "🎁 Recompensas\n"
+        f"🥤 Bebida (excepto chai): {balance}/5  {bar5}\n"
+        f"🍽️ Plato fuerte:          {balance}/10 {bar10}\n\n"
+        "Te faltan:\n"
+        f"➡️ {f5} para bebida 🥤\n"
+        f"➡️ {f10} para plato 🍽️\n\n"
+        f"{canje_txt}\n"
+    )
+
+
+# ================== FILTRO DE MONEDA ==================
+@app.template_filter("money")
+def money_format(value):
+    try:
+        return "${:,.2f}".format(float(value))
+    except:
+        return value
+
 
 # ================== PEDIDOS ABIERTOS ==================
-
 @app.route("/pedidos_abiertos")
 def pedidos_abiertos():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             cursor.execute("""
                 SELECT id, fecha, origen, mesero, total
                 FROM pedidos
@@ -57,33 +176,24 @@ def pedidos_abiertos():
                     LIMIT 4
                 """, (p["id"],))
                 p["items_preview"] = cursor.fetchall()
-
     finally:
         conn.close()
 
-    return render_template(
-        "pedidos_abiertos.html",
-        pedidos=pedidos
-    )
+    return render_template("pedidos_abiertos.html", pedidos=pedidos)
 
 
-# ================== FILTRO DE MONEDA ==================
-@app.template_filter("money")
-def money_format(value):
-    try:
-        return "${:,.2f}".format(float(value))
-    except:
-        return value
+# ================== HOME ==================
+@app.route("/")
+def index():
+    return redirect(url_for("nuevo_pedido"))
 
 
 # ================== PEDIDO ==================
-
 @app.route("/pedido/<int:pedido_id>", methods=["GET", "POST"])
 def ver_pedido(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             cursor.execute("""
                 SELECT * FROM pedidos
                 WHERE id = %s AND estado = 'abierto'
@@ -94,7 +204,6 @@ def ver_pedido(pedido_id):
                 flash("Pedido no disponible", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
-            # 👇 Ahora también trae personalización guardada
             cursor.execute("""
                 SELECT pi.id, pi.cantidad, pi.precio_unitario, pi.subtotal,
                        pi.proteina, pi.sin, pi.nota,
@@ -114,11 +223,9 @@ def ver_pedido(pedido_id):
             productos = cursor.fetchall()
 
             if request.method == "POST":
-
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
 
-                # 👇 Nuevos campos (guardarlos)
                 proteinas_sel = request.form.getlist("proteina[]")
                 sin_sel = request.form.getlist("sin[]")
                 notas_sel = request.form.getlist("nota[]")
@@ -137,16 +244,13 @@ def ver_pedido(pedido_id):
                     sin_txt = safe_get(sin_sel, i, "")
                     nota = safe_get(notas_sel, i, "")
 
-                    cursor.execute("""
-                        SELECT precio FROM productos WHERE id = %s
-                    """, (prod_id,))
+                    cursor.execute("SELECT precio FROM productos WHERE id = %s", (prod_id,))
                     row = cursor.fetchone()
                     if not row:
                         continue
 
                     precio = Decimal(row["precio"])
 
-                    # ✅ Merge solo si coincide producto + personalización
                     cursor.execute("""
                         SELECT id, cantidad
                         FROM pedido_items
@@ -167,14 +271,9 @@ def ver_pedido(pedido_id):
                             SET cantidad = %s,
                                 subtotal = %s
                             WHERE id = %s
-                        """, (
-                            nueva_cantidad,
-                            nuevo_subtotal,
-                            existente["id"]
-                        ))
+                        """, (nueva_cantidad, nuevo_subtotal, existente["id"]))
 
                         total_agregado += precio * cant
-
                     else:
                         subtotal = precio * cant
                         total_agregado += subtotal
@@ -184,14 +283,8 @@ def ver_pedido(pedido_id):
                             (pedido_id, producto_id, proteina, sin, nota, cantidad, precio_unitario, subtotal)
                             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                         """, (
-                            pedido_id,
-                            prod_id,
-                            prot,
-                            sin_txt,
-                            nota,
-                            cant,
-                            precio,
-                            subtotal
+                            pedido_id, prod_id, prot, sin_txt, nota,
+                            cant, precio, subtotal
                         ))
 
                 cursor.execute("""
@@ -203,20 +296,13 @@ def ver_pedido(pedido_id):
 
                 conn.commit()
                 return redirect(url_for("ver_pedido", pedido_id=pedido_id))
-
     finally:
         conn.close()
 
-    return render_template(
-        "pedido.html",
-        pedido=pedido,
-        items=items,
-        productos=productos
-    )
+    return render_template("pedido.html", pedido=pedido, items=items, productos=productos)
 
 
-# ================== CERRAR PEDIDOS ==================
-
+# ================== CERRAR PEDIDO (NORMAL) ==================
 @app.route("/cerrar_pedido/<int:pedido_id>", methods=["POST"])
 def cerrar_pedido(pedido_id):
     conn = get_connection()
@@ -235,10 +321,51 @@ def cerrar_pedido(pedido_id):
     return redirect(url_for("pedidos_abiertos"))
 
 
-# ================== HOME ==================
-@app.route("/")
-def index():
-    return redirect(url_for("nuevo_pedido"))
+# ================== CERRAR PEDIDO + WHATSAPP + TOTOPOS ==================
+@app.route("/cerrar_pedido_whatsapp/<int:pedido_id>", methods=["POST"])
+def cerrar_pedido_whatsapp(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, total, telefono_whatsapp, estado
+                FROM pedidos
+                WHERE id=%s
+            """, (pedido_id,))
+            pedido = cursor.fetchone()
+
+            if not pedido:
+                flash("Pedido no encontrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            if pedido["estado"] != "abierto":
+                flash("Este pedido ya está cerrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            phone = pedido.get("telefono_whatsapp")
+            if not phone:
+                cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
+                conn.commit()
+                flash("Pedido cerrado. (Sin WhatsApp porque no hay teléfono)", "success")
+                return redirect(url_for("pedidos_abiertos"))
+
+            # 1) Cerrar pedido
+            cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
+
+            # 2) Sumar totopos (MVP: +1 por compra)
+            earned = 1
+            customer_id = loyalty_get_or_create_customer(cursor, phone)
+            balance = loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, earned)
+
+            # 3) Ticket + totopos
+            ticket_text = generar_ticket_texto(pedido_id, cursor)
+            msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(pedido["total"]))
+            full_message = ticket_text + "\n\n" + msg_loyalty
+
+            conn.commit()
+            return redirect(wa_me_link(phone, full_message))
+    finally:
+        conn.close()
 
 
 # ================== PRODUCTOS ==================
@@ -247,7 +374,6 @@ def productos():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             if request.method == "POST":
                 cursor.execute("""
                     INSERT INTO productos (nombre, categoria, costo, precio)
@@ -268,7 +394,6 @@ def productos():
                 ORDER BY categoria, nombre
             """)
             productos = cursor.fetchall()
-
     finally:
         conn.close()
 
@@ -276,13 +401,11 @@ def productos():
 
 
 # ================== NUEVO PEDIDO ==================
-
 @app.route("/nuevo_pedido", methods=["GET", "POST"])
 def nuevo_pedido():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             cursor.execute("""
                 SELECT * FROM productos
                 WHERE activo = 1
@@ -297,7 +420,6 @@ def nuevo_pedido():
             proteinas = cursor.fetchall()
 
             if request.method == "POST":
-
                 fecha = request.form.get("fecha")
                 if not fecha:
                     cursor.execute("SELECT NOW() AS ahora")
@@ -308,10 +430,12 @@ def nuevo_pedido():
                 metodo_pago = request.form["metodo_pago"]
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
 
+                tel_raw = request.form.get("telefono_whatsapp", "").strip()
+                telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
+
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
 
-                # 👇 Nuevos campos (guardarlos)
                 proteinas_sel = request.form.getlist("proteina[]")
                 sin_sel = request.form.getlist("sin[]")
                 notas_sel = request.form.getlist("nota[]")
@@ -346,34 +470,25 @@ def nuevo_pedido():
                     subtotal = precio_unit * cant
                     total += subtotal
 
-                    prot = safe_get(proteinas_sel, i, "")
-                    sin_txt = safe_get(sin_sel, i, "")
-                    nota = safe_get(notas_sel, i, "")
-
                     items.append({
                         "producto_id": prod_id,
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
-                        "proteina": prot,
-                        "sin": sin_txt,
-                        "nota": nota,
+                        "proteina": safe_get(proteinas_sel, i, ""),
+                        "sin": safe_get(sin_sel, i, ""),
+                        "nota": safe_get(notas_sel, i, ""),
                     })
 
                 neto = total + monto_uber
 
                 cursor.execute("""
                     INSERT INTO pedidos
-                    (fecha, origen, mesero, metodo_pago, total, monto_uber, neto, estado)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,'abierto')
+                    (fecha, origen, mesero, telefono_whatsapp, metodo_pago, total, monto_uber, neto, estado)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'abierto')
                 """, (
-                    fecha,
-                    origen,
-                    mesero,
-                    metodo_pago,
-                    total,
-                    monto_uber,
-                    neto
+                    fecha, origen, mesero, telefono_e164,
+                    metodo_pago, total, monto_uber, neto
                 ))
 
                 pedido_id = cursor.lastrowid
@@ -386,9 +501,9 @@ def nuevo_pedido():
                     """, (
                         pedido_id,
                         it["producto_id"],
-                        it.get("proteina"),
-                        it.get("sin"),
-                        it.get("nota"),
+                        it["proteina"],
+                        it["sin"],
+                        it["nota"],
                         it["cantidad"],
                         it["precio_unitario"],
                         it["subtotal"],
@@ -397,16 +512,10 @@ def nuevo_pedido():
                 conn.commit()
                 flash(f"Pedido #{pedido_id} creado y abierto", "success")
                 return redirect(url_for("ver_pedido", pedido_id=pedido_id))
-
     finally:
         conn.close()
 
-    return render_template(
-        "nuevo_pedido.html",
-        productos=productos,
-        salsas=salsas,
-        proteinas=proteinas,
-    )
+    return render_template("nuevo_pedido.html", productos=productos, salsas=salsas, proteinas=proteinas)
 
 
 # ================== COMPRAS ==================
@@ -415,7 +524,6 @@ def compras():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             if request.method == "POST":
                 cursor.execute("""
                     INSERT INTO insumos_compras
@@ -440,7 +548,6 @@ def compras():
                 ORDER BY fecha DESC, id DESC
             """)
             compras = cursor.fetchall()
-
     finally:
         conn.close()
 
@@ -455,7 +562,6 @@ def dashboard():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             filtro = ""
             params = []
 
@@ -463,7 +569,6 @@ def dashboard():
                 filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
-            # Ingresos
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
@@ -474,7 +579,6 @@ def dashboard():
             """, params)
             ingresos = cursor.fetchall()
 
-            # Costos
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
@@ -485,7 +589,6 @@ def dashboard():
             """, params)
             costos = cursor.fetchall()
 
-            # Costos por tipo
             cursor.execute(f"""
                 SELECT tipo_costo,
                        SUM(costo) AS total
@@ -500,23 +603,20 @@ def dashboard():
             utilidad = total_ingresos - total_costos
             margen = (utilidad / total_ingresos * 100) if total_ingresos else 0
 
-            # Ventas por día
             cursor.execute(f"""
-                    SELECT
-                        DATE(fecha) AS dia,
-                        DAYNAME(fecha) AS dia_semana,
-                        COUNT(*) AS pedidos,
-                        SUM(total) AS total,
-                        SUM(neto) AS neto
-                    FROM pedidos
-                    {filtro}
-                    GROUP BY DATE(fecha), DAYNAME(fecha)
-                    ORDER BY dia DESC
-                """, params)
-
+                SELECT
+                    DATE(fecha) AS dia,
+                    DAYNAME(fecha) AS dia_semana,
+                    COUNT(*) AS pedidos,
+                    SUM(total) AS total,
+                    SUM(neto) AS neto
+                FROM pedidos
+                {filtro}
+                GROUP BY DATE(fecha), DAYNAME(fecha)
+                ORDER BY dia DESC
+            """, params)
             ventas_dia = cursor.fetchall()
 
-            # Meses disponibles
             cursor.execute("""
                 SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes
                 FROM pedidos
@@ -524,7 +624,6 @@ def dashboard():
             """)
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
-            # Top productos
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
@@ -539,7 +638,6 @@ def dashboard():
             """, params)
             top_productos = cursor.fetchall()
 
-            # Top gastos
             cursor.execute("""
                 SELECT concepto,
                        tipo_costo,
@@ -553,7 +651,6 @@ def dashboard():
             """, (mes, mes))
             top_gastos = cursor.fetchall()
 
-            # Promedios
             cursor.execute("""
                 SELECT
                     AVG(pedidos) AS avg_pedidos,
@@ -570,7 +667,6 @@ def dashboard():
                 ) t
             """, (mes, mes))
             promedios_dia = cursor.fetchone()
-
     finally:
         conn.close()
 
@@ -593,13 +689,11 @@ def dashboard():
 
 
 # ================== Eliminar item de pedido ==================
-
 @app.route("/pedido/<int:pedido_id>/eliminar_item/<int:item_id>", methods=["POST"])
 def eliminar_item_pedido(pedido_id, item_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
             cursor.execute("""
                 SELECT pe.estado, pi.subtotal
                 FROM pedidos pe
@@ -632,7 +726,6 @@ def eliminar_item_pedido(pedido_id, item_id):
 
             conn.commit()
             flash("Producto eliminado del pedido", "success")
-
     finally:
         conn.close()
 
@@ -640,18 +733,12 @@ def eliminar_item_pedido(pedido_id, item_id):
 
 
 # ================== Eliminar pedido ==================
-
 @app.route("/eliminar_pedido/<int:pedido_id>", methods=["POST"])
 def eliminar_pedido(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-
-            cursor.execute("""
-                SELECT estado
-                FROM pedidos
-                WHERE id = %s
-            """, (pedido_id,))
+            cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (pedido_id,))
             pedido = cursor.fetchone()
 
             if not pedido:
@@ -662,19 +749,11 @@ def eliminar_pedido(pedido_id):
                 flash("No se puede eliminar un pedido cerrado", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
-            cursor.execute("""
-                DELETE FROM pedido_items
-                WHERE pedido_id = %s
-            """, (pedido_id,))
-
-            cursor.execute("""
-                DELETE FROM pedidos
-                WHERE id = %s
-            """, (pedido_id,))
+            cursor.execute("DELETE FROM pedido_items WHERE pedido_id = %s", (pedido_id,))
+            cursor.execute("DELETE FROM pedidos WHERE id = %s", (pedido_id,))
 
             conn.commit()
             flash(f"Pedido #{pedido_id} eliminado correctamente", "success")
-
     finally:
         conn.close()
 
@@ -682,7 +761,6 @@ def eliminar_pedido(pedido_id):
 
 
 # ================== generar_ticket_texto ==================
-
 def generar_ticket_texto(pedido_id, cursor):
     cursor.execute("""
         SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
@@ -693,11 +771,7 @@ def generar_ticket_texto(pedido_id, cursor):
     """, (pedido_id,))
     items = cursor.fetchall()
 
-    cursor.execute("""
-        SELECT total
-        FROM pedidos
-        WHERE id = %s
-    """, (pedido_id,))
+    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
     pedido = cursor.fetchone()
 
     lines = []
@@ -708,7 +782,6 @@ def generar_ticket_texto(pedido_id, cursor):
         subtotal = it["cantidad"] * it["precio_unitario"]
         lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
 
-        # 👇 personalización en ticket (si existe)
         if it.get("proteina"):
             lines.append(f'  PROT: {it["proteina"]}')
         if it.get("sin"):
@@ -725,53 +798,15 @@ def generar_ticket_texto(pedido_id, cursor):
 
 
 # ================== generar ticket whats ==================
-
 def generar_ticket_whatsapp(pedido_id, cursor):
-    cursor.execute("""
-        SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
-        FROM pedido_items pi
-        JOIN productos p ON p.id = pi.producto_id
-        WHERE pi.pedido_id = %s
-        ORDER BY pi.id ASC
-    """, (pedido_id,))
-    items = cursor.fetchall()
-
-    cursor.execute("""
-        SELECT total
-        FROM pedidos
-        WHERE id = %s
-    """, (pedido_id,))
-    pedido = cursor.fetchone()
-
-    lines = []
-    lines.append("Señor Chilaquil")
-    lines.append("--------------------")
-
-    for it in items:
-        subtotal = it["cantidad"] * it["precio_unitario"]
-        lines.append(f'{it["cantidad"]} {it["nombre"]} - ${subtotal:.2f}')
-
-        if it.get("proteina"):
-            lines.append(f'  PROT: {it["proteina"]}')
-        if it.get("sin"):
-            lines.append(f'  SIN: {it["sin"]}')
-        if it.get("nota"):
-            lines.append(f'  NOTA: {it["nota"]}')
-
-    lines.append("--------------------")
-    lines.append(f'Total: ${pedido["total"]:.2f}')
-    lines.append("")
-    lines.append("¡Gracias por tu compra!")
-
-    mensaje = "\n".join(lines)
-    return urllib.parse.quote(mensaje)
+    texto = generar_ticket_texto(pedido_id, cursor)
+    return urllib.parse.quote(texto)
 
 
-# ================== enviar ticekt a whats ==================
-
+# ================== enviar ticket a whats (LEGACY) ==================
 @app.route("/pedido/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
-    telefono = request.args.get("tel")  # 👈 viene del modal
+    telefono = request.args.get("tel")
 
     if not telefono:
         flash("Número no válido", "error")
@@ -788,7 +823,6 @@ def enviar_ticket_whatsapp(pedido_id):
 
 
 # ================== Preview ticket ==================
-
 @app.route("/pedido/<int:pedido_id>/ticket_preview")
 def ticket_preview(pedido_id):
     conn = get_connection()
