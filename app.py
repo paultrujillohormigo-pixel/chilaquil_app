@@ -130,8 +130,8 @@ E = {
     "check": "OK",    # check
     "pin": "-",       # bullet
     "gift": "*",      # sección
-    "drink": "DRINK", # bebida
-    "plate": "PLATE", # plato
+    "drink": "Una bebida gratis", # bebida
+    "plate": "Un plato fuerte gratis", # plato
     "arrow": "->",    # flecha
 }
 
@@ -172,8 +172,8 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -
         f"{E['drink']}: {balance}/5  {bar5}\n"
         f"{E['plate']}: {balance}/10 {bar10}\n\n"
         "Te faltan:\n"
-        f"{E['arrow']} {f5} para bebida\n"
-        f"{E['arrow']} {f10} para plato\n\n"
+        f"{E['arrow']} {f5} para una bebida gratis\n"
+        f"{E['arrow']} {f10} para un platofuerte \n\n"
         f"{canje_txt}\n"
     )
 
