@@ -1111,6 +1111,7 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
     finally:
         conn.close()
 
+import pymysql
 from flask import render_template, request
 from db import get_connection
 
@@ -1120,17 +1121,21 @@ def ver_stock():
 
     conn = get_connection()
     try:
-        with conn.cursor(dictionary=True) as cur:
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
             cur.execute("""
                 SELECT insumo_id, nombre, unidad_base, stock_actual
                 FROM vw_stock_actual
                 WHERE (%s = '' OR nombre LIKE %s)
                 ORDER BY nombre
             """, (q, f"%{q}%"))
+
             rows = cur.fetchall()
+
         return render_template("stock.html", rows=rows, q=q)
+
     finally:
         conn.close()
+
 
 
 # ================== RUN ==================
