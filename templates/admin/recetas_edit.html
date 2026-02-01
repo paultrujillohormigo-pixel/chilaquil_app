@@ -1,168 +1,121 @@
-<div style="display:flex; gap:10px; margin-bottom:12px;">
-  <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_index') }}">← Recetas</a>
-  <a class="btn btn-secondary" href="{{ url_for('costeo.costeo_index') }}">📊 Costeo</a>
-</div>
+{% extends "base.html" %}
+{% block content %}
 
 <h2>Receta: {{ platillo.nombre }}</h2>
 
-<form method="post">
-  <table class="table">
-  <thead>
-    <tr>
-      <th>Insumo</th>
-      <th>Cantidad</th>
-      <th>Unidad</th>
-      <th>Costo unitario</th>
-      <th>Subtotal</th>
-      <th></th>
-    </tr>
-  </thead>
-
-  <tbody id="rows">
-    {% for r in receta %}
-    <tr>
-      <td>
-        <select name="insumo_id[]" class="insumoSelect" onchange="onRowChange(this)">
-          {% for i in insumos %}
-            <option value="{{ i.id }}" {% if i.id == r.insumo_id %}selected{% endif %}>
-              {{ i.nombre }}
-            </option>
-          {% endfor %}
-        </select>
-      </td>
-
-      <td>
-        <input type="number" step="0.01" min="0"
-               name="cantidad_base[]"
-               value="{{ r.cantidad_base }}"
-               oninput="onQtyChange(this)">
-      </td>
-
-      <td class="unidad">{{ r.unidad_base }}</td>
-
-      <td class="costo_unitario">
-        {% if r.costo_unitario is not none %}
-{% if r.get('costo_unitario') is not none %}
-  ${{ "%.4f"|format(r.get('costo_unitario')) }}
-{% else %}
-  <span class="muted">Sin costo</span>
+{% if costeo %}
+  <div class="card" style="margin:12px 0; padding:12px;">
+    <strong>Resumen costeo (vista):</strong>
+    <div style="margin-top:6px; font-size:14px;">
+      {% for k, v in costeo.items() %}
+        <div><b>{{ k }}</b>: {{ v }}</div>
+      {% endfor %}
+    </div>
+    <small style="display:block; margin-top:8px;">
+      Nota: este resumen depende de <code>v_costeo_platillos</code>. Si aún no actualizamos la vista,
+      puede que no refleje precio manual.
+    </small>
+  </div>
 {% endif %}
-        {% else %}
-          <span class="muted">Sin costo</span>
-        {% endif %}
-      </td>
 
-      <td class="subtotal">
-        {% if r.subtotal is not none %}
-          ${{ "%.2f"|format(r.subtotal) }}
-        {% else %}
-          <span class="muted">—</span>
-        {% endif %}
-      </td>
+<form method="post">
 
-      <td><button type="button" class="btn" onclick="removeRow(this)">Quitar</button></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <div class="card" style="padding:12px; margin:12px 0;">
+    <h3 style="margin:0 0 10px;">Ingredientes actuales</h3>
 
+    {% if receta and receta|length > 0 %}
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="text-align:left; border-bottom:1px solid #ddd;">
+            <th>Insumo</th>
+            <th style="width:120px;">Cantidad</th>
+            <th style="width:70px;">Unidad</th>
+            <th style="width:150px;">$ Manual</th>
+            <th style="width:90px;">Usar</th>
+            <th style="width:140px;">$ Compras</th>
+            <th style="width:140px;">$ Usado</th>
+            <th style="width:140px;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in receta %}
+          <tr style="border-bottom:1px solid #eee;">
+            <td>
+              <b>{{ r.insumo_nombre }}</b>
+              {% if r.merma_pct and r.merma_pct != 0 %}
+                <div style="font-size:12px; opacity:.8;">Merma: {{ r.merma_pct }}%</div>
+              {% endif %}
+              {% if r.costo_unitario_usado is none %}
+                <div style="font-size:12px; color:#b00020;"><b>SIN PRECIO</b> (pon manual o registra compra)</div>
+              {% endif %}
+            </td>
 
-  <button type="button" class="btn" onclick="addRow()">+ Agregar ingrediente</button>
-  <button type="submit" class="btn btn-primary">Guardar receta</button>
+            <!-- Insumo id -->
+            <td style="display:none;">
+              <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
+            </td>
+
+            <td>
+              <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}"
+                     style="width:110px;">
+            </td>
+
+            <td>{{ r.unidad_base }}</td>
+
+            <td>
+              <input type="number" step="0.0001" name="precio_manual[]"
+                     value="{{ r.precio_manual if r.precio_manual is not none else '' }}"
+                     placeholder="$/{{ r.unidad_base }}"
+                     style="width:140px;">
+            </td>
+
+            <td style="text-align:center;">
+              <!-- Truco robusto: manda 0 siempre y 1 si checked -->
+              <input type="hidden" name="usa_precio_manual[]" value="0">
+              <input type="checkbox" value="1"
+                     {% if r.usa_precio_manual %}checked{% endif %}
+                     onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
+            </td>
+
+            <td>
+              {{ r.costo_unitario_compra if r.costo_unitario_compra is not none else '—' }}
+            </td>
+
+            <td>
+              {{ r.costo_unitario_usado if r.costo_unitario_usado is not none else '—' }}
+            </td>
+
+            <td>
+              {{ r.subtotal if r.subtotal is not none else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No hay ingredientes todavía.</p>
+    {% endif %}
+  </div>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button type="submit" class="btn-primary">Guardar receta</button>
+    <a href="{{ url_for('costeo.recetas_index') }}" class="btn-gray">Volver</a>
+  </div>
+
 </form>
 
-<hr>
+<hr style="margin:18px 0;">
 
-<h3>Desglose (automático)</h3>
-{% if costeo %}
-  <ul>
-    <li><strong>Costo insumos:</strong> ${{ costeo.costo_insumos }}</li>
-    <li><strong>Costos operativos (75%):</strong> ${{ costeo.costo_operativo }}</li>
-    <li><strong>Costo total:</strong> ${{ costeo.costo_total }}</li>
-    <li><strong>Ganancia sugerida (margen 50%):</strong> ${{ costeo.ganancia_sugerida }}</li>
-    <li><strong>Precio sugerido:</strong> ${{ costeo.precio_sugerido }}</li>
-    {% if costeo.precio_actual %}
-      <li><strong>Precio actual:</strong> ${{ costeo.precio_actual }}</li>
-    {% endif %}
-  </ul>
-{% else %}
-  <p>No hay costeo aún (falta costo vigente de algún insumo o receta vacía).</p>
-{% endif %}
+<div class="card" style="padding:12px;">
+  <h3 style="margin:0 0 10px;">Agregar ingredientes (rápido)</h3>
+  <p style="margin:0 0 10px; opacity:.85;">
+    Esto es opcional. Si tú ya tienes otro UI para agregar insumos, ignora esta sección.
+  </p>
 
-<script>
-  // insumos incluye: id, nombre, unidad_base, merma_pct, costo_unitario
-  const INSUMOS = {{ insumos|tojson }};
-  const insumoMap = new Map(INSUMOS.map(i => [String(i.id), i]));
+  <!-- Si quieres usar el catálogo para agregar nuevos insumos aquí mismo, lo armamos después -->
+  <div style="font-size:13px; opacity:.85;">
+    Catálogo disponible: {{ insumos|length }} insumos activos.
+  </div>
+</div>
 
-  function money4(x){ return `$${Number(x).toFixed(4)}`; }
-  function money2(x){ return `$${Number(x).toFixed(2)}`; }
-
-  function recalcRow(tr){
-    const sel = tr.querySelector(".insumoSelect");
-    const qtyInput = tr.querySelector("input[name='cantidad_base[]']");
-    const unidadTd = tr.querySelector(".unidad");
-    const costoTd = tr.querySelector(".costo_unitario");
-    const subtotalTd = tr.querySelector(".subtotal");
-
-    const insumo = insumoMap.get(String(sel.value));
-    const qty = Number(qtyInput.value || 0);
-
-    // unidad
-    unidadTd.textContent = insumo?.unidad_base || "—";
-
-    // costo unitario
-    const cu = insumo?.costo_unitario;
-    if (cu === null || cu === undefined) {
-      costoTd.innerHTML = `<span class="muted">Sin costo</span>`;
-      subtotalTd.innerHTML = `<span class="muted">—</span>`;
-      return;
-    }
-
-    costoTd.textContent = money4(cu);
-
-    // subtotal con merma
-    const merma = Number(insumo?.merma_pct || 0);
-    const subtotal = qty * Number(cu) * (1 + merma/100);
-    subtotalTd.textContent = money2(subtotal);
-  }
-
-  function onRowChange(selectEl){
-    recalcRow(selectEl.closest("tr"));
-  }
-
-  function onQtyChange(inputEl){
-    recalcRow(inputEl.closest("tr"));
-  }
-
-  function removeRow(btn){
-    btn.closest("tr").remove();
-  }
-
-  function addRow(){
-    const tbody = document.getElementById("rows");
-    const tr = document.createElement("tr");
-
-    const options = INSUMOS.map(i => `<option value="${i.id}">${i.nombre}</option>`).join("");
-
-    tr.innerHTML = `
-      <td>
-        <select name="insumo_id[]" class="insumoSelect" onchange="onRowChange(this)">
-          ${options}
-        </select>
-      </td>
-      <td>
-        <input type="number" step="0.01" min="0" name="cantidad_base[]" value="" oninput="onQtyChange(this)">
-      </td>
-      <td class="unidad">—</td>
-      <td class="costo_unitario"><span class="muted">—</span></td>
-      <td class="subtotal"><span class="muted">—</span></td>
-      <td><button type="button" class="btn" onclick="removeRow(this)">Quitar</button></td>
-    `;
-
-    tbody.appendChild(tr);
-    recalcRow(tr);
-  }
-
-  // recalcular todo al cargar (por si ya hay datos)
-  document.querySelectorAll("#rows tr").forEach(tr => recalcRow(tr));
-</script>
+{% endblock %}
