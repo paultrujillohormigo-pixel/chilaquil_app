@@ -5,7 +5,7 @@
   <div>
     <h2 style="margin:0;">🧾 Receta: {{ platillo.nombre }}</h2>
     <p class="muted" style="margin:6px 0 0;">
-      Izquierda: costeo usando <b>Manual</b> (si está activo). Derecha: referencia de <b>Compras</b>.
+      Comparativa arriba: <b>Usado (manual manda)</b> vs <b>Solo compras</b>.
     </p>
   </div>
   <div class="page-actions">
@@ -13,93 +13,169 @@
   </div>
 </div>
 
-{% set costo_total = (costeo.costo_total if costeo and costeo.costo_total is not none else none) %}
-{% set precio_actual = (costeo.precio_actual if costeo and costeo.precio_actual is not none else none) %}
-{% set ganancia_sugerida = (costeo.ganancia_sugerida if costeo and costeo.ganancia_sugerida is not none else none) %}
-{% set precio_sugerido = (costeo.precio_sugerido if costeo and costeo.precio_sugerido is not none else none) %}
+{# =======================
+   RESUMEN DOBLE
+   ======================= #}
+{% if costeo or costeo_compras %}
+  {% set c1 = costeo %}
+  {% set c2 = costeo_compras %}
 
-{% set ganancia_actual = none %}
-{% set margen_actual = none %}
-{% if precio_actual and precio_actual > 0 and costo_total is not none %}
-  {% set ganancia_actual = (precio_actual - costo_total) %}
-  {% set margen_actual = ((ganancia_actual / precio_actual) * 100) %}
-{% endif %}
-
-{% if costeo %}
   <div class="card" style="margin:12px 0;">
     <div class="card-head">
-      <h3 style="margin:0;">Resumen</h3>
+      <h3 style="margin:0;">Resumen comparativo</h3>
       <p class="muted" style="margin:6px 0 0;">
-        Si un ingrediente no tiene precio manual ni compras, el platillo queda incompleto.
+        Izquierda: <b>Usado</b> (respeta manual). Derecha: <b>Solo Compras</b> (ignora manual).
       </p>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="k">Costo insumos</div>
-        <div class="v">${{ "%.2f"|format(costeo.costo_insumos or 0) }}</div>
-      </div>
-      <div class="summary-item">
-        <div class="k">Operativos (75%)</div>
-        <div class="v">${{ "%.2f"|format(costeo.costo_operativo or 0) }}</div>
-      </div>
-      <div class="summary-item">
-        <div class="k">Costo total</div>
-        <div class="v">${{ "%.2f"|format(costeo.costo_total or 0) }}</div>
-      </div>
-      <div class="summary-item">
-        <div class="k">Precio sugerido</div>
-        <div class="v"><b>${{ "%.2f"|format(costeo.precio_sugerido or 0) }}</b></div>
-      </div>
+    <div class="compare">
+      <!-- ===== USADO ===== -->
+      <div class="cmp">
+        <div class="cmp-head">📌 Usado (manual manda)</div>
 
-      <div class="summary-item">
-        <div class="k">Ganancia sugerida</div>
-        <div class="v">${{ "%.2f"|format(costeo.ganancia_sugerida or 0) }}</div>
-
-        <div class="sub">
-          <div class="k2">Ganancia con precio actual</div>
-          {% if ganancia_actual is not none %}
-            <div class="v2">
-              <b>${{ "%.2f"|format(ganancia_actual) }}</b>
-              <span class="muted">({{ "%.2f"|format(margen_actual) }}% margen)</span>
-            </div>
-          {% else %}
-            <div class="v2 muted">—</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="summary-item">
-        <div class="k">Precio actual</div>
-        <div class="v">
-          {% if precio_actual %}
-            ${{ "%.2f"|format(precio_actual) }}
-          {% else %}
-            <span class="muted">—</span>
-          {% endif %}
-        </div>
-
-        {% if costeo.insumos_sin_precio is defined and costeo.insumos_sin_precio and costeo.insumos_sin_precio > 0 %}
-          <div class="pill pill-warn" style="margin-top:8px;">
-            ⚠️ Incompleto ({{ costeo.insumos_sin_precio }})
-          </div>
-        {% else %}
-          <div class="pill pill-ok" style="margin-top:8px;">
-            ✅ OK
-          </div>
+        {% set precio_actual_1 = (c1.precio_actual if c1 and c1.precio_actual is not none else none) %}
+        {% set costo_total_1 = (c1.costo_total if c1 and c1.costo_total is not none else none) %}
+        {% set ganancia_actual_1 = none %}
+        {% set margen_actual_1 = none %}
+        {% if precio_actual_1 and precio_actual_1 > 0 and costo_total_1 is not none %}
+          {% set ganancia_actual_1 = (precio_actual_1 - costo_total_1) %}
+          {% set margen_actual_1 = ((ganancia_actual_1 / precio_actual_1) * 100) %}
         {% endif %}
+
+        <div class="cmp-grid">
+          <div class="box">
+            <div class="k">Costo insumos</div>
+            <div class="v">{{ c1 and ("$%.2f"|format(c1.costo_insumos or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Operativos (75%)</div>
+            <div class="v">{{ c1 and ("$%.2f"|format(c1.costo_operativo or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Costo total</div>
+            <div class="v">{{ c1 and ("$%.2f"|format(c1.costo_total or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Precio sugerido</div>
+            <div class="v"><b>{{ c1 and ("$%.2f"|format(c1.precio_sugerido or 0)) or "—" }}</b></div>
+          </div>
+
+          <div class="box">
+            <div class="k">Ganancia sugerida</div>
+            <div class="v">{{ c1 and ("$%.2f"|format(c1.ganancia_sugerida or 0)) or "—" }}</div>
+            <div class="sub">
+              <div class="k2">Ganancia con precio actual</div>
+              {% if ganancia_actual_1 is not none %}
+                <div class="v2"><b>${{ "%.2f"|format(ganancia_actual_1) }}</b> <span class="muted">({{ "%.2f"|format(margen_actual_1) }}%)</span></div>
+              {% else %}
+                <div class="v2 muted">—</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="k">Precio actual</div>
+            <div class="v">
+              {% if precio_actual_1 %}${{ "%.2f"|format(precio_actual_1) }}{% else %}<span class="muted">—</span>{% endif %}
+            </div>
+
+            {% if c1 and c1.insumos_sin_precio is defined and c1.insumos_sin_precio and c1.insumos_sin_precio > 0 %}
+              <div class="pill pill-warn" style="margin-top:8px;">⚠️ Incompleto ({{ c1.insumos_sin_precio }})</div>
+            {% else %}
+              <div class="pill pill-ok" style="margin-top:8px;">✅ OK</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== COMPRAS ===== -->
+      <div class="cmp">
+        <div class="cmp-head">🧾 Solo compras</div>
+
+        {% set precio_actual_2 = (c2.precio_actual if c2 and c2.precio_actual is not none else none) %}
+        {% set costo_total_2 = (c2.costo_total if c2 and c2.costo_total is not none else none) %}
+        {% set ganancia_actual_2 = none %}
+        {% set margen_actual_2 = none %}
+        {% if precio_actual_2 and precio_actual_2 > 0 and costo_total_2 is not none %}
+          {% set ganancia_actual_2 = (precio_actual_2 - costo_total_2) %}
+          {% set margen_actual_2 = ((ganancia_actual_2 / precio_actual_2) * 100) %}
+        {% endif %}
+
+        <div class="cmp-grid">
+          <div class="box">
+            <div class="k">Costo insumos</div>
+            <div class="v">{{ c2 and ("$%.2f"|format(c2.costo_insumos or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Operativos (75%)</div>
+            <div class="v">{{ c2 and ("$%.2f"|format(c2.costo_operativo or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Costo total</div>
+            <div class="v">{{ c2 and ("$%.2f"|format(c2.costo_total or 0)) or "—" }}</div>
+          </div>
+          <div class="box">
+            <div class="k">Precio sugerido</div>
+            <div class="v"><b>{{ c2 and ("$%.2f"|format(c2.precio_sugerido or 0)) or "—" }}</b></div>
+          </div>
+
+          <div class="box">
+            <div class="k">Ganancia sugerida</div>
+            <div class="v">{{ c2 and ("$%.2f"|format(c2.ganancia_sugerida or 0)) or "—" }}</div>
+            <div class="sub">
+              <div class="k2">Ganancia con precio actual</div>
+              {% if ganancia_actual_2 is not none %}
+                <div class="v2"><b>${{ "%.2f"|format(ganancia_actual_2) }}</b> <span class="muted">({{ "%.2f"|format(margen_actual_2) }}%)</span></div>
+              {% else %}
+                <div class="v2 muted">—</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="k">Precio actual</div>
+            <div class="v">
+              {% if precio_actual_2 %}${{ "%.2f"|format(precio_actual_2) }}{% else %}<span class="muted">—</span>{% endif %}
+            </div>
+
+            {% if c2 and c2.insumos_sin_precio is defined and c2.insumos_sin_precio and c2.insumos_sin_precio > 0 %}
+              <div class="pill pill-warn" style="margin-top:8px;">⚠️ Incompleto ({{ c2.insumos_sin_precio }})</div>
+            {% else %}
+              <div class="pill pill-ok" style="margin-top:8px;">✅ OK</div>
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
 
     <small class="muted" style="display:block; margin-top:10px;">
-      Este resumen viene de <code>v_costeo_platillos</code>.
+      “Usado” respeta manual; “Solo compras” ignora manual y usa el costo vigente de compras.
     </small>
   </div>
+
+  <style>
+    .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .cmp{border:1px solid #eee;border-radius:14px;padding:12px}
+    .cmp-head{font-weight:700;margin-bottom:10px}
+    .cmp-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:10px}
+    .box{border:1px solid #eee;border-radius:12px;padding:10px}
+    .box .k{font-size:12px;opacity:.75}
+    .box .v{font-size:18px;margin-top:6px}
+    .box .sub{margin-top:10px;padding-top:10px;border-top:1px dashed #eee}
+    .box .k2{font-size:12px;opacity:.75}
+    .box .v2{margin-top:6px}
+    @media (max-width: 1100px){
+      .compare{grid-template-columns:1fr}
+      .cmp-grid{grid-template-columns:1fr}
+    }
+  </style>
 {% endif %}
 
+{# =======================
+   FORM RECETA (misma tabla editable)
+   ======================= #}
 <form method="post" id="recetaForm">
 
-  <!-- ========= AGREGAR INSUMOS ========= -->
   <div class="card" style="padding:12px; margin:12px 0;">
     <h3 style="margin:0 0 10px;">Agregar ingrediente</h3>
 
@@ -149,138 +225,74 @@
     </div>
   </div>
 
-  <!-- ========= DOS TABLAS: MANUAL vs COMPRAS ========= -->
-  <div class="split">
-    <!-- IZQUIERDA: USADO -->
-    <div class="card">
-      <div class="card-head">
-        <h3 style="margin:0;">📌 Precio usado (Manual manda)</h3>
-        <p class="muted" style="margin:6px 0 0;">Esto es lo que se usa para costear el platillo.</p>
-      </div>
+  <div class="card" style="padding:12px; margin:12px 0;">
+    <h3 style="margin:0 0 10px;">Ingredientes</h3>
 
-      <div class="table-wrap">
-        <table class="table" id="tblUsado">
-          <thead>
-            <tr>
-              <th>Insumo</th>
-              <th style="width:110px;">Cant.</th>
-              <th style="width:70px;">Und</th>
-              <th style="width:140px;">$ Manual</th>
-              <th style="width:70px;">Usar</th>
-              <th style="width:140px;">$ Usado</th>
-              <th style="width:140px;">Subtotal</th>
-              <th style="width:90px;">Quitar</th>
-            </tr>
-          </thead>
-          <tbody id="recetaBody">
-            {% for r in receta %}
-            <tr class="{% if r.costo_unitario_usado is none %}row-warn{% endif %}">
-              <td>
-                <b>{{ r.insumo_nombre }}</b>
-                {% if r.merma_pct and r.merma_pct != 0 %}
-                  <div class="muted" style="font-size:12px;">Merma: {{ r.merma_pct }}%</div>
-                {% endif %}
-                {% if r.costo_unitario_usado is none %}
-                  <div class="warn-text"><b>SIN PRECIO</b></div>
-                {% endif %}
-              </td>
+    <div class="table-wrap">
+      <table class="table" id="recetaTable">
+        <thead>
+          <tr>
+            <th>Insumo</th>
+            <th style="width:120px;">Cantidad</th>
+            <th style="width:70px;">Unidad</th>
+            <th style="width:150px;">$ Manual</th>
+            <th style="width:90px;">Usar</th>
+            <th style="width:140px;">$ Compras</th>
+            <th style="width:140px;">$ Usado</th>
+            <th style="width:140px;">Subtotal</th>
+            <th style="width:110px;">Quitar</th>
+          </tr>
+        </thead>
 
-              <!-- arrays alineados -->
-              <td style="display:none;">
-                <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
-              </td>
+        <tbody id="recetaBody">
+          {% for r in receta %}
+          <tr class="{% if r.costo_unitario_usado is none %}row-warn{% endif %}">
+            <td>
+              <b>{{ r.insumo_nombre }}</b>
+              {% if r.merma_pct and r.merma_pct != 0 %}
+                <div class="muted" style="font-size:12px;">Merma: {{ r.merma_pct }}%</div>
+              {% endif %}
+              {% if r.costo_unitario_usado is none %}
+                <div class="warn-text"><b>SIN PRECIO</b> (pon manual o registra compra)</div>
+              {% endif %}
+            </td>
 
-              <td>
-                <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}" class="inp-sm">
-              </td>
+            <td style="display:none;">
+              <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
+            </td>
 
-              <td>{{ r.unidad_base }}</td>
+            <td>
+              <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}" class="inp-sm">
+            </td>
 
-              <td>
-                <input type="number" step="0.0001" name="precio_manual[]"
-                       value="{{ r.precio_manual if r.precio_manual is not none else '' }}"
-                       placeholder="$/{{ r.unidad_base }}"
-                       class="inp-sm">
-              </td>
+            <td>{{ r.unidad_base }}</td>
 
-              <td style="text-align:center;">
-                <input type="hidden" name="usa_precio_manual[]" value="{{ '1' if r.usa_precio_manual else '0' }}">
-                <input type="checkbox"
-                       {% if r.usa_precio_manual %}checked{% endif %}
-                       onchange="this.previousElementSibling.value = this.checked ? '1' : '0'; syncRowToCompras(this);">
-              </td>
+            <td>
+              <input type="number" step="0.0001" name="precio_manual[]"
+                     value="{{ r.precio_manual if r.precio_manual is not none else '' }}"
+                     placeholder="$/{{ r.unidad_base }}"
+                     class="inp-sm">
+            </td>
 
-              <td class="usado">
-                {{ r.costo_unitario_usado if r.costo_unitario_usado is not none else '—' }}
-              </td>
+            <td style="text-align:center;">
+              <input type="hidden" name="usa_precio_manual[]" value="{{ '1' if r.usa_precio_manual else '0' }}">
+              <input type="checkbox"
+                     {% if r.usa_precio_manual %}checked{% endif %}
+                     onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
+            </td>
 
-              <td class="subt">
-                {{ r.subtotal if r.subtotal is not none else '—' }}
-              </td>
+            <td>{{ r.costo_unitario_compra if r.costo_unitario_compra is not none else '—' }}</td>
+            <td>{{ r.costo_unitario_usado if r.costo_unitario_usado is not none else '—' }}</td>
+            <td>{{ r.subtotal if r.subtotal is not none else '—' }}</td>
 
-              <td>
-                <button type="button" class="btn btn-danger" onclick="quitarFila(this)">🗑</button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+            <td>
+              <button type="button" class="btn btn-danger" onclick="quitarFila(this)">🗑</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
 
-      <div class="muted" style="margin-top:10px; font-size:13px;">
-        Nota: los subtotales se recalculan completamente al guardar (SQL). Aquí se muestran los valores actuales.
-      </div>
-    </div>
-
-    <!-- DERECHA: COMPRAS -->
-    <div class="card">
-      <div class="card-head">
-        <h3 style="margin:0;">🧾 Precio de compras (referencia)</h3>
-        <p class="muted" style="margin:6px 0 0;">Esto es lo último registrado en compras (no se edita aquí).</p>
-      </div>
-
-      <div class="table-wrap">
-        <table class="table" id="tblCompras">
-          <thead>
-            <tr>
-              <th>Insumo</th>
-              <th style="width:110px;">Cant.</th>
-              <th style="width:70px;">Und</th>
-              <th style="width:140px;">$ Compras</th>
-              <th style="width:140px;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody id="comprasBody">
-            {% for r in receta %}
-            <tr data-insumo="{{ r.insumo_id }}">
-              <td>
-                <b>{{ r.insumo_nombre }}</b>
-                {% if r.merma_pct and r.merma_pct != 0 %}
-                  <div class="muted" style="font-size:12px;">Merma: {{ r.merma_pct }}%</div>
-                {% endif %}
-              </td>
-              <td class="cant">{{ r.cantidad_base }}</td>
-              <td>{{ r.unidad_base }}</td>
-              <td class="compra">
-                {{ r.costo_unitario_compra if r.costo_unitario_compra is not none else '—' }}
-              </td>
-              <td class="subcompra">
-                {# subtotal compras (solo referencia) #}
-                {% if r.costo_unitario_compra is not none %}
-                  {{ "%.2f"|format((r.cantidad_base * r.costo_unitario_compra * (1 + (r.merma_pct/100))) ) }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="muted" style="margin-top:10px; font-size:13px;">
-        Tip: úsalo para comparar si tu manual se está yendo arriba/abajo de lo que realmente compras.
-      </div>
+      </table>
     </div>
   </div>
 
@@ -300,18 +312,6 @@
   .muted{opacity:.7}
   .warn-text{font-size:12px;color:#b00020;margin-top:4px}
 
-  .summary-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:12px;margin-top:12px}
-  .summary-item{border:1px solid #eee;border-radius:12px;padding:12px}
-  .summary-item .k{font-size:12px;opacity:.75}
-  .summary-item .v{font-size:18px;margin-top:6px}
-  .summary-item .sub{margin-top:10px;padding-top:10px;border-top:1px dashed #eee}
-  .summary-item .k2{font-size:12px;opacity:.75}
-  .summary-item .v2{margin-top:6px}
-
-  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #ddd;width:max-content}
-  .pill-ok{background:#f3fff3;border-color:#bfe8bf}
-  .pill-warn{background:#fff4f4;border-color:#f0b4b4}
-
   .table-wrap{overflow:auto;margin-top:10px}
   .table{width:100%;border-collapse:collapse}
   .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle;white-space:nowrap}
@@ -329,11 +329,9 @@
   .add-row{display:grid;grid-template-columns: 1.6fr 0.6fr 0.8fr 0.8fr; gap:12px; align-items:end}
   .add-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 
-  .split{display:grid;grid-template-columns: 1fr 1fr; gap:12px}
-  @media (max-width: 1100px){
-    .split{grid-template-columns:1fr}
-    .summary-grid{grid-template-columns:1fr}
-  }
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #ddd;width:max-content}
+  .pill-ok{background:#f3fff3;border-color:#bfe8bf}
+  .pill-warn{background:#fff4f4;border-color:#f0b4b4}
 
   .footer-actions{display:flex;gap:10px;align-items:center;margin-top:14px}
 </style>
@@ -341,16 +339,7 @@
 <script>
   function quitarFila(btn) {
     const tr = btn.closest('tr');
-    if (!tr) return;
-
-    // también elimina su espejo en compras
-    const insumoId = tr.querySelector('input[name="insumo_id[]"]')?.value;
-    if (insumoId) {
-      const mirror = document.querySelector('#comprasBody tr[data-insumo="'+insumoId+'"]');
-      if (mirror) mirror.remove();
-    }
-
-    tr.remove();
+    if (tr) tr.remove();
   }
 
   function agregarInsumo() {
@@ -367,7 +356,6 @@
     const cantidad = (cant.value || '').trim();
     if (!cantidad || Number(cantidad) <= 0) { alert('Cantidad inválida.'); return; }
 
-    // evita duplicados
     const exists = Array.from(document.querySelectorAll('input[name="insumo_id[]"]'))
       .some(i => i.value === insumoId);
     if (exists) { alert('Ese insumo ya está en la receta.'); return; }
@@ -380,9 +368,9 @@
     const precioManual = (pm.value || '').trim();
     const usarManual = (um.checked && precioManual !== '') ? '1' : '0';
 
-    // agrega a tabla "usado"
     const body = document.getElementById('recetaBody');
     const tr = document.createElement('tr');
+
     tr.innerHTML = `
       <td>
         <b>${escapeHtml(nombre)}</b>
@@ -394,16 +382,14 @@
       </td>
 
       <td>
-        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidad)}" class="inp-sm"
-               oninput="syncCantidadToCompras(this)">
+        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidad)}" class="inp-sm">
       </td>
 
       <td>${escapeHtml(unidad)}</td>
 
       <td>
         <input type="number" step="0.0001" name="precio_manual[]" value="${escapeAttr(precioManual)}"
-               placeholder="$/${escapeHtml(unidad)}" class="inp-sm"
-               oninput="syncRowToCompras(this)">
+               placeholder="$/${escapeHtml(unidad)}" class="inp-sm">
       </td>
 
       <td style="text-align:center;">
@@ -411,50 +397,23 @@
         <input type="checkbox" ${usarManual === '1' ? 'checked' : ''} onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
       </td>
 
-      <td class="usado">—</td>
-      <td class="subt">—</td>
+      <td>${compra ? escapeHtml(compra) : '—'}</td>
+      <td>—</td>
+      <td>—</td>
 
       <td>
         <button type="button" class="btn btn-danger" onclick="quitarFila(this)">🗑</button>
       </td>
     `;
+
     body.appendChild(tr);
 
-    // agrega espejo en tabla compras
-    const cb = document.getElementById('comprasBody');
-    const tr2 = document.createElement('tr');
-    tr2.setAttribute('data-insumo', insumoId);
-    tr2.innerHTML = `
-      <td>
-        <b>${escapeHtml(nombre)}</b>
-        ${merma && merma !== '0.00' ? `<div class="muted" style="font-size:12px;">Merma: ${escapeHtml(merma)}%</div>` : ``}
-      </td>
-      <td class="cant">${escapeHtml(cantidad)}</td>
-      <td>${escapeHtml(unidad)}</td>
-      <td class="compra">${compra ? escapeHtml(compra) : '—'}</td>
-      <td class="subcompra">—</td>
-    `;
-    cb.appendChild(tr2);
-
-    // limpia inputs
+    // limpia
     cant.value = '';
     pm.value = '';
     um.checked = false;
     sel.value = '';
   }
-
-  function syncCantidadToCompras(input) {
-    const tr = input.closest('tr');
-    const insumoId = tr.querySelector('input[name="insumo_id[]"]')?.value;
-    const mirror = document.querySelector('#comprasBody tr[data-insumo="'+insumoId+'"]');
-    if (!mirror) return;
-
-    const val = input.value;
-    mirror.querySelector('.cant').textContent = val;
-  }
-
-  // (no calculamos subtotales en vivo; se recalcula al guardar)
-  function syncRowToCompras(_) { /* placeholder */ }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function(m) {
