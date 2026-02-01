@@ -301,3 +301,56 @@ def costeo_index():
         flash("No se pudo cargar el costeo: falta crear v_costeo_platillos o falta costo vigente.", "error")
 
     return render_template("admin/costeo_index.html", data=data)
+
+
+from flask import request, redirect, url_for, flash
+from decimal import Decimal, InvalidOperation
+from db import get_connection
+from costeo import costeo_bp  # (si ya estás dentro de costeo.py, NO lo importes)
+
+@costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
+def platillo_precio_update(platillo_id):
+    precio_txt = (request.form.get("precio_pos") or "").strip()
+
+    try:
+        precio_pos = Decimal(precio_txt)
+    except (InvalidOperation, TypeError):
+        flash("Precio inválido.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    if precio_pos < 0:
+        flash("El precio no puede ser negativo.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            conn.begin()
+
+            # 1) Actualiza precio_actual en platillos (tu módulo de costeo)
+            cursor.execute("""
+                UPDATE platillos
+                SET precio_actual = %s
+                WHERE id = %s
+            """, (precio_pos, platillo_id))
+
+            # 2) Actualiza precio en productos (POS)
+            #    Si tienes un producto por platillo, con esto basta.
+            #    Si tienes varios, esto los actualizará a todos.
+            cursor.execute("""
+                UPDATE productos
+                SET precio = %s
+                WHERE platillo_id = %s
+            """, (precio_pos, platillo_id))
+
+            conn.commit()
+            flash("Precio actualizado ✅", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error actualizando precio: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("costeo.platillos_index"))
+
