@@ -38,8 +38,10 @@
         <th style="text-align:center; padding:12px;">Unidad</th>
         <th style="text-align:right; padding:12px;">Stock</th>
         <th style="text-align:center; padding:12px;">Estado</th>
+        <th style="text-align:center; padding:12px;">Agregar</th>
       </tr>
     </thead>
+
     <tbody>
       {% for r in rows %}
       {% set st = r.stock_actual %}
@@ -70,12 +72,32 @@
             </span>
           {% endif %}
         </td>
+
+        <!-- ✅ NUEVO: input + botón por fila -->
+        <td style="padding:12px; text-align:center;">
+          <form method="post" action="/inventario/stock/agregar"
+                style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap;">
+            <input type="hidden" name="insumo_id" value="{{ r.insumo_id }}">
+            <input type="hidden" name="q" value="{{ q }}">
+            <input type="hidden" name="bajo" value="{% if solo_bajo %}1{% else %}0{% endif %}">
+            <input type="hidden" name="neg" value="{% if solo_neg %}1{% else %}0{% endif %}">
+
+            <input name="cantidad" type="number" step="0.001" min="0.001" required
+                   placeholder="+ {{ r.unidad_base }}"
+                   style="width:120px; padding:8px; border:1px solid #ddd; border-radius:10px;">
+
+            <button type="submit"
+                    style="padding:8px 12px; border:none; border-radius:10px; background:#111; color:#fff; cursor:pointer;">
+              Agregar
+            </button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
 
       {% if rows|length == 0 %}
       <tr>
-        <td colspan="4" style="padding:16px; text-align:center; color:#777;">
+        <td colspan="5" style="padding:16px; text-align:center; color:#777;">
           No hay resultados.
         </td>
       </tr>
