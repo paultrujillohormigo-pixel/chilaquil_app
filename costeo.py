@@ -6,7 +6,7 @@ costeo_bp = Blueprint("costeo", __name__, url_prefix="/admin")
 
 
 # =========================
-# Helpers DB (usa tu get_connection)
+# Helpers DB
 # =========================
 def query_all(sql, params=None):
     conn = get_connection()
@@ -49,7 +49,7 @@ def execute_many(sql, rows):
 
 
 # =========================
-# Platillos (alta + lista)
+# Platillos
 # =========================
 @costeo_bp.get("/platillos")
 def platillos_index():
@@ -84,7 +84,7 @@ def platillos_create():
 
 
 # =========================
-# Insumos (alta + lista)
+# Insumos
 # =========================
 @costeo_bp.get("/insumos")
 def insumos_index():
@@ -146,7 +146,7 @@ def recetas_edit(platillo_id):
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
 
-    # Catálogo de insumos (con costo vigente de compras como referencia)
+    # Catálogo de insumos (con costo compras como referencia)
     insumos = query_all("""
         SELECT
           i.id,
@@ -160,7 +160,7 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """)
 
-    # Receta del platillo, pero permitiendo precio manual por ingrediente
+    # Receta: costo usado = manual si aplica, si no compras.
     receta = query_all("""
         SELECT
           r.id AS receta_id,
@@ -196,38 +196,39 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """, (platillo_id,))
 
-    # Costeo total (si existe la vista)
+    # Resúmenes:
     costeo = None
+    costeo_compras = None
     try:
         costeo = query_one("SELECT * FROM v_costeo_platillos WHERE platillo_id=%s", (platillo_id,))
     except Exception:
         costeo = None
+
+    try:
+        costeo_compras = query_one("SELECT * FROM v_costeo_platillos_compras WHERE platillo_id=%s", (platillo_id,))
+    except Exception:
+        costeo_compras = None
 
     return render_template(
         "admin/recetas_edit.html",
         platillo=platillo,
         insumos=insumos,
         receta=receta,
-        costeo=costeo
+        costeo=costeo,
+        costeo_compras=costeo_compras
     )
 
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
 def recetas_save(platillo_id):
-    """
-    Guarda receta sin borrar todo (para no perder overrides):
-    - Usa UPSERT por (platillo_id, insumo_id)
-    - Elimina solo los insumos que el usuario quitó
-    """
     insumo_ids = request.form.getlist("insumo_id[]")
     cantidades = request.form.getlist("cantidad_base[]")
-    usar_manual_vals = request.form.getlist("usa_precio_manual[]")  # '0'/'1' (por hidden+checkbox)
+    usar_manual_vals = request.form.getlist("usa_precio_manual[]")  # '0'/'1'
     precios_manual = request.form.getlist("precio_manual[]")
 
     rows = []
     keep_insumo_ids = []
 
-    # Nota: el HTML manda SIEMPRE todos los arrays alineados
     for insumo_id, cant, um, pm in zip(insumo_ids, cantidades, usar_manual_vals, precios_manual):
         if not insumo_id:
             continue
@@ -250,7 +251,7 @@ def recetas_save(platillo_id):
             except:
                 precio_manual_val = None
 
-        # Si marca "usar manual" pero no puso precio, lo forzamos a 0 (para no engañar)
+        # si marca manual pero no puso precio, desactívalo
         if usa_manual == 1 and precio_manual_val is None:
             usa_manual = 0
 
@@ -261,7 +262,7 @@ def recetas_save(platillo_id):
         flash("No hay ingredientes válidos.", "warning")
         return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
-    # UPSERT (requiere índice único uq_receta_platillo_insumo)
+    # UPSERT por uq_receta_platillo_insumo
     execute_many("""
         INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual)
         VALUES (%s,%s,%s,%s,%s)
@@ -271,7 +272,7 @@ def recetas_save(platillo_id):
           precio_manual = VALUES(precio_manual)
     """, rows)
 
-    # Borra solo lo que ya no se envió
+    # Borra lo que ya no viene
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -289,7 +290,7 @@ def recetas_save(platillo_id):
 
 
 # =========================
-# Costeo
+# Costeo (listado)
 # =========================
 @costeo_bp.get("/costeo")
 def costeo_index():
