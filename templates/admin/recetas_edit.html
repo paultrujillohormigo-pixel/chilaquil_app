@@ -1,7 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>Receta: {{ platillo.nombre }}</h2>
+<div class="page-head">
+  <div>
+    <h2 style="margin:0;">Receta: {{ platillo.nombre }}</h2>
+    <p class="muted" style="margin:6px 0 0;">
+      Edita cantidades en unidad base (g / ml / pza). Puedes usar precio manual por ingrediente o el costo de compras.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_index') }}">← Volver</a>
+  </div>
+</div>
 
 {% if costeo %}
   <div class="card" style="margin:12px 0; padding:12px;">
@@ -12,110 +22,326 @@
       {% endfor %}
     </div>
     <small style="display:block; margin-top:8px;">
-      Nota: este resumen depende de <code>v_costeo_platillos</code>. Si aún no actualizamos la vista,
-      puede que no refleje precio manual.
+      Este resumen depende de <code>v_costeo_platillos</code>. Si la vista ya está actualizada, reflejará precio manual.
     </small>
   </div>
 {% endif %}
 
-<form method="post">
+<form method="post" id="recetaForm">
 
+  <!-- ========= AGREGAR INSUMOS ========= -->
   <div class="card" style="padding:12px; margin:12px 0;">
-    <h3 style="margin:0 0 10px;">Ingredientes actuales</h3>
+    <h3 style="margin:0 0 10px;">Agregar ingrediente</h3>
+
+    <div class="add-row">
+      <div>
+        <label class="lbl">Insumo</label>
+        <select id="addInsumo" class="inp">
+          <option value="">— Selecciona —</option>
+          {% for i in insumos %}
+            <option
+              value="{{ i.id }}"
+              data-nombre="{{ i.nombre }}"
+              data-unidad="{{ i.unidad_base }}"
+              data-merma="{{ i.merma_pct }}"
+              data-compra="{{ i.costo_unitario if i.costo_unitario is not none else '' }}"
+            >
+              {{ i.nombre }} ({{ i.unidad_base }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="lbl">Cantidad</label>
+        <input id="addCantidad" type="number" step="0.01" class="inp" placeholder="Ej. 100">
+      </div>
+
+      <div>
+        <label class="lbl">$ Manual (opcional)</label>
+        <input id="addPrecioManual" type="number" step="0.0001" class="inp" placeholder="$/unidad base">
+      </div>
+
+      <div class="add-actions">
+        <label class="chk">
+          <input id="addUsarManual" type="checkbox">
+          <span>Usar manual</span>
+        </label>
+
+        <button type="button" class="btn btn-primary" onclick="agregarInsumo()">
+          ➕ Agregar
+        </button>
+      </div>
+    </div>
+
+    <div class="muted" style="margin-top:10px; font-size:13px;">
+      Tip: si marcas “Usar manual” pero dejas vacío el precio, se guardará usando compras.
+    </div>
+  </div>
+
+  <!-- ========= TABLA RECETA ========= -->
+  <div class="card" style="padding:12px; margin:12px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <h3 style="margin:0 0 10px;">Ingredientes actuales</h3>
+      <div class="muted" style="font-size:13px;">
+        Filas: <span id="rowCount">0</span>
+      </div>
+    </div>
 
     {% if receta and receta|length > 0 %}
-      <table style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr style="text-align:left; border-bottom:1px solid #ddd;">
-            <th>Insumo</th>
-            <th style="width:120px;">Cantidad</th>
-            <th style="width:70px;">Unidad</th>
-            <th style="width:150px;">$ Manual</th>
-            <th style="width:90px;">Usar</th>
-            <th style="width:140px;">$ Compras</th>
-            <th style="width:140px;">$ Usado</th>
-            <th style="width:140px;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in receta %}
-          <tr style="border-bottom:1px solid #eee;">
-            <td>
-              <b>{{ r.insumo_nombre }}</b>
-              {% if r.merma_pct and r.merma_pct != 0 %}
-                <div style="font-size:12px; opacity:.8;">Merma: {{ r.merma_pct }}%</div>
-              {% endif %}
-              {% if r.costo_unitario_usado is none %}
-                <div style="font-size:12px; color:#b00020;"><b>SIN PRECIO</b> (pon manual o registra compra)</div>
-              {% endif %}
-            </td>
+      <div class="table-wrap">
+        <table class="table" id="recetaTable">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th style="width:120px;">Cantidad</th>
+              <th style="width:70px;">Unidad</th>
+              <th style="width:150px;">$ Manual</th>
+              <th style="width:90px;">Usar</th>
+              <th style="width:140px;">$ Compras</th>
+              <th style="width:140px;">$ Usado</th>
+              <th style="width:140px;">Subtotal</th>
+              <th style="width:110px;">Quitar</th>
+            </tr>
+          </thead>
 
-            <!-- Insumo id -->
-            <td style="display:none;">
-              <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
-            </td>
+          <tbody id="recetaBody">
+            {% for r in receta %}
+            <tr class="{% if r.costo_unitario_usado is none %}row-warn{% endif %}">
 
-            <td>
-              <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}"
-                     style="width:110px;">
-            </td>
+              <td>
+                <b>{{ r.insumo_nombre }}</b>
 
-            <td>{{ r.unidad_base }}</td>
+                {% if r.merma_pct and r.merma_pct != 0 %}
+                  <div class="muted" style="font-size:12px;">Merma: {{ r.merma_pct }}%</div>
+                {% endif %}
 
-            <td>
-              <input type="number" step="0.0001" name="precio_manual[]"
-                     value="{{ r.precio_manual if r.precio_manual is not none else '' }}"
-                     placeholder="$/{{ r.unidad_base }}"
-                     style="width:140px;">
-            </td>
+                {% if r.costo_unitario_usado is none %}
+                  <div class="warn-text"><b>SIN PRECIO</b> (pon manual o registra compra)</div>
+                {% endif %}
+              </td>
 
-            <td style="text-align:center;">
-              <!-- Truco robusto: manda 0 siempre y 1 si checked -->
-              <input type="hidden" name="usa_precio_manual[]" value="0">
-              <input type="checkbox" value="1"
-                     {% if r.usa_precio_manual %}checked{% endif %}
-                     onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
-            </td>
+              <!-- inputs alineados (arrays) -->
+              <td style="display:none;">
+                <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
+              </td>
 
-            <td>
-              {{ r.costo_unitario_compra if r.costo_unitario_compra is not none else '—' }}
-            </td>
+              <td>
+                <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}" class="inp-sm">
+              </td>
 
-            <td>
-              {{ r.costo_unitario_usado if r.costo_unitario_usado is not none else '—' }}
-            </td>
+              <td>{{ r.unidad_base }}</td>
 
-            <td>
-              {{ r.subtotal if r.subtotal is not none else '—' }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <td>
+                <input type="number" step="0.0001" name="precio_manual[]"
+                       value="{{ r.precio_manual if r.precio_manual is not none else '' }}"
+                       placeholder="$/{{ r.unidad_base }}"
+                       class="inp-sm">
+              </td>
+
+              <td style="text-align:center;">
+                <input type="hidden" name="usa_precio_manual[]" value="{{ '1' if r.usa_precio_manual else '0' }}">
+                <input type="checkbox"
+                       {% if r.usa_precio_manual %}checked{% endif %}
+                       onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
+              </td>
+
+              <td>
+                {{ r.costo_unitario_compra if r.costo_unitario_compra is not none else '—' }}
+              </td>
+
+              <td>
+                {{ r.costo_unitario_usado if r.costo_unitario_usado is not none else '—' }}
+              </td>
+
+              <td>
+                {{ r.subtotal if r.subtotal is not none else '—' }}
+              </td>
+
+              <td>
+                <button type="button" class="btn btn-danger" onclick="quitarFila(this)">🗑</button>
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
-      <p>No hay ingredientes todavía.</p>
+      <div class="muted">No hay ingredientes todavía. Agrega uno con el formulario de arriba.</div>
+
+      <div class="table-wrap" style="margin-top:10px; display:none;">
+        <table class="table" id="recetaTable">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th style="width:120px;">Cantidad</th>
+              <th style="width:70px;">Unidad</th>
+              <th style="width:150px;">$ Manual</th>
+              <th style="width:90px;">Usar</th>
+              <th style="width:140px;">$ Compras</th>
+              <th style="width:140px;">$ Usado</th>
+              <th style="width:140px;">Subtotal</th>
+              <th style="width:110px;">Quitar</th>
+            </tr>
+          </thead>
+          <tbody id="recetaBody"></tbody>
+        </table>
+      </div>
     {% endif %}
   </div>
 
   <div style="display:flex; gap:10px; align-items:center;">
-    <button type="submit" class="btn-primary">Guardar receta</button>
-    <a href="{{ url_for('costeo.recetas_index') }}" class="btn-gray">Volver</a>
+    <button type="submit" class="btn btn-primary">Guardar receta</button>
+    <a href="{{ url_for('costeo.recetas_index') }}" class="btn btn-secondary">Cancelar</a>
   </div>
 
 </form>
 
-<hr style="margin:18px 0;">
+<style>
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .page-actions{display:flex;gap:10px;flex-wrap:wrap}
 
-<div class="card" style="padding:12px;">
-  <h3 style="margin:0 0 10px;">Agregar ingredientes (rápido)</h3>
-  <p style="margin:0 0 10px; opacity:.85;">
-    Esto es opcional. Si tú ya tienes otro UI para agregar insumos, ignora esta sección.
-  </p>
+  .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
+  .muted{opacity:.7}
+  .warn-text{font-size:12px;color:#b00020;margin-top:4px}
 
-  <!-- Si quieres usar el catálogo para agregar nuevos insumos aquí mismo, lo armamos después -->
-  <div style="font-size:13px; opacity:.85;">
-    Catálogo disponible: {{ insumos|length }} insumos activos.
-  </div>
-</div>
+  .table-wrap{overflow:auto;margin-top:10px}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle;white-space:nowrap}
+  .row-warn td{background:#fff8f8}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd;background:#fff;cursor:pointer}
+  .btn-primary{background:#111;color:#fff;border-color:#111}
+  .btn-secondary{background:#f6f6f6;color:#111}
+  .btn-danger{background:#fff3f3;color:#b00020;border-color:#f0b4b4;padding:8px 10px}
+
+  .lbl{display:block;font-size:12px;opacity:.75;margin-bottom:6px}
+  .inp{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+  .inp-sm{width:110px;padding:8px 10px;border:1px solid #ddd;border-radius:10px}
+
+  .add-row{display:grid;grid-template-columns: 1.6fr 0.6fr 0.8fr 0.8fr; gap:12px; align-items:end}
+  .add-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;opacity:.9}
+</style>
+
+<script>
+  function updateRowCount() {
+    const body = document.getElementById('recetaBody');
+    const count = body ? body.querySelectorAll('tr').length : 0;
+    const el = document.getElementById('rowCount');
+    if (el) el.textContent = count;
+  }
+
+  function ensureTableVisible() {
+    const tbl = document.getElementById('recetaTable');
+    if (tbl && tbl.parentElement && tbl.parentElement.style.display === 'none') {
+      tbl.parentElement.style.display = 'block';
+    }
+  }
+
+  function quitarFila(btn) {
+    const tr = btn.closest('tr');
+    if (tr) tr.remove();
+    updateRowCount();
+  }
+
+  function agregarInsumo() {
+    const sel = document.getElementById('addInsumo');
+    const cant = document.getElementById('addCantidad');
+    const pm = document.getElementById('addPrecioManual');
+    const um = document.getElementById('addUsarManual');
+
+    const insumoId = sel.value;
+    const opt = sel.options[sel.selectedIndex];
+
+    if (!insumoId) {
+      alert('Selecciona un insumo.');
+      return;
+    }
+
+    const cantidad = (cant.value || '').trim();
+    if (!cantidad || Number(cantidad) <= 0) {
+      alert('Cantidad inválida.');
+      return;
+    }
+
+    // Evita duplicados: si ya existe el insumo en la tabla, no lo agregues
+    const body = document.getElementById('recetaBody');
+    const exists = Array.from(body.querySelectorAll('input[name="insumo_id[]"]'))
+      .some(i => i.value === insumoId);
+    if (exists) {
+      alert('Ese insumo ya está en la receta. Edita la cantidad en la tabla.');
+      return;
+    }
+
+    const nombre = opt.getAttribute('data-nombre') || 'Insumo';
+    const unidad = opt.getAttribute('data-unidad') || '';
+    const merma = opt.getAttribute('data-merma') || '';
+    const compra = opt.getAttribute('data-compra') || '';
+
+    const precioManual = (pm.value || '').trim();
+    const usarManual = um.checked && precioManual !== '' ? '1' : '0';
+
+    ensureTableVisible();
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>
+        <b>${escapeHtml(nombre)}</b>
+        ${merma && merma !== '0.00' ? `<div class="muted" style="font-size:12px;">Merma: ${escapeHtml(merma)}%</div>` : ``}
+      </td>
+
+      <td style="display:none;">
+        <input type="hidden" name="insumo_id[]" value="${escapeAttr(insumoId)}">
+      </td>
+
+      <td>
+        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidad)}" class="inp-sm">
+      </td>
+
+      <td>${escapeHtml(unidad)}</td>
+
+      <td>
+        <input type="number" step="0.0001" name="precio_manual[]" value="${escapeAttr(precioManual)}"
+               placeholder="$/${escapeHtml(unidad)}" class="inp-sm">
+      </td>
+
+      <td style="text-align:center;">
+        <input type="hidden" name="usa_precio_manual[]" value="${usarManual}">
+        <input type="checkbox" ${usarManual === '1' ? 'checked' : ''} onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
+      </td>
+
+      <td>${compra ? escapeHtml(compra) : '—'}</td>
+      <td>—</td>
+      <td>—</td>
+
+      <td>
+        <button type="button" class="btn btn-danger" onclick="quitarFila(this)">🗑</button>
+      </td>
+    `;
+
+    body.appendChild(tr);
+
+    // limpia inputs
+    cant.value = '';
+    pm.value = '';
+    um.checked = false;
+    sel.value = '';
+
+    updateRowCount();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(m) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+    });
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  // init
+  updateRowCount();
+</script>
 
 {% endblock %}
