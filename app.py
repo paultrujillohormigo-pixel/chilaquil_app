@@ -1136,6 +1136,65 @@ def ver_stock():
     finally:
         conn.close()
 
+import pymysql
+from decimal import Decimal, InvalidOperation
+from flask import request, redirect, url_for, flash
+from db import get_connection
+
+@app.post("/inventario/stock/agregar")
+def agregar_stock():
+    insumo_id = (request.form.get("insumo_id") or "").strip()
+    cantidad_txt = (request.form.get("cantidad") or "").strip()
+    q = (request.form.get("q") or "").strip()  # para conservar filtro
+
+    if not insumo_id.isdigit():
+        flash("Insumo inválido.", "error")
+        return redirect(url_for("ver_stock", q=q))
+
+    try:
+        cantidad = Decimal(cantidad_txt)
+    except (InvalidOperation, TypeError):
+        flash("Cantidad inválida.", "error")
+        return redirect(url_for("ver_stock", q=q))
+
+    if cantidad <= 0:
+        flash("La cantidad debe ser mayor a 0.", "error")
+        return redirect(url_for("ver_stock", q=q))
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            conn.start_transaction()
+
+            # Seguridad: no permitir agregar a insumos desactivados
+            cur.execute("SELECT activo, unidad_base FROM insumos WHERE id=%s", (int(insumo_id),))
+            ins = cur.fetchone()
+            if not ins or int(ins["activo"]) != 1:
+                conn.rollback()
+                flash("El insumo no está activo.", "error")
+                return redirect(url_for("ver_stock", q=q))
+
+            # Insertar movimiento (entrada manual, positivo)
+            cur.execute("""
+                INSERT INTO inventario_movimientos
+                    (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
+                VALUES
+                    (%s, %s, 'entrada_manual', 'stock_ui', NULL, 'Entrada manual desde /inventario/stock')
+            """, (int(insumo_id), str(cantidad)))
+
+            conn.commit()
+
+        flash(f"Stock agregado ✅ (+{cantidad} {ins['unidad_base']})", "success")
+        return redirect(url_for("ver_stock", q=q))
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
 
 
 # ================== RUN ==================
