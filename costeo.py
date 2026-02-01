@@ -146,7 +146,7 @@ def recetas_edit(platillo_id):
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
 
-    # Trae catálogo de insumos con costo vigente
+    # Catálogo de insumos (con costo vigente de compras como referencia)
     insumos = query_all("""
         SELECT
           i.id,
@@ -160,18 +160,33 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """)
 
-    # Trae receta con costo unitario + subtotal por ingrediente (incluye merma)
+    # Receta del platillo, pero permitiendo precio manual por ingrediente
     receta = query_all("""
         SELECT
-          r.id,
+          r.id AS receta_id,
           r.insumo_id,
           i.nombre AS insumo_nombre,
           i.unidad_base,
           i.merma_pct,
           r.cantidad_base,
-          cv.costo_unitario,
+
+          r.usa_precio_manual,
+          r.precio_manual,
+
+          cv.costo_unitario AS costo_unitario_compra,
+
+          CASE
+            WHEN r.usa_precio_manual=1 AND r.precio_manual IS NOT NULL THEN r.precio_manual
+            ELSE cv.costo_unitario
+          END AS costo_unitario_usado,
+
           ROUND(
-            r.cantidad_base * cv.costo_unitario * (1 + (i.merma_pct/100)),
+            r.cantidad_base
+            * (CASE
+                WHEN r.usa_precio_manual=1 AND r.precio_manual IS NOT NULL THEN r.precio_manual
+                ELSE cv.costo_unitario
+              END)
+            * (1 + (i.merma_pct/100)),
             2
           ) AS subtotal
         FROM recetas r
@@ -199,30 +214,75 @@ def recetas_edit(platillo_id):
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
 def recetas_save(platillo_id):
+    """
+    Guarda receta sin borrar todo (para no perder overrides):
+    - Usa UPSERT por (platillo_id, insumo_id)
+    - Elimina solo los insumos que el usuario quitó
+    """
     insumo_ids = request.form.getlist("insumo_id[]")
     cantidades = request.form.getlist("cantidad_base[]")
+    usar_manual_vals = request.form.getlist("usa_precio_manual[]")  # '0'/'1' (por hidden+checkbox)
+    precios_manual = request.form.getlist("precio_manual[]")
 
     rows = []
-    for insumo_id, cant in zip(insumo_ids, cantidades):
+    keep_insumo_ids = []
+
+    # Nota: el HTML manda SIEMPRE todos los arrays alineados
+    for insumo_id, cant, um, pm in zip(insumo_ids, cantidades, usar_manual_vals, precios_manual):
         if not insumo_id:
             continue
+
         try:
+            insumo_id_int = int(insumo_id)
             c = Decimal(cant)
         except:
             continue
+
         if c <= 0:
             continue
-        rows.append((platillo_id, int(insumo_id), c))
+
+        usa_manual = 1 if str(um) == "1" else 0
+
+        precio_manual_val = None
+        if pm not in (None, "", " "):
+            try:
+                precio_manual_val = Decimal(pm)
+            except:
+                precio_manual_val = None
+
+        # Si marca "usar manual" pero no puso precio, lo forzamos a 0 (para no engañar)
+        if usa_manual == 1 and precio_manual_val is None:
+            usa_manual = 0
+
+        rows.append((platillo_id, insumo_id_int, c, usa_manual, precio_manual_val))
+        keep_insumo_ids.append(insumo_id_int)
 
     if not rows:
         flash("No hay ingredientes válidos.", "warning")
         return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
-    execute("DELETE FROM recetas WHERE platillo_id=%s", (platillo_id,))
-    execute_many(
-        "INSERT INTO recetas (platillo_id, insumo_id, cantidad_base) VALUES (%s,%s,%s)",
-        rows
-    )
+    # UPSERT (requiere índice único uq_receta_platillo_insumo)
+    execute_many("""
+        INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual)
+        VALUES (%s,%s,%s,%s,%s)
+        ON DUPLICATE KEY UPDATE
+          cantidad_base = VALUES(cantidad_base),
+          usa_precio_manual = VALUES(usa_precio_manual),
+          precio_manual = VALUES(precio_manual)
+    """, rows)
+
+    # Borra solo lo que ya no se envió
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            placeholders = ",".join(["%s"] * len(keep_insumo_ids))
+            cursor.execute(
+                f"DELETE FROM recetas WHERE platillo_id=%s AND insumo_id NOT IN ({placeholders})",
+                (platillo_id, *keep_insumo_ids)
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
     flash("Receta guardada correctamente.", "success")
     return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
