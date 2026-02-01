@@ -12,7 +12,10 @@
   <div class="card-head">
     <h3>Desglose</h3>
     <p class="muted">
-      Costo insumos + 75% operativos → costo total. Precio sugerido calculado para margen objetivo 80%.
+      Costo insumos + 75% operativos → costo total. Precio sugerido calculado para margen objetivo 50%.
+    </p>
+    <p class="muted" style="margin-top:6px;">
+      Tip: si un platillo dice <b>“Incompleto”</b>, significa que le faltan precios (ni compras ni manuales) en 1+ insumos.
     </p>
   </div>
 
@@ -31,16 +34,63 @@
           <th style="width:160px;">Acción</th>
         </tr>
       </thead>
+
       <tbody>
         {% for r in data %}
-        <tr>
-          <td><strong>{{ r.platillo }}</strong></td>
+        {% set incompleto = (r.insumos_sin_precio is not none and r.insumos_sin_precio > 0) %}
 
-          <td>${{ "%.2f"|format(r.costo_insumos or 0) }}</td>
-          <td>${{ "%.2f"|format(r.costo_operativo or 0) }}</td>
-          <td>${{ "%.2f"|format(r.costo_total or 0) }}</td>
-          <td>${{ "%.2f"|format(r.ganancia_sugerida or 0) }}</td>
-          <td><strong>${{ "%.2f"|format(r.precio_sugerido or 0) }}</strong></td>
+        <tr class="{% if incompleto %}row-warn{% endif %}">
+          <td>
+            <strong>{{ r.platillo }}</strong>
+
+            {% if incompleto %}
+              <div class="pill pill-warn" title="Hay insumos sin costo (ni manual ni compras)">
+                ⚠️ Incompleto ({{ r.insumos_sin_precio }})
+              </div>
+            {% else %}
+              <div class="pill pill-ok">✅ OK</div>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% else %}
+              ${{ "%.2f"|format(r.costo_insumos or 0) }}
+            {% endif %}
+          </td>
+
+          <td>
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% else %}
+              ${{ "%.2f"|format(r.costo_operativo or 0) }}
+            {% endif %}
+          </td>
+
+          <td>
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% else %}
+              ${{ "%.2f"|format(r.costo_total or 0) }}
+            {% endif %}
+          </td>
+
+          <td>
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% else %}
+              ${{ "%.2f"|format(r.ganancia_sugerida or 0) }}
+            {% endif %}
+          </td>
+
+          <td>
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% else %}
+              <strong>${{ "%.2f"|format(r.precio_sugerido or 0) }}</strong>
+            {% endif %}
+          </td>
 
           <td>
             {% if r.precio_actual %}
@@ -51,7 +101,9 @@
           </td>
 
           <td>
-            {% if r.precio_actual and r.precio_actual > 0 %}
+            {% if incompleto %}
+              <span class="muted">—</span>
+            {% elif r.precio_actual and r.precio_actual > 0 and r.costo_total is not none %}
               {{ "%.2f"|format(((r.precio_actual - r.costo_total) / r.precio_actual) * 100) }}%
             {% else %}
               <span class="muted">—</span>
@@ -67,6 +119,7 @@
         </tr>
         {% endfor %}
       </tbody>
+
     </table>
   </div>
 </div>
@@ -74,15 +127,24 @@
 <style>
   .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
   .page-actions{display:flex;gap:10px;flex-wrap:wrap}
+
   .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
   .card-head h3{margin:0 0 6px 0}
   .muted{opacity:.7;margin:0}
+
   .table-wrap{overflow:auto;margin-top:10px}
   .table{width:100%;border-collapse:collapse}
   .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle;white-space:nowrap}
+
   .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd}
   .btn-primary{background:#111;color:#fff;border-color:#111}
   .btn-secondary{background:#f6f6f6;color:#111}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #ddd;width:max-content}
+  .pill-ok{background:#f3fff3;border-color:#bfe8bf}
+  .pill-warn{background:#fff4f4;border-color:#f0b4b4}
+
+  .row-warn td{background: #fff8f8;}
 </style>
 
 {% endblock %}
