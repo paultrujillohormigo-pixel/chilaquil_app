@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+  <h2 style="margin:0;">📦 Stock / Inventario</h2>
+
+  <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Buscar insumo..."
+           style="padding:10px; border:1px solid #ddd; border-radius:10px; min-width:220px;">
+
+    <label style="display:flex; align-items:center; gap:6px; font-size:14px;">
+      <input type="checkbox" name="bajo" value="1" {% if solo_bajo %}checked{% endif %}>
+      Bajo stock (&lt; 10)
+    </label>
+
+    <label style="display:flex; align-items:center; gap:6px; font-size:14px;">
+      <input type="checkbox" name="neg" value="1" {% if solo_neg %}checked{% endif %}>
+      Negativos
+    </label>
+
+    <button type="submit"
+            style="padding:10px 14px; border:none; border-radius:10px; background:#111; color:#fff; cursor:pointer;">
+      Filtrar
+    </button>
+
+    <a href="/inventario/stock"
+       style="padding:10px 14px; border:1px solid #ddd; border-radius:10px; text-decoration:none; color:#111;">
+      Limpiar
+    </a>
+  </form>
+</div>
+
+<div style="margin-top:14px; border:1px solid #eee; border-radius:14px; overflow:hidden;">
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr style="background:#fafafa;">
+        <th style="text-align:left; padding:12px;">Insumo</th>
+        <th style="text-align:center; padding:12px;">Unidad</th>
+        <th style="text-align:right; padding:12px;">Stock</th>
+        <th style="text-align:center; padding:12px;">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      {% set st = r.stock_actual %}
+      <tr style="border-top:1px solid #f1f1f1;">
+        <td style="padding:12px;">
+          <div style="font-weight:600;">{{ r.nombre }}</div>
+          <div style="font-size:12px; color:#888;">ID: {{ r.insumo_id }}</div>
+        </td>
+
+        <td style="padding:12px; text-align:center;">{{ r.unidad_base }}</td>
+
+        <td style="padding:12px; text-align:right; font-variant-numeric: tabular-nums;">
+          {{ "%.3f"|format(st) }}
+        </td>
+
+        <td style="padding:12px; text-align:center;">
+          {% if st < 0 %}
+            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#ffe5e5; color:#b30000; font-size:12px; font-weight:700;">
+              ❌ NEGATIVO
+            </span>
+          {% elif st < 10 %}
+            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#fff6db; color:#8a5a00; font-size:12px; font-weight:700;">
+              ⚠️ BAJO
+            </span>
+          {% else %}
+            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#e9ffef; color:#0a6b2b; font-size:12px; font-weight:700;">
+              ✅ OK
+            </span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+
+      {% if rows|length == 0 %}
+      <tr>
+        <td colspan="4" style="padding:16px; text-align:center; color:#777;">
+          No hay resultados.
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
