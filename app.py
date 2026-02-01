@@ -1010,6 +1010,106 @@ def borrar_pedidos_bulk():
     finally:
         conn.close()
 
+from decimal import Decimal
+from db import get_connection
+
+def descontar_stock_por_pedido(pedido_id: int) -> None:
+    """
+    Inserta movimientos 'salida_venta' en inventario_movimientos con base en recetas.
+    - Usa productos.platillo_id para encontrar receta.
+    - Respeta insumos.descuenta_stock=1 (salsas fuera).
+    - Evita doble descuento (chequeo + índice único recomendado).
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            conn.start_transaction()
+
+            # 1) Si ya existe al menos una salida_venta para este pedido, no repetir
+            cur.execute("""
+                SELECT 1
+                FROM inventario_movimientos
+                WHERE tipo='salida_venta'
+                  AND ref_tabla='pedidos'
+                  AND ref_id=%s
+                LIMIT 1
+            """, (pedido_id,))
+            if cur.fetchone():
+                conn.rollback()
+                return
+
+            # 2) Traer items vendidos + platillo_id
+            cur.execute("""
+                SELECT
+                    pi.cantidad AS cantidad_vendida,
+                    p.platillo_id
+                FROM pedido_items pi
+                JOIN productos p ON p.id = pi.producto_id
+                WHERE pi.pedido_id = %s
+            """, (pedido_id,))
+            items = cur.fetchall()
+
+            if not items:
+                conn.commit()
+                return
+
+            # 3) Acumular consumo por insumo
+            consumo = {}  # insumo_id -> Decimal
+
+            for it in items:
+                platillo_id = it["platillo_id"]
+                if platillo_id is None:
+                    # Producto sin receta ligada -> lo saltamos (no rompe cierre)
+                    continue
+
+                qty = Decimal(str(it["cantidad_vendida"]))
+
+                cur.execute("""
+                    SELECT r.insumo_id, r.cantidad_base
+                    FROM recetas r
+                    JOIN insumos i ON i.id = r.insumo_id
+                    WHERE r.platillo_id = %s
+                      AND i.descuenta_stock = 1
+                """, (platillo_id,))
+                receta = cur.fetchall()
+
+                for r in receta:
+                    insumo_id = r["insumo_id"]
+                    cant_base = Decimal(str(r["cantidad_base"]))
+                    total = cant_base * qty
+
+                    consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + total
+
+            if not consumo:
+                conn.commit()
+                return
+
+            # 4) Insertar movimientos (negativo)
+            rows = []
+            for insumo_id, total_salida in consumo.items():
+                rows.append((
+                    insumo_id,
+                    -total_salida,
+                    "salida_venta",
+                    "pedidos",
+                    pedido_id,
+                    f"Salida automática por pedido #{pedido_id}"
+                ))
+
+            cur.executemany("""
+                INSERT INTO inventario_movimientos
+                    (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s)
+            """, rows)
+
+            conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 
