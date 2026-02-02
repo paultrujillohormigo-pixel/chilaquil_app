@@ -1,155 +1,128 @@
 {% extends "base.html" %}
 {% block content %}
-
 <h2>Productos</h2>
 
-<!-- ================== FORM NUEVO PRODUCTO ================== -->
-<form method="post"
-      style="display:grid; gap:12px; max-width:900px; margin-bottom:22px;">
+<form method="post" style="display:grid; gap:10px; max-width:980px; margin-bottom:18px;">
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:end;">
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-
-        <div>
-            <label>Nombre</label>
-            <input type="text" name="nombre" required style="width:100%;">
-        </div>
-
-        <div>
-            <label>Categoría</label>
-            <input type="text"
-                   name="categoria"
-                   placeholder="chilaquiles, tamal, bebida..."
-                   required
-                   style="width:100%;">
-        </div>
-
-            <div>
-                          <label>Costo</label>
-                          <input type="number"
-                                 name="costo"
-                                 id="costoInput"
-                                 step="0.01"
-                                 required
-                                 style="width:100%;">
-                        </div>
-                        
-                        <div style="grid-column: 1 / -1;">
-                          <label>Platillo (para receta / inventario)</label>
-                          <select name="platillo_id"
-                                  id="platilloSelect"
-                                  style="width:100%;">
-                            <option value="">— Sin platillo (costo manual) —</option>
-                            {% for pl in platillos %}
-                              <option value="{{ pl.id }}"
-                                      data-costo="{{ pl.costo_base }}">
-                                {{ pl.nombre }} — ${{ "%.2f"|format(pl.costo_base) }}
-                              </option>
-                            {% endfor %}
-                          </select>
-                        
-                          <small style="opacity:.7;">
-                            Si eliges un platillo, el costo se toma automáticamente de su receta.
-                          </small>
-            </div>
-
-
-        <div>
-            <label>Precio</label>
-            <input type="number" name="precio" step="0.01" required style="width:100%;">
-        </div>
-
-        <div style="grid-column: 1 / -1;">
-            <label>Platillo (para receta / inventario)</label>
-            <select name="platillo_id" style="width:100%;">
-                <option value="">— Sin platillo (NO descuenta inventario) —</option>
-                {% for pl in platillos %}
-                    <option value="{{ pl.id }}">{{ pl.nombre }}</option>
-                {% endfor %}
-            </select>
-            <small style="opacity:.7;">
-                Si lo relacionas, este producto descontará inventario al cerrar pedido
-                usando recetas y recetas_proteina.
-            </small>
-        </div>
+    <div>
+      <label>Nombre:</label>
+      <input type="text" name="nombre" required style="width:100%;">
     </div>
 
-    <div style="display:flex; justify-content:flex-end;">
-        <button type="submit" class="btn-primary">➕ Agregar producto</button>
+    <div>
+      <label>Categoría:</label>
+      <input type="text" name="categoria" placeholder="chilaquiles, tamal, bebida..." required style="width:100%;">
     </div>
+
+    <div>
+      <label>Platillo (receta / inventario):</label>
+      <select name="platillo_id" id="platilloSelect" style="width:100%;">
+        <option value="">— Sin platillo —</option>
+        {% for pl in platillos %}
+          <option value="{{ pl.id }}">{{ pl.nombre }}</option>
+        {% endfor %}
+      </select>
+      <small style="opacity:.7;">Si ligas platillo, el costo se calcula con recetas + última compra.</small>
+    </div>
+
+    <div>
+      <label>Costo (auto si eliges platillo):</label>
+      <input type="number" name="costo" id="costoInput" step="0.01" value="0" style="width:100%;">
+      <small id="costoHint" style="opacity:.7;">Si seleccionas platillo, se llena solo.</small>
+    </div>
+
+    <div>
+      <label>Precio:</label>
+      <input type="number" name="precio" step="0.01" required style="width:100%;">
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button type="submit" class="btn-primary">Agregar</button>
+    </div>
+
+  </div>
 </form>
 
-<hr style="margin:18px 0; opacity:.25;">
+<table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nombre</th>
+      <th>Categoría</th>
+      <th>Costo</th>
+      <th>Precio</th>
+      <th>Platillo ligado</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in productos %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.nombre }}</td>
+      <td>{{ p.categoria }}</td>
+      <td><strong>{{ p.costo | money }}</strong></td>
+      <td>{{ p.precio | money }}</td>
 
-<!-- ================== TABLA PRODUCTOS ================== -->
-<table border="1"
-       cellpadding="8"
-       cellspacing="0"
-       style="width:100%; border-collapse:collapse;">
+      <td style="min-width:260px;">
+        <form method="post" action="{{ url_for('actualizar_platillo_producto', producto_id=p.id) }}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select name="platillo_id" class="platilloRowSelect" data-producto="{{ p.id }}">
+            <option value="">— Sin platillo —</option>
+            {% for pl in platillos %}
+              <option value="{{ pl.id }}" {% if p.platillo_id == pl.id %}selected{% endif %}>
+                {{ pl.nombre }}
+              </option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-gray">Guardar</button>
+          {% if p.platillo_id %}
+            <small style="opacity:.7;">(Actualmente: {{ p.platillo_nombre }})</small>
+          {% endif %}
+        </form>
+      </td>
 
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Costo</th>
-            <th>Precio</th>
-            <th>Platillo ligado</th>
-            <th style="width:120px;">Acciones</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        {% for p in productos %}
-        <tr>
-            <td>{{ p.id }}</td>
-            <td>{{ p.nombre }}</td>
-            <td>{{ p.categoria }}</td>
-            <td>{{ p.costo | money }}</td>
-            <td>{{ p.precio | money }}</td>
-            <td>
-                {% if p.platillo_id %}
-                    {{ p.platillo_nombre }}
-                    <small style="opacity:.6;">(#{{ p.platillo_id }})</small>
-                {% else %}
-                    <span style="opacity:.5;">—</span>
-                {% endif %}
-            </td>
-            <td style="text-align:center;">
-                <form method="post"
-                      action="{{ url_for('eliminar_producto', producto_id=p.id) }}"
-                      onsubmit="return confirm('¿Eliminar este producto? No se borrará el historial de pedidos.');">
-                    <button type="submit"
-                            style="background:#c0392b;
-                                   color:#fff;
-                                   border:0;
-                                   padding:6px 10px;
-                                   border-radius:6px;
-                                   cursor:pointer;">
-                        🗑 Eliminar
-                    </button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
+      <td>
+        <form method="post" action="{{ url_for('eliminar_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Eliminar (desactivar) este producto?');" style="display:inline;">
+          <button type="submit" class="btn-red">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
+
 <script>
-const platilloSelect = document.getElementById("platilloSelect");
-const costoInput = document.getElementById("costoInput");
+async function fetchCostoPlatillo(platilloId){
+  if(!platilloId) return null;
+  const res = await fetch(`/api/platillos/${platilloId}/costo`);
+  if(!res.ok) return null;
+  return await res.json(); // {costo: number}
+}
 
-platilloSelect.addEventListener("change", () => {
-  const opt = platilloSelect.options[platilloSelect.selectedIndex];
-  const costo = opt.getAttribute("data-costo");
+document.addEventListener("DOMContentLoaded", () => {
+  const sel = document.getElementById("platilloSelect");
+  const costoInput = document.getElementById("costoInput");
+  const hint = document.getElementById("costoHint");
 
-  if (costo && platilloSelect.value !== "") {
-    costoInput.value = Number(costo).toFixed(2);
+  async function updateCosto(){
+    const id = sel.value;
+    if(!id){
+      costoInput.readOnly = false;
+      hint.textContent = "Sin platillo: costo manual.";
+      return;
+    }
+    hint.textContent = "Calculando costo...";
+    const data = await fetchCostoPlatillo(id);
+    const costo = data ? Number(data.costo || 0) : 0;
+
+    costoInput.value = costo.toFixed(2);
     costoInput.readOnly = true;
-    costoInput.style.background = "#f5f5f5";
-  } else {
-    costoInput.value = "";
-    costoInput.readOnly = false;
-    costoInput.style.background = "#fff";
+    hint.textContent = "Costo automático desde recetas + última compra (insumos_compras.costo_unitario).";
   }
+
+  sel.addEventListener("change", updateCosto);
+  updateCosto();
 });
 </script>
 
