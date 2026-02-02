@@ -189,19 +189,11 @@ def money_format(value):
 # =============== INVENTARIO: DESCONTAR ===================
 # =========================================================
 
-def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
-    """
-    Inserta movimientos 'salida_venta' en inventario_movimientos en base a:
-      1) receta base: recetas (platillo_id -> insumo_id)
-      2) receta por proteína: recetas_proteina (platillo_id + proteina_id -> insumo_id)
+from decimal import Decimal
+import pymysql
 
-    Reglas:
-      - Usa productos.platillo_id para mapear producto -> platillo.
-      - Usa pedido_items.proteina_id para mapear proteína seleccionada.
-      - Respeta insumos.descuenta_stock=1 (salsas fuera).
-      - Idempotente recomendado: UNIQUE KEY (tipo, ref_tabla, ref_id, insumo_id) + INSERT IGNORE.
-    """
-    # Traer items del pedido con platillo_id + proteina_id
+def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
+    # 0) items del pedido con platillo_id + proteina_id
     cur.execute("""
         SELECT
             pi.cantidad AS cantidad_vendida,
@@ -219,14 +211,14 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
     consumo = {}  # insumo_id -> Decimal(total_salida)
 
     for it in items:
-        platillo_id = it.get("platillo_id")
-        proteina_id = it.get("proteina_id")
-        qty = Decimal(str(it.get("cantidad_vendida") or 0))
+        platillo_id = it["platillo_id"]
+        proteina_id = it["proteina_id"]
+        qty = Decimal(str(it["cantidad_vendida"] or 0))
 
         if not platillo_id or qty <= 0:
             continue
 
-        # 1) Receta base
+        # 1A) receta base
         cur.execute("""
             SELECT r.insumo_id, r.cantidad_base
             FROM recetas r
@@ -241,7 +233,7 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
             cant_base = Decimal(str(r["cantidad_base"]))
             consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
 
-        # 2) Receta por proteína (si aplica)
+        # 1B) receta por proteína
         if proteina_id:
             cur.execute("""
                 SELECT rp.insumo_id, rp.cantidad_base
@@ -265,11 +257,11 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
     for insumo_id, total_salida in consumo.items():
         rows.append((
             insumo_id,
-            str(-total_salida),   # salida = NEGATIVO
+            str(-total_salida),
             "salida_venta",
             "pedidos",
             pedido_id,
-            f"Salida automática por pedido #{pedido_id}",
+            f"Salida automática por pedido #{pedido_id}"
         ))
 
     cur.executemany("""
@@ -278,6 +270,20 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
         VALUES
             (%s, %s, %s, %s, %s, %s)
     """, rows)
+
+
+def descontar_stock_por_pedido(pedido_id: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            conn.begin()
+            descontar_stock_por_pedido_cursor(cur, pedido_id)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def descontar_stock_por_pedido(pedido_id: int) -> None:
