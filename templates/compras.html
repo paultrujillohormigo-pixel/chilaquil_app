@@ -5,14 +5,14 @@
   <div>
     <h2 class="page-title">🧾 Compras</h2>
     <p class="page-subtitle">
-      Registra compras operativas o insumos. Si seleccionas un insumo existente y activas “Sumar stock”, se crea la entrada automática al inventario.
+      Si activas <strong>Sumar stock</strong>, captura la compra en <strong>unidad base</strong> del insumo (ej. g/ml/pza) y automáticamente entra al inventario.
     </p>
   </div>
 </header>
 
 <div class="layout-2col">
 
-  <!-- ================== IZQUIERDA: FORM ================== -->
+  <!-- ================== FORM ================== -->
   <section class="card">
     <div class="card-head">
       <h3>Registrar compra</h3>
@@ -21,9 +21,38 @@
 
     <form method="post" id="compraForm" class="form">
 
-      <!-- ===== Bloque 1: Datos básicos ===== -->
+      <!-- ===== Switches arriba ===== -->
       <div class="section">
-        <div class="section-title">Datos de la compra</div>
+        <div class="section-title">Modo</div>
+
+        <div class="toggles">
+          <label class="toggle">
+            <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
+            <span class="toggle-ui"></span>
+            <span class="toggle-text">
+              <strong>Sumar stock</strong>
+              <small>Usa unidad base del insumo</small>
+            </span>
+          </label>
+
+          <label class="toggle" id="toggleOtroLabel">
+            <input type="checkbox" id="esOtro">
+            <span class="toggle-ui"></span>
+            <span class="toggle-text">
+              <strong>Otro (no está en la lista)</strong>
+              <small>Registra compra, no suma stock</small>
+            </span>
+          </label>
+        </div>
+
+        <p class="hint" style="margin:10px 0 0;">
+          Si activas <strong>Sumar stock</strong>, ya no pedimos “Cantidad/Unidad” texto libre para evitar errores.
+        </p>
+      </div>
+
+      <!-- ===== Datos generales ===== -->
+      <div class="section">
+        <div class="section-title">Datos generales</div>
 
         <div class="grid">
           <div class="field">
@@ -54,16 +83,6 @@
             <input type="number" name="costo" step="0.01" min="0" required placeholder="0.00">
           </div>
 
-          <div class="field">
-            <label>Cantidad (texto) <span class="req">*</span></label>
-            <input type="text" name="cantidad" placeholder="Ej. 2, 5, 1" required>
-          </div>
-
-          <div class="field">
-            <label>Unidad (texto) <span class="req">*</span></label>
-            <input type="text" name="unidad" placeholder="Ej. kg, pza, caja" required>
-          </div>
-
           <div class="field span-2">
             <label>Nota (opcional)</label>
             <input type="text" name="nota" placeholder="Ej. factura, promo, proveedor...">
@@ -71,32 +90,12 @@
         </div>
       </div>
 
-      <!-- ===== Bloque 2: Clasificación (insumo / otro) ===== -->
+      <!-- ===== Selector insumo / concepto ===== -->
       <div class="section">
-        <div class="section-title">Clasificación</div>
+        <div class="section-title">Concepto / Insumo</div>
 
-        <div class="toggles">
-          <label class="toggle">
-            <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
-            <span class="toggle-ui"></span>
-            <span class="toggle-text">
-              <strong>Sumar stock</strong>
-              <small>Solo si eliges un insumo existente</small>
-            </span>
-          </label>
-
-          <label class="toggle">
-            <input type="checkbox" id="esOtro">
-            <span class="toggle-ui"></span>
-            <span class="toggle-text">
-              <strong>Otro (no está en la lista)</strong>
-              <small>Se registra compra, pero no suma stock</small>
-            </span>
-          </label>
-        </div>
-
-        <div class="grid" style="margin-top:12px;">
-          <div class="field">
+        <div class="grid">
+          <div class="field" id="insumoSelectWrap">
             <label>Insumo (lista)</label>
             <select name="insumo_id" id="insumoSelect">
               <option value="">— Selecciona un insumo —</option>
@@ -112,7 +111,7 @@
           <div class="field" id="otroWrap" style="display:none;">
             <label>Nombre / concepto (Otro) <span class="req">*</span></label>
             <input type="text" id="otroTexto" placeholder="Ej. Chile guajillo, Servilletas premium..." autocomplete="off">
-            <small class="help">Esto se guardará como “concepto”.</small>
+            <small class="help">Se guardará como “concepto”.</small>
           </div>
         </div>
 
@@ -120,24 +119,41 @@
         <input type="hidden" name="concepto" id="concepto">
       </div>
 
-      <!-- ===== Bloque 3: Stock (solo si aplica) ===== -->
+      <!-- ===== Cantidad/Unidad TEXTO (solo si NO sumar stock) ===== -->
+      <div class="section" id="textoFields">
+        <div class="section-title">Cantidad (texto libre)</div>
+
+        <div class="grid">
+          <div class="field">
+            <label>Cantidad (texto) <span class="req">*</span></label>
+            <input type="text" name="cantidad" id="cantidadTxt" placeholder="Ej. 2, 5, 1">
+          </div>
+
+          <div class="field">
+            <label>Unidad (texto) <span class="req">*</span></label>
+            <input type="text" name="unidad" id="unidadTxt" placeholder="Ej. kg, pza, caja">
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Stock panel (solo si sumar stock) ===== -->
       <div class="section" id="stockPanel" style="display:none;">
         <div class="section-title">Entrada a inventario</div>
         <p class="hint" style="margin-top:-2px;">
-          Se registrará un movimiento <strong>entrada_compra</strong> en inventario_movimientos.
+          Captura en unidad base del insumo. Esto generará <strong>entrada_compra</strong>.
         </p>
 
         <div class="grid">
           <div class="field">
             <label>Cantidad base <span class="req">*</span></label>
             <input type="number" name="cantidad_base" id="cantidadBase" step="0.01" min="0" placeholder="0.00">
-            <small class="help">Ej. compraste 3 kg → escribe 3.00</small>
+            <small class="help">Ej. 3 kg → si tu unidad base es kg, escribe 3.00</small>
           </div>
 
           <div class="field">
             <label>Unidad base</label>
             <input type="text" name="unidad_base" id="unidadBase" readonly>
-            <small class="help">Se toma automáticamente del insumo.</small>
+            <small class="help">Automático desde el insumo.</small>
           </div>
 
           <div class="field">
@@ -155,7 +171,7 @@
     </form>
   </section>
 
-  <!-- ================== DERECHA: LISTADO ================== -->
+  <!-- ================== LISTADO ================== -->
   <aside class="card">
     <div class="card-head">
       <h3>Últimas compras</h3>
@@ -201,159 +217,48 @@
 </div>
 
 <style>
-/* ===== Layout ===== */
-.page-head{
-  display:flex; justify-content:space-between; align-items:flex-end; gap:12px;
-  margin-bottom: 14px;
-}
-.page-title{ margin:0; }
-.page-subtitle{ margin:6px 0 0; color:#666; max-width: 900px; }
-.layout-2col{
-  display:grid;
-  grid-template-columns: 1.25fr .85fr;
-  gap: 12px;
-}
-@media (max-width: 1100px){
-  .layout-2col{ grid-template-columns: 1fr; }
-}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:14px;}
+.page-title{margin:0;}
+.page-subtitle{margin:6px 0 0;color:#666;max-width:900px;}
+.layout-2col{display:grid;grid-template-columns:1.25fr .85fr;gap:12px;}
+@media (max-width:1100px){.layout-2col{grid-template-columns:1fr;}}
 
-/* ===== Card ===== */
-.card{
-  background:#fff;
-  border:1px solid #e7e7e7;
-  border-radius:14px;
-  padding: 14px;
-}
-.card-head{
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 12px;
-}
-.hint{ color:#777; font-size:.92rem; }
+.card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:14px;}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #eee;margin-bottom:12px;}
+.hint{color:#777;font-size:.92rem;}
 
-/* ===== Form ===== */
-.form{ display:flex; flex-direction:column; gap: 14px; }
-.section{
-  border:1px solid #eee;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fafafa;
-}
-.section-title{
-  font-weight: 900;
-  margin-bottom: 10px;
-}
-.grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 1100px){
-  .grid{ grid-template-columns: 1fr; }
-}
-.field label{
-  display:block;
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-.field input, .field select{
-  width:100%;
-  padding: 10px 10px;
-  border:1px solid #ddd;
-  border-radius: 10px;
-  background:#fff;
-}
-.field input:focus, .field select:focus{
-  outline:none;
-  border-color:#bbb;
-}
-.help{ display:block; margin-top:6px; color:#777; font-size:.88rem; }
-.req{ color:#d33; font-weight:900; }
-.span-2{ grid-column: 1 / -1; }
+.form{display:flex;flex-direction:column;gap:14px;}
+.section{border:1px solid #eee;border-radius:12px;padding:12px;background:#fafafa;}
+.section-title{font-weight:900;margin-bottom:10px;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media (max-width:1100px){.grid{grid-template-columns:1fr;}}
+.field label{display:block;font-weight:800;margin-bottom:6px;}
+.field input,.field select{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;background:#fff;}
+.help{display:block;margin-top:6px;color:#777;font-size:.88rem;}
+.req{color:#d33;font-weight:900;}
+.span-2{grid-column:1 / -1;}
 
-/* ===== Toggles (checkbox nice) ===== */
-.toggles{
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-.toggle{
-  display:flex; align-items:center; gap:10px;
-  border:1px solid #e5e5e5;
-  background:#fff;
-  border-radius: 12px;
-  padding: 10px 12px;
-  cursor:pointer;
-  user-select:none;
-  min-width: 280px;
-  flex: 1;
-}
-.toggle input{ display:none; }
-.toggle-ui{
-  width:46px; height:26px;
-  border-radius: 999px;
-  background:#e8e8e8;
-  position:relative;
-  flex: 0 0 46px;
-  transition: .15s ease;
-}
-.toggle-ui::after{
-  content:"";
-  width:22px; height:22px;
-  border-radius: 999px;
-  background:#fff;
-  position:absolute;
-  top:2px; left:2px;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
-  transition: .15s ease;
-}
-.toggle input:checked + .toggle-ui{
-  background:#c9f0d3;
-}
-.toggle input:checked + .toggle-ui::after{
-  left:22px;
-}
-.toggle-text{ display:flex; flex-direction:column; line-height:1.15; }
-.toggle-text small{ color:#777; font-weight:600; margin-top:3px; }
+.toggles{display:flex;gap:10px;flex-wrap:wrap;}
+.toggle{display:flex;align-items:center;gap:10px;border:1px solid #e5e5e5;background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;user-select:none;min-width:280px;flex:1;}
+.toggle input{display:none;}
+.toggle-ui{width:46px;height:26px;border-radius:999px;background:#e8e8e8;position:relative;flex:0 0 46px;transition:.15s ease;}
+.toggle-ui::after{content:"";width:22px;height:22px;border-radius:999px;background:#fff;position:absolute;top:2px;left:2px;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:.15s ease;}
+.toggle input:checked + .toggle-ui{background:#c9f0d3;}
+.toggle input:checked + .toggle-ui::after{left:22px;}
+.toggle-text{display:flex;flex-direction:column;line-height:1.15;}
+.toggle-text small{color:#777;font-weight:600;margin-top:3px;}
 
-/* ===== Stock panel emphasis ===== */
-#stockPanel{
-  border-color:#d9f0e0;
-  background:#f6fff8;
-}
+#stockPanel{border-color:#d9f0e0;background:#f6fff8;}
 
-/* ===== Actions ===== */
-.actions{ display:flex; justify-content:flex-end; }
-.btn-primary{
-  border:0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-weight: 900;
-  cursor:pointer;
-}
+.actions{display:flex;justify-content:flex-end;}
+.btn-primary{border:0;padding:10px 14px;border-radius:12px;font-weight:900;cursor:pointer;}
 
-/* ===== Table ===== */
-.table-wrap{ overflow:auto; }
-.table{ width:100%; border-collapse: collapse; table-layout: fixed; }
-.table th, .table td{
-  padding: 10px 8px;
-  border-bottom: 1px solid #eee;
-  overflow:hidden; text-overflow: ellipsis; vertical-align: top;
-  font-size: .95rem;
-}
-.td-left{ white-space: normal; overflow-wrap:anywhere; word-break:break-word; }
-.badge{
-  display:inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid #ddd;
-  background:#f3f3f3;
-  font-weight: 900;
-  font-size: .85rem;
-}
-.badge.ok{
-  background:#e9fff0;
-  border-color:#bfead0;
-}
+.table-wrap{overflow:auto;}
+.table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.table th,.table td{padding:10px 8px;border-bottom:1px solid #eee;overflow:hidden;text-overflow:ellipsis;vertical-align:top;font-size:.95rem;}
+.td-left{white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #ddd;background:#f3f3f3;font-weight:900;font-size:.85rem;}
+.badge.ok{background:#e9fff0;border-color:#bfead0;}
 </style>
 
 <script>
@@ -379,63 +284,76 @@ function calcCostoUnitario(){
 
 function syncConcepto(){
   const isOtro = qs("esOtro").checked;
-
   if (isOtro){
     qs("concepto").value = norm(qs("otroTexto").value) || "Otro";
     return;
   }
-
   const sel = qs("insumoSelect");
   const opt = sel.options[sel.selectedIndex];
   const txt = opt ? (opt.textContent || "").trim() : "";
   qs("concepto").value = txt || "Compra";
 }
 
-function toggleOtro(){
-  const isOtro = qs("esOtro").checked;
-  qs("otroWrap").style.display = isOtro ? "block" : "none";
-
-  if (isOtro){
-    qs("insumoSelect").value = "";
-    setUnidadBaseFromSelect();
-    // no puede sumar stock si es otro
-    if (qs("esInsumo").checked){
-      qs("esInsumo").checked = false;
-    }
-  } else {
-    qs("otroTexto").value = "";
-  }
-
-  syncConcepto();
-  toggleStockPanel();
-}
-
-function toggleStockPanel(){
+function togglePanels(){
   const sumarStock = qs("esInsumo").checked;
   const isOtro = qs("esOtro").checked;
   const insumoId = norm(qs("insumoSelect").value);
 
-  const show = sumarStock && !isOtro && !!insumoId;
-  qs("stockPanel").style.display = show ? "block" : "none";
+  // Si sumar stock, no permitimos "otro"
+  qs("toggleOtroLabel").style.opacity = sumarStock ? "0.45" : "1";
+  qs("toggleOtroLabel").style.pointerEvents = sumarStock ? "none" : "auto";
+  if (sumarStock && isOtro){
+    qs("esOtro").checked = false;
+  }
 
-  if (!show){
+  // Mostrar/Ocultar "Otro"
+  const isOtroFinal = qs("esOtro").checked;
+  qs("otroWrap").style.display = isOtroFinal ? "block" : "none";
+
+  // Texto libre solo cuando NO sumar stock
+  qs("textoFields").style.display = sumarStock ? "none" : "block";
+
+  // Stock panel solo si: sumarStock ON + insumo seleccionado + no otro
+  const showStock = sumarStock && !!insumoId && !isOtroFinal;
+  qs("stockPanel").style.display = showStock ? "block" : "none";
+
+  // Limpiezas según modo
+  if (sumarStock){
+    // limpia texto libre (para que no se mande basura)
+    qs("cantidadTxt").value = "";
+    qs("unidadTxt").value = "";
+  } else {
+    // limpia campos de stock
     qs("cantidadBase").value = "";
     qs("unidadBase").value = "";
     qs("costoUnitario").value = "";
-  } else {
+  }
+
+  if (showStock){
     setUnidadBaseFromSelect();
     calcCostoUnitario();
   }
+  syncConcepto();
 }
 
 function validar(e){
-  if (qs("esOtro").checked && !norm(qs("otroTexto").value)){
-    alert("Escribe el nombre del concepto en “Otro”.");
-    e.preventDefault();
-    return false;
-  }
+  const sumarStock = qs("esInsumo").checked;
+  const isOtro = qs("esOtro").checked;
 
-  if (qs("esInsumo").checked){
+  if (!sumarStock){
+    // modo normal: requiere cantidad/unidad texto
+    if (!norm(qs("cantidadTxt").value) || !norm(qs("unidadTxt").value)){
+      alert("Completa Cantidad y Unidad (texto libre) si NO estás sumando stock.");
+      e.preventDefault();
+      return false;
+    }
+    if (isOtro && !norm(qs("otroTexto").value)){
+      alert("Escribe el nombre del concepto en “Otro”.");
+      e.preventDefault();
+      return false;
+    }
+  } else {
+    // modo stock: requiere insumo + cantidad_base
     const insumoId = norm(qs("insumoSelect").value);
     const cantBase = Number(qs("cantidadBase").value || "0");
     if (!insumoId){
@@ -449,23 +367,24 @@ function validar(e){
       return false;
     }
   }
+
   return true;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  toggleOtro();
-  toggleStockPanel();
+  togglePanels();
   syncConcepto();
 
-  qs("esOtro").addEventListener("change", toggleOtro);
-  qs("esInsumo").addEventListener("change", toggleStockPanel);
+  qs("esInsumo").addEventListener("change", togglePanels);
+  qs("esOtro").addEventListener("change", togglePanels);
 
   qs("insumoSelect").addEventListener("change", () => {
-    syncConcepto();
-    toggleStockPanel();
+    togglePanels();
   });
 
-  qs("otroTexto").addEventListener("input", syncConcepto);
+  qs("otroTexto").addEventListener("input", () => {
+    syncConcepto();
+  });
 
   qs("cantidadBase").addEventListener("input", calcCostoUnitario);
   document.querySelector("input[name='costo']").addEventListener("input", calcCostoUnitario);
