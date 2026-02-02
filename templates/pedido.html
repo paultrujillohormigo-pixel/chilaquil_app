@@ -20,14 +20,12 @@
     </button>
 
     {% if pedido.estado == 'abierto' %}
-      <!-- ✅ Cerrar SIN enviar -->
       <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" style="display:inline;">
         <button type="submit" class="btn-gray" onclick="return confirm('¿Cerrar pedido sin enviar WhatsApp?')">
           ✅ Cerrar (sin enviar)
         </button>
       </form>
 
-      <!-- ✅ Cerrar + WhatsApp + Totopos (usa teléfono guardado en pedido) -->
       <form method="post"
             action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}"
             style="display:inline;">
@@ -43,10 +41,8 @@
 
 <div class="pos-layout">
 
-  <!-- ================== PANEL IZQUIERDO ================== -->
   <section class="pos-left">
 
-    <!-- ================== ITEMS DEL PEDIDO ================== -->
     <div class="card">
       <div class="card-head">
         <h3>Productos en el pedido</h3>
@@ -69,7 +65,6 @@
             <td class="td-left">
               {{ it.nombre }}
 
-              {# === mostrar personalización guardada === #}
               {% if it.proteina or it.sin or it.nota %}
               <div class="cocina-meta">
                 {% if it.proteina %}
@@ -105,7 +100,6 @@
       {% endif %}
     </div>
 
-    <!-- ================== AGREGAR MÁS ================== -->
     {% if pedido.estado == 'abierto' %}
     <div class="card">
       <div class="card-head">
@@ -131,7 +125,6 @@
 
   </section>
 
-  <!-- ================== PANEL DERECHO ================== -->
   {% if pedido.estado == 'abierto' %}
   <aside class="pos-right">
 
@@ -196,6 +189,12 @@
     <h3>Personalizar</h3>
     <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
 
+    <!-- ✅ Salsa (opcional). Se guarda salsa_id para reporte; NO descuenta stock si tu insumo salsa está en descuenta_stock=0 -->
+    <div class="custom-section">
+      <label><strong>Salsa</strong></label>
+      <div id="salsaRadios" class="custom-grid"></div>
+    </div>
+
     <div class="custom-section">
       <label><strong>Proteína</strong></label>
       <div id="proteinaRadios" class="custom-grid"></div>
@@ -237,160 +236,59 @@
 </div>
 
 <style>
-/* ====== Layout responsive (iPad) ====== */
 @media (max-width: 1100px){
-  .pos-layout{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
+  .pos-layout{display:flex;flex-direction:column;gap:12px;}
   .pos-left,.pos-right{ width:100%; }
   .card-sticky{ position:static !important; top:auto !important; }
 }
-
-/* ====== Evitar que texto/tabla se salgan ====== */
 .pos-layout, .card, .carrito-wrap, #carritoTable, .modal-box{ max-width:100%; }
 body{ overflow-x:hidden; }
-
-#carritoTable, .pedido-table{
-  width:100%;
-  table-layout:fixed;
+#carritoTable, .pedido-table{ width:100%; table-layout:fixed; }
+#carritoTable th,#carritoTable td,.pedido-table th,.pedido-table td{ overflow:hidden;text-overflow:ellipsis;vertical-align:top; }
+#carritoTable td.td-left,#carritoTable td:first-child,.pedido-table td.td-left,.pedido-table td:first-child{
+  white-space:normal;overflow-wrap:anywhere;word-break:break-word;
 }
-
-#carritoTable th,#carritoTable td,
-.pedido-table th,.pedido-table td{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  vertical-align:top;
-}
-
-#carritoTable td.td-left,
-#carritoTable td:first-child,
-.pedido-table td.td-left,
-.pedido-table td:first-child{
-  white-space:normal;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-}
-
-/* ====== Header carrito ====== */
-.carrito-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-
-/* ====== Meta modificadores ====== */
+.carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:8px;
-  background:#f3f3f3;
-  border:1px solid #ddd;
-  font-weight:700;
-  font-size:.85rem;
-  max-width:100%;
-  overflow-wrap:anywhere;
-  word-break:break-word;
+  display:inline-block;padding:4px 8px;border-radius:8px;background:#f3f3f3;border:1px solid #ddd;
+  font-weight:700;font-size:.85rem;max-width:100%;overflow-wrap:anywhere;word-break:break-word;
 }
 .tag-warn{ background:#fff3cd; border-color:#f0c36d; }
 .nota{
-  padding:6px 8px;
-  border-radius:8px;
-  border:1px dashed #bbb;
-  background:#fff;
-  font-size:.85rem;
-  max-width:100%;
-  overflow-wrap:anywhere;
-  word-break:break-word;
+  padding:6px 8px;border-radius:8px;border:1px dashed #bbb;background:#fff;font-size:.85rem;
+  max-width:100%;overflow-wrap:anywhere;word-break:break-word;
 }
-
-/* ====== Grid personalización ====== */
 .custom-section{ margin-top:12px; }
-.custom-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-  margin-top:8px;
-}
-.custom-pill{
-  border:1px solid #ddd;
-  border-radius:12px;
-  padding:12px;
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-@media (max-width: 1100px){
-  .custom-grid{ grid-template-columns:1fr; }
-}
-
-/* ====== Modal robusto (iPad) ====== */
+.custom-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.custom-pill{ border:1px solid #ddd; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center; }
+@media (max-width: 1100px){ .custom-grid{ grid-template-columns:1fr; } }
 .modal{
-  position:fixed;
-  left:0; top:0;
-  width:100vw;
-  height:100vh;
-  height:100dvh;
-  display:none;
-  justify-content:center;
-  align-items:center;
-  background:rgba(0,0,0,.45);
-  z-index:2147483647;
-  padding:14px;
-  box-sizing:border-box;
-  overscroll-behavior:contain;
+  position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:none;justify-content:center;align-items:center;
+  background:rgba(0,0,0,.45);z-index:2147483647;padding:14px;box-sizing:border-box;overscroll-behavior:contain;
 }
 .modal.is-open{ display:flex; }
-
 .modal-box{
-  background:#fff;
-  border-radius:14px;
-  padding:16px;
-  width:min(640px, 94vw);
-  max-height: calc(var(--vh, 1vh) * 88);
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  transform: translateZ(0);
+  background:#fff;border-radius:14px;padding:16px;width:min(640px, 94vw);
+  max-height: calc(var(--vh, 1vh) * 88);overflow:auto;-webkit-overflow-scrolling:touch;transform: translateZ(0);
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 @media (max-width: 1100px){
   .modal{ align-items:flex-end; padding:10px; }
-  .modal-box{
-    width:100%;
-    border-radius:18px 18px 14px 14px;
-    max-height: calc(var(--vh, 1vh) * 92);
-  }
+  .modal-box{ width:100%; border-radius:18px 18px 14px 14px; max-height: calc(var(--vh, 1vh) * 92); }
 }
 .modal-close{
-  position:sticky;
-  top:0;
-  float:right;
-  border:0;
-  background:rgba(255,255,255,.88);
-  backdrop-filter: blur(6px);
-  font-size:18px;
-  cursor:pointer;
-  padding:6px 10px;
-  border-radius:10px;
+  position:sticky;top:0;float:right;border:0;background:rgba(255,255,255,.88);backdrop-filter: blur(6px);
+  font-size:18px;cursor:pointer;padding:6px 10px;border-radius:10px;
 }
 .modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
 .modal-actions{
-  position:sticky;
-  bottom:0;
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(6px);
-  padding-top:10px;
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
+  position:sticky;bottom:0;background: rgba(255,255,255,.92);backdrop-filter: blur(6px);
+  padding-top:10px;display:flex;gap:10px;justify-content:flex-end;
 }
 </style>
 
 <script>
-/* ===== Fix vh real en iPad/iPhone ===== */
 function setVH(){
   const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -399,7 +297,6 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
-/* ===== Confirmar cierre con WhatsApp ===== */
 function confirmarCerrarWhatsApp(){
   const tel = "{{ (pedido.telefono_whatsapp or '')|e }}";
   if (!tel){
@@ -409,63 +306,59 @@ function confirmarCerrarWhatsApp(){
   return confirm("¿Cerrar pedido y mandar WhatsApp con ticket + totopos?");
 }
 
-/* ===== Config modificadores ===== */
+/* ====== Datos desde backend (para mapear a ID) ====== */
+const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
+const SALSAS_DB = {{ (salsas or [])|tojson }};
+
+function mapIdByNombre(arr, nombre){
+  const n = (nombre || "").toString().trim().toLowerCase();
+  for (const it of (arr || [])){
+    if ((it.nombre || "").toString().trim().toLowerCase() === n){
+      return it.id;
+    }
+  }
+  return null;
+}
+
+/* ====== Config modificadores UI ====== */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-/* ===== NO personalizar en bebidas/extras ===== */
+/* NO personalizar en bebidas/extras */
 const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
-const NO_MOD_KEYWORDS = [
-  "coca", "refresco", "agua", "café", "cafe", "chai",
-  "capuccino", "capuchino", "jugo", "jarrito", "boing"
-];
+const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
 
-function normaliza(str){
-  return (str || "").toString().trim().toLowerCase();
-}
+function normaliza(str){ return (str || "").toString().trim().toLowerCase(); }
 
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
-
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
-  for (const c of NO_MOD_CATEGORIAS){
-    if (cat.includes(c)) return false;
-  }
-  for (const kw of NO_MOD_KEYWORDS){
-    if (nom.includes(kw)) return false;
-  }
+  for (const c of NO_MOD_CATEGORIAS){ if (cat.includes(c)) return false; }
+  for (const kw of NO_MOD_KEYWORDS){ if (nom.includes(kw)) return false; }
   return true;
 }
 
-let carrito = {}; // carrito[uid]
+let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 
 function escapeHtml(str){
   const s = String(str ?? "");
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
-
 function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* ===== Agregar producto ===== */
+/* Agregar producto */
 function agregarProducto(producto_id, nombre, precio, categoria){
   const uid = uidLinea(producto_id);
 
+  // si NO aplica modal
   if (!productoTieneModificadores(nombre, categoria)){
     carrito[uid] = {
-      producto_id: producto_id,
-      nombre: nombre,
-      precio: Number(precio),
-      cantidad: 1,
-      custom: { proteina: "", sin: [], nota: "" }
+      producto_id, nombre, precio: Number(precio), cantidad: 1,
+      custom: { salsa: "", salsa_id: null, proteina: "", proteina_id: null, sin: [], nota: "" }
     };
     renderCarrito();
     return;
@@ -475,11 +368,29 @@ function agregarProducto(producto_id, nombre, precio, categoria){
   abrirCustomModal();
 }
 
-/* ===== Modal personalización ===== */
+/* Modal */
 function abrirCustomModal(){
   setVH();
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
+  // salsas
+  const salsaRadios = document.getElementById("salsaRadios");
+  salsaRadios.innerHTML = "";
+  // opción "—"
+  salsaRadios.innerHTML +=
+    '<label class="custom-pill">' +
+      '<input type="radio" name="salsa_radio" value="" checked>' +
+      '<span>—</span>' +
+    '</label>';
+  (SALSAS_DB || []).forEach((s) => {
+    salsaRadios.innerHTML +=
+      '<label class="custom-pill">' +
+        '<input type="radio" name="salsa_radio" value="' + escapeHtml(s.nombre) + '">' +
+        '<span>' + escapeHtml(s.nombre) + '</span>' +
+      '</label>';
+  });
+
+  // proteínas
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
   PROTEINAS.forEach((p, idx) => {
@@ -490,6 +401,7 @@ function abrirCustomModal(){
       '</label>';
   });
 
+  // sin
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   SIN_OPCIONES.forEach((s) => {
@@ -513,8 +425,14 @@ function cerrarCustomModal(){
 }
 
 function confirmarCustom(){
+  const salsaEl = document.querySelector("input[name='salsa_radio']:checked");
+  const salsa = salsaEl ? (salsaEl.value || "") : "";
+  const salsa_id = salsa ? mapIdByNombre(SALSAS_DB, salsa) : null;
+
   const protEl = document.querySelector("input[name='proteina_radio']:checked");
-  const proteina = protEl ? protEl.value : "";
+  const proteina = protEl ? (protEl.value || "") : "";
+  const proteina_id = proteina ? mapIdByNombre(PROTEINAS_DB, proteina) : null;
+
   const sin = [];
   document.querySelectorAll("input[name='sin_check']:checked").forEach(x => sin.push(x.value));
   const nota = document.getElementById("notaInput").value || "";
@@ -526,14 +444,14 @@ function confirmarCustom(){
     nombre: modalState.nombre,
     precio: Number(modalState.precio),
     cantidad: 1,
-    custom: { proteina, sin, nota }
+    custom: { salsa, salsa_id, proteina, proteina_id, sin, nota }
   };
 
   cerrarCustomModal();
   renderCarrito();
 }
 
-/* ===== Controles carrito ===== */
+/* Carrito controls */
 function restarProducto(uid){
   if (!carrito[uid]) return;
   carrito[uid].cantidad -= 1;
@@ -552,9 +470,12 @@ function eliminarProducto(uid){
 function editarLinea(uid){
   const it = carrito[uid];
   if (!it) return;
-
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
   abrirCustomModal();
+
+  // set salsa y prot actuales
+  const targetSalsa = (it.custom && it.custom.salsa) ? it.custom.salsa : "";
+  document.querySelectorAll("input[name='salsa_radio']").forEach(r => r.checked = (r.value === targetSalsa));
 
   const targetProt = (it.custom && it.custom.proteina) ? it.custom.proteina : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
@@ -564,11 +485,10 @@ function editarLinea(uid){
 
   const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
-
   document.getElementById("notaInput").value = (it.custom && it.custom.nota) ? it.custom.nota : "";
 }
 
-/* ===== Render + hidden inputs ===== */
+/* Render + hidden inputs */
 function renderCarrito(){
   const tbody = document.querySelector("#carritoTable tbody");
   const hidden = document.getElementById("inputsHidden");
@@ -582,56 +502,66 @@ function renderCarrito(){
     const subtotal = Number(it.precio) * Number(it.cantidad);
     total += subtotal;
 
-    const prot = (it.custom && it.custom.proteina) ? ("PROT: " + it.custom.proteina) : "";
-    const sin  = (it.custom && it.custom.sin && it.custom.sin.length) ? ("SIN: " + it.custom.sin.join(", ")) : "";
-    const nota = (it.custom && it.custom.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+    const salsa = (it.custom && it.custom.salsa) ? ("SALSA: " + it.custom.salsa) : "";
+    const prot  = (it.custom && it.custom.proteina) ? ("PROT: " + it.custom.proteina) : "";
+    const sin   = (it.custom && it.custom.sin && it.custom.sin.length) ? ("SIN: " + it.custom.sin.join(", ")) : "";
+    const nota  = (it.custom && it.custom.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
 
     let cocinaHtml = "";
-    if (prot || sin || nota){
+    if (salsa || prot || sin || nota){
       cocinaHtml += '<div class="cocina-meta">';
-      if (prot) cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
-      if (sin)  cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
-      if (nota) cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
+      if (salsa) cocinaHtml += '<div><span class="tag">' + escapeHtml(salsa) + '</span></div>';
+      if (prot)  cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
+      if (sin)   cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
+      if (nota)  cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
       cocinaHtml += '</div>';
     }
 
-tbody.innerHTML += `
-  <tr>
-    <td class="td-left">
-      ${escapeHtml(it.nombre)}
-      ${cocinaHtml}
-      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn-gray" onclick="editarLinea('${uid}')">Editar</button>
-      </div>
-    </td>
+    tbody.innerHTML += `
+      <tr>
+        <td class="td-left">
+          ${escapeHtml(it.nombre)}
+          ${cocinaHtml}
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-gray" onclick="editarLinea('${uid}')">Editar</button>
+          </div>
+        </td>
 
-    <td>
-      <div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
-        <button type="button" class="btn-gray" onclick="restarProducto('${uid}')">–</button>
-        <span style="min-width:22px; text-align:center;">${it.cantidad}</span>
-        <button type="button" class="btn-gray" onclick="sumarProducto('${uid}')">+</button>
-      </div>
-    </td>
+        <td>
+          <div class="qty-controls" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+            <button type="button" class="btn-gray" onclick="restarProducto('${uid}')">–</button>
+            <span style="min-width:22px; text-align:center;">${it.cantidad}</span>
+            <button type="button" class="btn-gray" onclick="sumarProducto('${uid}')">+</button>
+          </div>
+        </td>
 
-    <td>$${Number(it.precio).toFixed(2)}</td>
-    <td><strong>$${subtotal.toFixed(2)}</strong></td>
-    <td><button type="button" class="btn-red" onclick="eliminarProducto('${uid}')">✕</button></td>
-  </tr>
-`;
+        <td>$${Number(it.precio).toFixed(2)}</td>
+        <td><strong>$${subtotal.toFixed(2)}</strong></td>
+        <td><button type="button" class="btn-red" onclick="eliminarProducto('${uid}')">✕</button></td>
+      </tr>
+    `;
 
+    const protTxt = it.custom ? (it.custom.proteina || "") : "";
+    const sinTxt  = (it.custom && it.custom.sin) ? it.custom.sin.join(",") : "";
+    const notaTxt = it.custom ? (it.custom.nota || "") : "";
+
+    const protId  = (it.custom && it.custom.proteina_id) ? it.custom.proteina_id : "";
+    const salsaId = (it.custom && it.custom.salsa_id) ? it.custom.salsa_id : "";
 
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(it.producto_id) + '">' +
       '<input type="hidden" name="cantidad[]" value="' + escapeHtml(it.cantidad) + '">' +
-      '<input type="hidden" name="proteina[]" value="' + escapeHtml(it.custom ? (it.custom.proteina || "") : "") + '">' +
-      '<input type="hidden" name="sin[]" value="' + escapeHtml(it.custom && it.custom.sin ? it.custom.sin.join(",") : "") + '">' +
-      '<input type="hidden" name="nota[]" value="' + escapeHtml(it.custom ? (it.custom.nota || "") : "") + '">';
+      '<input type="hidden" name="proteina[]" value="' + escapeHtml(protTxt) + '">' +
+      '<input type="hidden" name="sin[]" value="' + escapeHtml(sinTxt) + '">' +
+      '<input type="hidden" name="nota[]" value="' + escapeHtml(notaTxt) + '">' +
+      '<input type="hidden" name="proteina_id[]" value="' + escapeHtml(protId) + '">' +
+      '<input type="hidden" name="salsa_id[]" value="' + escapeHtml(salsaId) + '">';
   });
 
   document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
 }
 
-/* ===== Ticket modal ===== */
+/* Ticket */
 function abrirTicketPreview(id){
   fetch(`/pedido/${id}/ticket_preview`)
     .then(r => r.json())
@@ -648,7 +578,7 @@ function cerrarTicketModal(){
   document.body.style.overflow = "";
 }
 
-/* ===== Vista cocina ===== */
+/* Vista cocina */
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
@@ -665,9 +595,10 @@ function abrirVistaCocina(){
   let html = "";
   uids.forEach(uid => {
     const it = carrito[uid];
-    const prot = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
-    const sin  = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
-    const nota = it.custom && it.custom.nota && it.custom.nota.trim() ? it.custom.nota.trim() : "";
+    const salsa = it.custom && it.custom.salsa ? ("SALSA: " + it.custom.salsa) : "SALSA: —";
+    const prot  = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
+    const sin   = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
+    const nota  = it.custom && it.custom.nota && it.custom.nota.trim() ? it.custom.nota.trim() : "";
 
     html +=
       '<div style="border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px;">' +
@@ -676,6 +607,7 @@ function abrirVistaCocina(){
           '<div style="font-size:1.05rem; font-weight:900;">x' + it.cantidad + '</div>' +
         '</div>' +
         '<div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">' +
+          '<div><span class="tag">' + escapeHtml(salsa) + '</span></div>' +
           '<div><span class="tag">' + escapeHtml(prot) + '</span></div>' +
           '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>' +
           (nota ? '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>' : "") +
@@ -693,7 +625,7 @@ function cerrarVistaCocina(){
   document.body.style.overflow = "";
 }
 
-/* ===== Cerrar al click fuera (todos) ===== */
+/* cerrar al click fuera */
 document.addEventListener("click", (e) => {
   ["customModal","cocinaModal","ticketModal"].forEach(id => {
     const m = document.getElementById(id);
