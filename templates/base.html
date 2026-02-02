@@ -22,36 +22,69 @@
     </style>
 </head>
 <body>
-    <nav class="navbar">
+
+<nav class="navbar">
   <div class="nav-left">
-    <strong>Señor Chilaquil</strong>
+    <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
   </div>
 
   <div class="nav-links">
-    <!-- OPERACIÓN -->
-    <a href="{{ url_for('nuevo_pedido') }}">➕ Nuevo pedido</a>
-    <a href="{{ url_for('pedidos_abiertos') }}">🧾 Pedidos</a>
-    <a href="{{ url_for('borrar_pedidos') }}">🗑️ Borrar pedidos</a>
 
-    <span class="nav-sep">|</span>
+    <!-- POS -->
+    <div class="nav-dd">
+      <button class="nav-dd-btn" type="button">
+        POS <span class="nav-caret">▾</span>
+      </button>
+      <div class="nav-dd-menu">
+        <a href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
+        <a href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
+      </div>
+    </div>
 
-    <!-- PRODUCTOS / RECETAS -->
-    <a href="{{ url_for('productos') }}">🍽️ Productos</a>
-    <a href="{{ url_for('costeo.index') }}">📐 Costeo</a>
+    <!-- Catálogos -->
+    <div class="nav-dd">
+      <button class="nav-dd-btn" type="button">
+        Catálogos <span class="nav-caret">▾</span>
+      </button>
+      <div class="nav-dd-menu">
+        {# OJO: tu error dice que ahora es productos_view #}
+        <a href="{{ url_for('productos_view') }}">Productos</a>
 
-    <span class="nav-sep">|</span>
+        {# Si tienes rutas para esto, descomenta/ajusta #}
+        {# <a href="{{ url_for('insumos_view') }}">Insumos</a> #}
+        {# <a href="{{ url_for('platillos_view') }}">Platillos</a> #}
+        {# <a href="{{ url_for('proteinas_view') }}">Proteínas</a> #}
+        {# <a href="{{ url_for('salsas_view') }}">Salsas</a> #}
+      </div>
+    </div>
 
-    <!-- INVENTARIO -->
-    <a href="{{ url_for('compras') }}">🛒 Compras</a>
-    <a href="{{ url_for('ver_stock') }}">📦 Stock</a>
+    <!-- Inventario -->
+    <div class="nav-dd">
+      <button class="nav-dd-btn" type="button">
+        Inventario <span class="nav-caret">▾</span>
+      </button>
+      <div class="nav-dd-menu">
+        <a href="{{ url_for('ver_stock') }}">Stock actual</a>
+        <a href="{{ url_for('compras') }}">Compras</a>
+      </div>
+    </div>
 
-    <span class="nav-sep">|</span>
+    <!-- Finanzas / Admin -->
+    <div class="nav-dd">
+      <button class="nav-dd-btn" type="button">
+        Admin <span class="nav-caret">▾</span>
+      </button>
+      <div class="nav-dd-menu">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
+      </div>
+    </div>
 
-    <!-- ANÁLISIS -->
-    <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
   </div>
 </nav>
 
+
+    
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
