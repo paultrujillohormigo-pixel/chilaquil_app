@@ -819,6 +819,21 @@ def compras():
 
             # ====== 2) POST: guardar compra + stock ======
             if request.method == "POST":
+
+                # ✅ Si el HTML oculta cantidad/unidad (cuando es_insumo=1),
+                #    aquí NO debe reventar por KeyError:
+                cantidad_txt = (request.form.get("cantidad") or "").strip()
+                unidad_txt = (request.form.get("unidad") or "").strip()
+
+                # Opcional (pero útil): si es insumo, puedes “rellenar” cantidad/unidad
+                # con la base para que tus reportes sean consistentes.
+                if request.form.get("es_insumo") == "1":
+                    # Si vienen vacíos, usa la cantidad_base/unidad_base
+                    if not cantidad_txt:
+                        cantidad_txt = (request.form.get("cantidad_base") or "").strip()
+                    if not unidad_txt:
+                        unidad_txt = (request.form.get("unidad_base") or "").strip()
+
                 cursor.execute("""
                     INSERT INTO insumos_compras
                     (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota,
@@ -827,8 +842,8 @@ def compras():
                 """, (
                     request.form["fecha"],
                     request.form["lugar"],
-                    request.form["cantidad"],
-                    request.form["unidad"],
+                    cantidad_txt,                          # ✅ antes request.form["cantidad"]
+                    unidad_txt,                            # ✅ antes request.form["unidad"]
                     request.form["concepto"],
                     request.form["costo"],
                     request.form["tipo_costo"],
@@ -844,8 +859,8 @@ def compras():
                 # ✅ Si es insumo, crea entrada_compra
                 if (
                     request.form.get("es_insumo") == "1"
-                    and request.form.get("insumo_id")
-                    and request.form.get("cantidad_base")
+                    and (request.form.get("insumo_id") or "").strip()
+                    and (request.form.get("cantidad_base") or "").strip()
                 ):
                     cursor.execute("""
                         INSERT IGNORE INTO inventario_movimientos
@@ -863,7 +878,7 @@ def compras():
                 flash("Compra registrada correctamente", "success")
                 return redirect(url_for("compras"))
 
-            # ====== 3) GET: listar últimas compras (opcional pero recomendado) ======
+            # ====== 3) GET: listar últimas compras ======
             cursor.execute("""
                 SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo
                 FROM insumos_compras
@@ -875,8 +890,8 @@ def compras():
     finally:
         conn.close()
 
-    # ✅ OJO: aquí ya mandas insumos
     return render_template("compras.html", compras=compras_rows, insumos=insumos)
+
 
 
 # =========================================================
