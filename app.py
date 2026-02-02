@@ -1370,6 +1370,35 @@ def agregar_stock():
         conn.close()
 
 
+
+@app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
+def eliminar_producto(producto_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Soft delete
+            cursor.execute("""
+                UPDATE productos
+                SET activo = 0
+                WHERE id = %s
+                LIMIT 1
+            """, (producto_id,))
+
+            conn.commit()
+            flash("Producto eliminado (desactivado).", "success")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        flash(f"Error eliminando producto: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("productos"))
+
+
+
 # ================== RUN ==================
 if __name__ == "__main__":
     app.run(debug=True)
