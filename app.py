@@ -766,35 +766,78 @@ def cerrar_pedido_whatsapp(pedido_id):
 # ================== PRODUCTOS =============================
 # =========================================================
 
+import pymysql
+from flask import render_template, request, redirect, url_for, flash
+from db import get_connection
+
 @app.route("/productos", methods=["GET", "POST"])
-def productos_view():
+def productos():
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+
+            # 1) lista de platillos para relacionar
+            cursor.execute("""
+                SELECT id, nombre
+                FROM platillos
+                WHERE activo = 1
+                ORDER BY nombre
+            """)
+            platillos = cursor.fetchall()
+
+            # 2) crear producto
             if request.method == "POST":
+                nombre = request.form["nombre"].strip()
+                categoria = request.form["categoria"].strip()
+                costo = request.form["costo"]
+                precio = request.form["precio"]
+                platillo_id = request.form.get("platillo_id") or None
+
                 cursor.execute("""
-                    INSERT INTO productos (nombre, categoria, costo, precio)
-                    VALUES (%s,%s,%s,%s)
-                """, (
-                    request.form["nombre"],
-                    request.form["categoria"],
-                    request.form["costo"],
-                    request.form["precio"],
-                ))
+                    INSERT INTO productos (nombre, categoria, costo, precio, platillo_id)
+                    VALUES (%s,%s,%s,%s,%s)
+                """, (nombre, categoria, costo, precio, platillo_id))
+
                 conn.commit()
                 flash("Producto creado correctamente", "success")
+                return redirect(url_for("productos"))
 
+            # 3) listar productos (incluye platillo actual)
             cursor.execute("""
-                SELECT *
-                FROM productos
-                WHERE activo = 1
-                ORDER BY categoria, nombre
+                SELECT p.id, p.nombre, p.categoria, p.costo, p.precio, p.activo, p.platillo_id,
+                       pl.nombre AS platillo_nombre
+                FROM productos p
+                LEFT JOIN platillos pl ON pl.id = p.platillo_id
+                WHERE p.activo = 1
+                ORDER BY p.categoria, p.nombre
             """)
             productos = cursor.fetchall()
+
     finally:
         conn.close()
 
-    return render_template("productos.html", productos=productos)
+    return render_template("productos.html", productos=productos, platillos=platillos)
+
+
+# ====== Guardar relación producto -> platillo (por fila) ======
+@app.post("/productos/<int:producto_id>/set_platillo")
+def productos_set_platillo(producto_id):
+    platillo_id = request.form.get("platillo_id") or None
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                UPDATE productos
+                SET platillo_id = %s
+                WHERE id = %s
+            """, (platillo_id, producto_id))
+            conn.commit()
+            flash("Relación producto → platillo actualizada ✅", "success")
+    finally:
+        conn.close()
+
+    return redirect(url_for("productos"))
 
 
 # =========================================================
