@@ -1,73 +1,330 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Registrar compra de insumos</h2>
 
-<form method="post">
+<h2 class="pos-title">🧾 Compras</h2>
+<p class="hint">Selecciona el insumo de la lista para sumar stock. Si no existe, usa “Otro” (se registra la compra, pero no suma stock).</p>
 
-    <label>Fecha:</label>
-    <input type="date" name="fecha" required>
+<div class="pos-layout" style="gap:12px;">
 
-    <label>Lugar:</label>
-    <input type="text" name="lugar" placeholder="Walmart, Abarrotes Juan…" required>
+  <section class="pos-left">
+    <div class="card">
+      <div class="card-head">
+        <h3>Registrar compra</h3>
+      </div>
 
-    <label>Cantidad:</label>
-    <input type="number" name="cantidad" step="0.01" required>
+      <form method="post" id="compraForm">
 
-    <label>Unidad:</label>
-    <select name="unidad" required>
-        <option value="pieza">Pieza</option>
-        <option value="kg">Kg</option>
-        <option value="lt">Litro</option>
-        <option value="paquete">Paquete</option>
-        <option value="otro">Otro</option>
-    </select>
+        <div class="form-grid">
 
-    <label>Concepto (qué compraste):</label>
-    <input type="text" name="concepto" required>
+          <div>
+            <label>Fecha</label>
+            <input type="date" name="fecha" required>
+          </div>
 
-    <label>Costo total pagado:</label>
-    <input type="number" name="costo" step="0.01" required>
+          <div>
+            <label>Lugar</label>
+            <input type="text" name="lugar" placeholder="Ej. Costco / Mercado" required>
+          </div>
 
-    <label>Tipo de costo:</label>
-    <select name="tipo_costo" required>
-        <option value="variable">Variable (insumos)</option>
-        <option value="fijo">Fijo (gas, luz, renta)</option>
-    </select>
+          <div>
+            <label>Tipo de costo</label>
+            <select name="tipo_costo" required>
+              <option value="insumos">Insumos</option>
+              <option value="operativo">Operativo</option>
+              <option value="servicios">Servicios</option>
+              <option value="renta">Renta</option>
+              <option value="nomina">Nómina</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
 
-    <label>Nota (opcional):</label>
-    <textarea name="nota" rows="2" placeholder="Algo extra…"></textarea>
+          <div>
+            <label>Costo total</label>
+            <input type="number" name="costo" step="0.01" min="0" required>
+          </div>
 
-    <button type="submit">Guardar compra</button>
-</form>
+          <div>
+            <label>Cantidad (texto libre)</label>
+            <input type="text" name="cantidad" placeholder="Ej. 2, 5, 1" required>
+          </div>
 
-<hr>
+          <div>
+            <label>Unidad (texto libre)</label>
+            <input type="text" name="unidad" placeholder="Ej. kg, pza, caja" required>
+          </div>
 
-<h3>Historial de compras</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>Lugar</th>
-            <th>Cantidad</th>
-            <th>Unidad</th>
-            <th>Concepto</th>
-            <th>Costo</th>
-            <th>Tipo</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for c in compras %}
-        <tr>
-            <td>{{ c.fecha }}</td>
-            <td>{{ c.lugar }}</td>
-            <td>{{ c.cantidad }}</td>
-            <td>{{ c.unidad }}</td>
-            <td>{{ c.concepto }}</td>
-            <td>${{ c.costo }}</td>
-            <td>{{ c.tipo_costo }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+          <div style="grid-column: 1 / -1;">
+            <label>Nota (opcional)</label>
+            <input type="text" name="nota" placeholder="Ej. factura, promo, proveedor...">
+          </div>
+
+        </div>
+
+        <hr style="margin:14px 0; opacity:.25;">
+
+        <!-- ====== ES INSUMO ====== -->
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:10px; margin:0;">
+            <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
+            <strong>Es insumo (sumar stock)</strong>
+          </label>
+          <span class="hint">Solo suma stock si seleccionas un insumo existente.</span>
+        </div>
+
+        <!-- ====== SELECT INSUMO + OTRO ====== -->
+        <div style="margin-top:12px;">
+          <div class="form-grid">
+
+            <div>
+              <label>Selecciona insumo</label>
+              <select name="insumo_id" id="insumoSelect">
+                <option value="">— Selecciona un insumo —</option>
+                {% for ins in insumos %}
+                  <option value="{{ ins.id }}" data-unidad="{{ ins.unidad_base }}">
+                    {{ ins.nombre }} ({{ ins.unidad_base }})
+                  </option>
+                {% endfor %}
+              </select>
+              <small class="hint">Si eliges uno aquí, se asocia correctamente y puede sumar stock.</small>
+            </div>
+
+            <div style="display:flex; align-items:flex-end; gap:10px;">
+              <label style="display:flex; align-items:center; gap:10px; margin:0; padding-bottom:6px;">
+                <input type="checkbox" id="esOtro">
+                <strong>Otro (no está en la lista)</strong>
+              </label>
+            </div>
+
+            <div style="grid-column: 1 / -1;" id="otroWrap" style="display:none;">
+              <label>Nombre del insumo / concepto (otro)</label>
+              <input type="text" id="otroTexto" placeholder="Ej. Chile guajillo, Servilletas premium..." autocomplete="off">
+              <!-- Se manda en concepto -->
+              <input type="hidden" name="concepto" id="conceptoHidden">
+              <small class="hint">Si pones “Otro”, se registra la compra pero NO suma stock porque no existe insumo_id.</small>
+            </div>
+
+            <!-- Campos de stock -->
+            <div id="stockFields" style="display:none;">
+              <label>Cantidad base (para stock)</label>
+              <input type="number" name="cantidad_base" id="cantidadBase" step="0.01" min="0">
+              <small class="hint">Ej. 3 kg → 3.00</small>
+            </div>
+
+            <div id="stockFields2" style="display:none;">
+              <label>Unidad base</label>
+              <input type="text" name="unidad_base" id="unidadBase" readonly>
+              <small class="hint">Se toma del insumo.</small>
+            </div>
+
+            <div id="stockFields3" style="display:none;">
+              <label>Costo unitario (auto)</label>
+              <input type="number" name="costo_unitario" id="costoUnitario" step="0.0001" readonly>
+              <small class="hint">costo_total / cantidad_base</small>
+            </div>
+
+          </div>
+
+          <!-- concepto normal si no es "otro" -->
+          <input type="hidden" name="concepto" id="conceptoNormal">
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+          <button type="submit" class="btn-primary">💾 Guardar compra</button>
+        </div>
+
+      </form>
+    </div>
+  </section>
+
+  <aside class="pos-right">
+    <div class="card card-sticky">
+      <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <h3 style="margin:0;">Últimas compras</h3>
+        <span class="hint">Recientes</span>
+      </div>
+
+      {% if compras %}
+        <div style="overflow:auto;">
+          <table class="pedido-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Tipo</th>
+                <th>Costo</th>
+                <th>Es insumo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in compras %}
+                <tr>
+                  <td>{{ c.fecha }}</td>
+                  <td class="td-left">{{ c.concepto }}</td>
+                  <td>{{ c.tipo_costo }}</td>
+                  <td><strong>{{ c.costo | money }}</strong></td>
+                  <td>
+                    {% if c.es_insumo %}
+                      <span class="tag">Sí</span>
+                    {% else %}
+                      <span class="hint">No</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="hint" style="margin:0;">Aún no hay compras registradas.</p>
+      {% endif %}
+    </div>
+  </aside>
+
+</div>
+
+<style>
+@media (max-width: 1100px){
+  .pos-layout{display:flex; flex-direction:column; gap:12px;}
+  .pos-left,.pos-right{width:100%;}
+  .card-sticky{position:static !important;}
+}
+.pedido-table{ width:100%; table-layout:fixed; }
+.pedido-table th,.pedido-table td{ overflow:hidden; text-overflow:ellipsis; vertical-align:top; }
+.pedido-table td.td-left{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+</style>
+
+<script>
+function qs(id){ return document.getElementById(id); }
+function norm(s){ return (s||"").toString().trim(); }
+
+function setUnidadBaseFromSelect(){
+  const sel = qs("insumoSelect");
+  const opt = sel.options[sel.selectedIndex];
+  const ub = opt ? (opt.getAttribute("data-unidad") || "") : "";
+  qs("unidadBase").value = ub;
+}
+
+function calcCostoUnitario(){
+  const costoTotal = parseFloat((document.querySelector("input[name='costo']").value || "0").toString());
+  const cantBase = parseFloat((qs("cantidadBase").value || "0").toString());
+  if (cantBase > 0){
+    qs("costoUnitario").value = (costoTotal / cantBase).toFixed(4);
+  } else {
+    qs("costoUnitario").value = "";
+  }
+}
+
+function toggleOtro(){
+  const isOtro = qs("esOtro").checked;
+
+  qs("otroWrap").style.display = isOtro ? "block" : "none";
+
+  if (isOtro){
+    // desactiva select insumo
+    qs("insumoSelect").value = "";
+    setUnidadBaseFromSelect();
+
+    // si estaba marcado "es insumo", lo apaga (porque no puede sumar stock sin insumo_id)
+    if (qs("esInsumo").checked){
+      qs("esInsumo").checked = false;
+      toggleStock();
+    }
+  } else {
+    // limpia "otro"
+    qs("otroTexto").value = "";
+  }
+
+  syncConcepto();
+}
+
+function toggleStock(){
+  const on = qs("esInsumo").checked;
+  const isOtro = qs("esOtro").checked;
+  const insumoId = norm(qs("insumoSelect").value);
+
+  // Solo muestra stockFields si: esInsumo ON + NO es otro + hay insumo seleccionado
+  const show = on && !isOtro && !!insumoId;
+
+  qs("stockFields").style.display  = show ? "block" : "none";
+  qs("stockFields2").style.display = show ? "block" : "none";
+  qs("stockFields3").style.display = show ? "block" : "none";
+
+  if (!show){
+    qs("cantidadBase").value = "";
+    qs("unidadBase").value = "";
+    qs("costoUnitario").value = "";
+  } else {
+    setUnidadBaseFromSelect();
+    calcCostoUnitario();
+  }
+}
+
+function syncConcepto(){
+  const isOtro = qs("esOtro").checked;
+  if (isOtro){
+    qs("conceptoHidden").value = norm(qs("otroTexto").value) || "Otro";
+    qs("conceptoNormal").value = ""; // evita duplicidad
+  } else {
+    // usa el nombre del insumo seleccionado como concepto, si hay
+    const sel = qs("insumoSelect");
+    const opt = sel.options[sel.selectedIndex];
+    const txt = opt ? (opt.textContent || "").trim() : "";
+    // quita "(kg)" etc si quieres, pero no es obligatorio
+    qs("conceptoNormal").value = txt || "Compra";
+    qs("conceptoHidden").value = "";
+  }
+}
+
+function validar(e){
+  const isOtro = qs("esOtro").checked;
+
+  // concepto: si esOtro, exige texto
+  if (isOtro){
+    if (!norm(qs("otroTexto").value)){
+      alert("Escribe el nombre del insumo/concepto en 'Otro'.");
+      e.preventDefault();
+      return false;
+    }
+  }
+
+  // si quiere sumar stock, debe seleccionar insumo y cantidad_base
+  if (qs("esInsumo").checked){
+    const insumoId = norm(qs("insumoSelect").value);
+    const cantBase = norm(qs("cantidadBase").value);
+
+    if (!insumoId){
+      alert("Para sumar stock debes seleccionar un insumo existente.");
+      e.preventDefault();
+      return false;
+    }
+    if (!cantBase || Number(cantBase) <= 0){
+      alert("Ingresa una cantidad base válida (> 0) para sumar stock.");
+      e.preventDefault();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // init
+  toggleOtro();
+  toggleStock();
+  syncConcepto();
+
+  // listeners
+  qs("esOtro").addEventListener("change", () => { toggleOtro(); toggleStock(); });
+  qs("esInsumo").addEventListener("change", toggleStock);
+  qs("insumoSelect").addEventListener("change", () => { syncConcepto(); toggleStock(); });
+  qs("otroTexto").addEventListener("input", syncConcepto);
+
+  qs("cantidadBase").addEventListener("input", calcCostoUnitario);
+  document.querySelector("input[name='costo']").addEventListener("input", calcCostoUnitario);
+
+  qs("compraForm").addEventListener("submit", validar);
+});
+</script>
 
 {% endblock %}
