@@ -193,7 +193,6 @@ from decimal import Decimal
 import pymysql
 
 def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
-    # 0) items del pedido con platillo_id + proteina_id
     cur.execute("""
         SELECT
             pi.cantidad AS cantidad_vendida,
@@ -211,9 +210,9 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
     consumo = {}  # insumo_id -> Decimal(total_salida)
 
     for it in items:
-        platillo_id = it["platillo_id"]
-        proteina_id = it["proteina_id"]
-        qty = Decimal(str(it["cantidad_vendida"] or 0))
+        platillo_id = it.get("platillo_id")
+        proteina_id = it.get("proteina_id")
+        qty = Decimal(str(it.get("cantidad_vendida") or 0))
 
         if not platillo_id or qty <= 0:
             continue
@@ -233,8 +232,8 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
             cant_base = Decimal(str(r["cantidad_base"]))
             consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
 
-        # 1B) receta por proteína
-        if proteina_id:
+        # 1B) receta por proteína (solo si NO es NULL)
+        if proteina_id is not None:
             cur.execute("""
                 SELECT rp.insumo_id, rp.cantidad_base
                 FROM recetas_proteina rp
@@ -270,20 +269,6 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
         VALUES
             (%s, %s, %s, %s, %s, %s)
     """, rows)
-
-
-def descontar_stock_por_pedido(pedido_id: int) -> None:
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cur:
-            conn.begin()
-            descontar_stock_por_pedido_cursor(cur, pedido_id)
-            conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
 
 
 def descontar_stock_por_pedido(pedido_id: int) -> None:
@@ -350,7 +335,8 @@ def pedidos_abiertos():
 def nuevo_pedido():
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+
             cursor.execute("""
                 SELECT * FROM productos
                 WHERE activo = 1
@@ -394,10 +380,17 @@ def nuevo_pedido():
                     return lst[i] if i < len(lst) else default
 
                 def safe_int_or_none(val):
+                    """
+                    Convierte '' / None / 'null' / '0' -> None
+                    Convierte números válidos -> int
+                    """
                     v = (val or "").strip()
-                    if not v:
+                    if not v or v.lower() == "null" or v == "0":
                         return None
-                    return int(v) if v.isdigit() else None
+                    try:
+                        return int(v)
+                    except Exception:
+                        return None
 
                 total = Decimal("0")
                 items = []
@@ -406,11 +399,12 @@ def nuevo_pedido():
                     if not str(prod_id).isdigit():
                         continue
 
-                    cant = int(cantidades[i]) if i < len(cantidades) and str(cantidades[i]).strip().isdigit() else 0
+                    cant_raw = safe_get(cantidades, i, "0")
+                    cant = int(cant_raw) if str(cant_raw).strip().isdigit() else 0
                     if cant <= 0:
                         continue
 
-                    # precio con uber si aplica (requiere columna precio_uber, si no existe, cae a precio)
+                    # precio con uber si aplica (si existe precio_uber)
                     if table_has_column(cursor, "productos", "precio_uber"):
                         cursor.execute("""
                             SELECT
@@ -423,15 +417,23 @@ def nuevo_pedido():
                             WHERE id = %s
                         """, (origen, int(prod_id)))
                     else:
-                        cursor.execute("SELECT precio AS precio_final FROM productos WHERE id=%s", (int(prod_id),))
+                        cursor.execute("""
+                            SELECT precio AS precio_final
+                            FROM productos
+                            WHERE id=%s
+                        """, (int(prod_id),))
 
                     row = cursor.fetchone()
-                    if not row:
+                    if not row or row.get("precio_final") is None:
                         continue
 
                     precio_unit = Decimal(str(row["precio_final"]))
                     subtotal = precio_unit * cant
                     total += subtotal
+
+                    # ✅ IDs reales (NULL si "Sin proteína" o si no aplica)
+                    prot_id = safe_int_or_none(safe_get(proteinas_id_sel, i, ""))
+                    salsa_id = safe_int_or_none(safe_get(salsas_id_sel, i, ""))
 
                     items.append({
                         "producto_id": int(prod_id),
@@ -439,13 +441,19 @@ def nuevo_pedido():
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
 
+                        # legacy para cocina/UI (no afecta inventario)
                         "proteina": safe_get(proteinas_sel, i, ""),
                         "sin": safe_get(sin_sel, i, ""),
                         "nota": safe_get(notas_sel, i, ""),
 
-                        "proteina_id": safe_int_or_none(safe_get(proteinas_id_sel, i, "")),
-                        "salsa_id": safe_int_or_none(safe_get(salsas_id_sel, i, "")),
+                        # para inventario (estos son los que importan)
+                        "proteina_id": prot_id,
+                        "salsa_id": salsa_id,
                     })
+
+                if not items:
+                    flash("No hay productos en el carrito.", "error")
+                    return redirect(url_for("nuevo_pedido"))
 
                 neto = total + monto_uber
 
@@ -467,11 +475,11 @@ def nuevo_pedido():
 
                     if has_prot_id:
                         cols.append("proteina_id")
-                        vals.append(it["proteina_id"])
+                        vals.append(it["proteina_id"])  # ✅ None si “Sin proteína”
 
                     if has_salsa_id:
                         cols.append("salsa_id")
-                        vals.append(it["salsa_id"])
+                        vals.append(it["salsa_id"])     # ✅ None si vacío
 
                     placeholders = ",".join(["%s"] * len(cols))
                     colsql = ",".join(cols)
