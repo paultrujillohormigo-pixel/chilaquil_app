@@ -65,8 +65,11 @@
             <td class="td-left">
               {{ it.nombre }}
 
-              {% if it.proteina or it.sin or it.nota %}
+              {% if it.salsa or it.proteina or it.sin or it.nota %}
               <div class="cocina-meta">
+                {% if it.salsa %}
+                <div><span class="tag">SALSA: {{ it.salsa }}</span></div>
+                {% endif %}
                 {% if it.proteina %}
                 <div><span class="tag">PROT: {{ it.proteina }}</span></div>
                 {% endif %}
@@ -189,10 +192,11 @@
     <h3>Personalizar</h3>
     <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
 
-    <!-- ✅ Salsa (opcional). Se guarda salsa_id para reporte; NO descuenta stock si tu insumo salsa está en descuenta_stock=0 -->
+    <!-- Salsa (opcional) -->
     <div class="custom-section">
       <label><strong>Salsa</strong></label>
       <div id="salsaRadios" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Opcional (si no aplica, déjalo vacío).</p>
     </div>
 
     <div class="custom-section">
@@ -236,59 +240,134 @@
 </div>
 
 <style>
+/* ====== Layout responsive (iPad) ====== */
 @media (max-width: 1100px){
   .pos-layout{display:flex;flex-direction:column;gap:12px;}
   .pos-left,.pos-right{ width:100%; }
   .card-sticky{ position:static !important; top:auto !important; }
 }
+
+/* ====== Evitar overflow horizontal ====== */
 .pos-layout, .card, .carrito-wrap, #carritoTable, .modal-box{ max-width:100%; }
 body{ overflow-x:hidden; }
+
 #carritoTable, .pedido-table{ width:100%; table-layout:fixed; }
-#carritoTable th,#carritoTable td,.pedido-table th,.pedido-table td{ overflow:hidden;text-overflow:ellipsis;vertical-align:top; }
-#carritoTable td.td-left,#carritoTable td:first-child,.pedido-table td.td-left,.pedido-table td:first-child{
-  white-space:normal;overflow-wrap:anywhere;word-break:break-word;
+
+#carritoTable th,#carritoTable td,
+.pedido-table th,.pedido-table td{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  vertical-align:top;
 }
+
+#carritoTable td.td-left,
+#carritoTable td:first-child,
+.pedido-table td.td-left,
+.pedido-table td:first-child{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* ====== Header carrito ====== */
 .carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+
+/* ====== Meta modificadores ====== */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
-  display:inline-block;padding:4px 8px;border-radius:8px;background:#f3f3f3;border:1px solid #ddd;
-  font-weight:700;font-size:.85rem;max-width:100%;overflow-wrap:anywhere;word-break:break-word;
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:8px;
+  background:#f3f3f3;
+  border:1px solid #ddd;
+  font-weight:700;
+  font-size:.85rem;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 .tag-warn{ background:#fff3cd; border-color:#f0c36d; }
 .nota{
-  padding:6px 8px;border-radius:8px;border:1px dashed #bbb;background:#fff;font-size:.85rem;
-  max-width:100%;overflow-wrap:anywhere;word-break:break-word;
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px dashed #bbb;
+  background:#fff;
+  font-size:.85rem;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
+
+/* ====== Grid personalización ====== */
 .custom-section{ margin-top:12px; }
 .custom-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
 .custom-pill{ border:1px solid #ddd; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center; }
 @media (max-width: 1100px){ .custom-grid{ grid-template-columns:1fr; } }
+
+/* ====== Modal robusto (iPad) ====== */
 .modal{
-  position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:none;justify-content:center;align-items:center;
-  background:rgba(0,0,0,.45);z-index:2147483647;padding:14px;box-sizing:border-box;overscroll-behavior:contain;
+  position:fixed;
+  left:0; top:0;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,.45);
+  z-index:2147483647;
+  padding:14px;
+  box-sizing:border-box;
+  overscroll-behavior:contain;
 }
 .modal.is-open{ display:flex; }
+
 .modal-box{
-  background:#fff;border-radius:14px;padding:16px;width:min(640px, 94vw);
-  max-height: calc(var(--vh, 1vh) * 88);overflow:auto;-webkit-overflow-scrolling:touch;transform: translateZ(0);
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  width:min(640px, 94vw);
+  max-height: calc(var(--vh, 1vh) * 88);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  transform: translateZ(0);
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 @media (max-width: 1100px){
   .modal{ align-items:flex-end; padding:10px; }
-  .modal-box{ width:100%; border-radius:18px 18px 14px 14px; max-height: calc(var(--vh, 1vh) * 92); }
+  .modal-box{
+    width:100%;
+    border-radius:18px 18px 14px 14px;
+    max-height: calc(var(--vh, 1vh) * 92);
+  }
 }
 .modal-close{
-  position:sticky;top:0;float:right;border:0;background:rgba(255,255,255,.88);backdrop-filter: blur(6px);
-  font-size:18px;cursor:pointer;padding:6px 10px;border-radius:10px;
+  position:sticky;
+  top:0;
+  float:right;
+  border:0;
+  background:rgba(255,255,255,.88);
+  backdrop-filter: blur(6px);
+  font-size:18px;
+  cursor:pointer;
+  padding:6px 10px;
+  border-radius:10px;
 }
 .modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
 .modal-actions{
-  position:sticky;bottom:0;background: rgba(255,255,255,.92);backdrop-filter: blur(6px);
-  padding-top:10px;display:flex;gap:10px;justify-content:flex-end;
+  position:sticky;
+  bottom:0;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(6px);
+  padding-top:10px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
 }
 </style>
 
 <script>
+/* ===== Fix vh real en iPad/iPhone ===== */
 function setVH(){
   const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -297,6 +376,7 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
+/* ===== Confirmar cierre con WhatsApp ===== */
 function confirmarCerrarWhatsApp(){
   const tel = "{{ (pedido.telefono_whatsapp or '')|e }}";
   if (!tel){
@@ -306,10 +386,21 @@ function confirmarCerrarWhatsApp(){
   return confirm("¿Cerrar pedido y mandar WhatsApp con ticket + totopos?");
 }
 
-/* ====== Datos desde backend (para mapear a ID) ====== */
+/* ===== Datos desde backend (asegúrate de pasar salsas y proteinas en render_template) ===== */
 const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
-const SALSAS_DB = {{ (salsas or [])|tojson }};
+const SALSAS_DB    = {{ (salsas or [])|tojson }};
 
+function escapeHtml(str){
+  const s = String(str ?? "");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* Mapear ID por nombre (fallback si guardas texto) */
 function mapIdByNombre(arr, nombre){
   const n = (nombre || "").toString().trim().toLowerCase();
   for (const it of (arr || [])){
@@ -317,14 +408,14 @@ function mapIdByNombre(arr, nombre){
       return it.id;
     }
   }
-  return null;
+  return "";
 }
 
-/* ====== Config modificadores UI ====== */
+/* ===== Config modificadores ===== */
 const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-/* NO personalizar en bebidas/extras */
+/* ===== NO personalizar en bebidas/extras ===== */
 const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
 const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
 
@@ -333,32 +424,36 @@ function normaliza(str){ return (str || "").toString().trim().toLowerCase(); }
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
+
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
-  for (const c of NO_MOD_CATEGORIAS){ if (cat.includes(c)) return false; }
-  for (const kw of NO_MOD_KEYWORDS){ if (nom.includes(kw)) return false; }
+  for (const c of NO_MOD_CATEGORIAS){
+    if (cat.includes(c)) return false;
+  }
+  for (const kw of NO_MOD_KEYWORDS){
+    if (nom.includes(kw)) return false;
+  }
   return true;
 }
 
-let carrito = {};
-let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
-
-function escapeHtml(str){
-  const s = String(str ?? "");
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
 function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
 
-/* Agregar producto */
+let carrito = {}; // carrito[uid]
+let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+
+/* ===== Agregar producto ===== */
 function agregarProducto(producto_id, nombre, precio, categoria){
   const uid = uidLinea(producto_id);
 
-  // si NO aplica modal
+  // Si NO aplica modal
   if (!productoTieneModificadores(nombre, categoria)){
     carrito[uid] = {
-      producto_id, nombre, precio: Number(precio), cantidad: 1,
-      custom: { salsa: "", salsa_id: null, proteina: "", proteina_id: null, sin: [], nota: "" }
+      producto_id,
+      nombre,
+      precio: Number(precio),
+      cantidad: 1,
+      custom: { salsa:"", salsa_id:"", proteina:"", proteina_id:"", sin:[], nota:"" }
     };
     renderCarrito();
     return;
@@ -368,20 +463,20 @@ function agregarProducto(producto_id, nombre, precio, categoria){
   abrirCustomModal();
 }
 
-/* Modal */
+/* ===== Modal personalización ===== */
 function abrirCustomModal(){
   setVH();
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
-  // salsas
+  // Salsas (desde DB) + opción vacía
   const salsaRadios = document.getElementById("salsaRadios");
   salsaRadios.innerHTML = "";
-  // opción "—"
   salsaRadios.innerHTML +=
     '<label class="custom-pill">' +
       '<input type="radio" name="salsa_radio" value="" checked>' +
-      '<span>—</span>' +
+      '<span>— (sin seleccionar)</span>' +
     '</label>';
+
   (SALSAS_DB || []).forEach((s) => {
     salsaRadios.innerHTML +=
       '<label class="custom-pill">' +
@@ -390,7 +485,7 @@ function abrirCustomModal(){
       '</label>';
   });
 
-  // proteínas
+  // Proteínas (lista UI)
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
   PROTEINAS.forEach((p, idx) => {
@@ -401,7 +496,7 @@ function abrirCustomModal(){
       '</label>';
   });
 
-  // sin
+  // Quitar
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   SIN_OPCIONES.forEach((s) => {
@@ -427,11 +522,11 @@ function cerrarCustomModal(){
 function confirmarCustom(){
   const salsaEl = document.querySelector("input[name='salsa_radio']:checked");
   const salsa = salsaEl ? (salsaEl.value || "") : "";
-  const salsa_id = salsa ? mapIdByNombre(SALSAS_DB, salsa) : null;
+  const salsa_id = salsa ? mapIdByNombre(SALSAS_DB, salsa) : "";
 
   const protEl = document.querySelector("input[name='proteina_radio']:checked");
   const proteina = protEl ? (protEl.value || "") : "";
-  const proteina_id = proteina ? mapIdByNombre(PROTEINAS_DB, proteina) : null;
+  const proteina_id = proteina ? mapIdByNombre(PROTEINAS_DB, proteina) : "";
 
   const sin = [];
   document.querySelectorAll("input[name='sin_check']:checked").forEach(x => sin.push(x.value));
@@ -451,7 +546,7 @@ function confirmarCustom(){
   renderCarrito();
 }
 
-/* Carrito controls */
+/* ===== Controles carrito ===== */
 function restarProducto(uid){
   if (!carrito[uid]) return;
   carrito[uid].cantidad -= 1;
@@ -470,25 +565,28 @@ function eliminarProducto(uid){
 function editarLinea(uid){
   const it = carrito[uid];
   if (!it) return;
+
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
   abrirCustomModal();
 
-  // set salsa y prot actuales
+  // set salsa
   const targetSalsa = (it.custom && it.custom.salsa) ? it.custom.salsa : "";
-  document.querySelectorAll("input[name='salsa_radio']").forEach(r => r.checked = (r.value === targetSalsa));
-
+  document.querySelectorAll("input[name='salsa_radio']").forEach(r => {
+    r.checked = (r.value === targetSalsa);
+  });
+  // set proteina
   const targetProt = (it.custom && it.custom.proteina) ? it.custom.proteina : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
   protRadios.forEach((r, idx) => {
     r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
   });
-
+  // set sin + nota
   const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
   document.getElementById("notaInput").value = (it.custom && it.custom.nota) ? it.custom.nota : "";
 }
 
-/* Render + hidden inputs */
+/* ===== Render + hidden inputs ===== */
 function renderCarrito(){
   const tbody = document.querySelector("#carritoTable tbody");
   const hidden = document.getElementById("inputsHidden");
@@ -502,18 +600,18 @@ function renderCarrito(){
     const subtotal = Number(it.precio) * Number(it.cantidad);
     total += subtotal;
 
-    const salsa = (it.custom && it.custom.salsa) ? ("SALSA: " + it.custom.salsa) : "";
-    const prot  = (it.custom && it.custom.proteina) ? ("PROT: " + it.custom.proteina) : "";
-    const sin   = (it.custom && it.custom.sin && it.custom.sin.length) ? ("SIN: " + it.custom.sin.join(", ")) : "";
-    const nota  = (it.custom && it.custom.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
+    const salsaTxt = (it.custom && it.custom.salsa) ? ("SALSA: " + it.custom.salsa) : "";
+    const protTxt  = (it.custom && it.custom.proteina) ? ("PROT: " + it.custom.proteina) : "";
+    const sinTxt   = (it.custom && it.custom.sin && it.custom.sin.length) ? ("SIN: " + it.custom.sin.join(", ")) : "";
+    const nota     = (it.custom && it.custom.nota && it.custom.nota.trim()) ? it.custom.nota.trim() : "";
 
     let cocinaHtml = "";
-    if (salsa || prot || sin || nota){
+    if (salsaTxt || protTxt || sinTxt || nota){
       cocinaHtml += '<div class="cocina-meta">';
-      if (salsa) cocinaHtml += '<div><span class="tag">' + escapeHtml(salsa) + '</span></div>';
-      if (prot)  cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
-      if (sin)   cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
-      if (nota)  cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
+      if (salsaTxt) cocinaHtml += '<div><span class="tag">' + escapeHtml(salsaTxt) + '</span></div>';
+      if (protTxt)  cocinaHtml += '<div><span class="tag">' + escapeHtml(protTxt) + '</span></div>';
+      if (sinTxt)   cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sinTxt) + '</span></div>';
+      if (nota)     cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
       cocinaHtml += '</div>';
     }
 
@@ -541,9 +639,9 @@ function renderCarrito(){
       </tr>
     `;
 
-    const protTxt = it.custom ? (it.custom.proteina || "") : "";
-    const sinTxt  = (it.custom && it.custom.sin) ? it.custom.sin.join(",") : "";
-    const notaTxt = it.custom ? (it.custom.nota || "") : "";
+    const protLegacy = it.custom ? (it.custom.proteina || "") : "";
+    const sinLegacy  = (it.custom && it.custom.sin) ? it.custom.sin.join(",") : "";
+    const notaLegacy = it.custom ? (it.custom.nota || "") : "";
 
     const protId  = (it.custom && it.custom.proteina_id) ? it.custom.proteina_id : "";
     const salsaId = (it.custom && it.custom.salsa_id) ? it.custom.salsa_id : "";
@@ -551,9 +649,9 @@ function renderCarrito(){
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(it.producto_id) + '">' +
       '<input type="hidden" name="cantidad[]" value="' + escapeHtml(it.cantidad) + '">' +
-      '<input type="hidden" name="proteina[]" value="' + escapeHtml(protTxt) + '">' +
-      '<input type="hidden" name="sin[]" value="' + escapeHtml(sinTxt) + '">' +
-      '<input type="hidden" name="nota[]" value="' + escapeHtml(notaTxt) + '">' +
+      '<input type="hidden" name="proteina[]" value="' + escapeHtml(protLegacy) + '">' +
+      '<input type="hidden" name="sin[]" value="' + escapeHtml(sinLegacy) + '">' +
+      '<input type="hidden" name="nota[]" value="' + escapeHtml(notaLegacy) + '">' +
       '<input type="hidden" name="proteina_id[]" value="' + escapeHtml(protId) + '">' +
       '<input type="hidden" name="salsa_id[]" value="' + escapeHtml(salsaId) + '">';
   });
@@ -561,7 +659,7 @@ function renderCarrito(){
   document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
 }
 
-/* Ticket */
+/* ===== Ticket modal ===== */
 function abrirTicketPreview(id){
   fetch(`/pedido/${id}/ticket_preview`)
     .then(r => r.json())
@@ -578,7 +676,7 @@ function cerrarTicketModal(){
   document.body.style.overflow = "";
 }
 
-/* Vista cocina */
+/* ===== Vista cocina ===== */
 function abrirVistaCocina(){
   const modal = document.getElementById("cocinaModal");
   const body = document.getElementById("cocinaBody");
@@ -625,7 +723,7 @@ function cerrarVistaCocina(){
   document.body.style.overflow = "";
 }
 
-/* cerrar al click fuera */
+/* ===== Cerrar al click fuera (todos) ===== */
 document.addEventListener("click", (e) => {
   ["customModal","cocinaModal","ticketModal"].forEach(id => {
     const m = document.getElementById(id);
