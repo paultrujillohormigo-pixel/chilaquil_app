@@ -2,34 +2,83 @@
 {% block content %}
 <h2>Productos</h2>
 
-<form method="post">
-    <label>Nombre:</label>
-    <input type="text" name="nombre" required>
-    <label>Categoría:</label>
-    <input type="text" name="categoria" placeholder="chilaquiles, tamal, bebida..." required>
-    <label>Costo:</label>
-    <input type="number" name="costo" step="0.01" required>
-    <label>Precio:</label>
-    <input type="number" name="precio" step="0.01" required>
-    <button type="submit">Agregar</button>
+<form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
+    <div>
+        <label>Nombre:</label><br>
+        <input type="text" name="nombre" required>
+    </div>
+
+    <div>
+        <label>Categoría:</label><br>
+        <input type="text" name="categoria" placeholder="chilaquiles, tamal, bebida..." required>
+    </div>
+
+    <div>
+        <label>Costo:</label><br>
+        <input type="number" name="costo" step="0.01" required>
+    </div>
+
+    <div>
+        <label>Precio:</label><br>
+        <input type="number" name="precio" step="0.01" required>
+    </div>
+
+    <button type="submit" class="btn-primary">Agregar</button>
 </form>
 
-<table>
-    <thead>
-        <tr>
-            <th>ID</th><th>Nombre</th><th>Categoría</th><th>Costo</th><th>Precio</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in productos %}
-        <tr>
-            <td>{{ p.id }}</td>
-            <td>{{ p.nombre }}</td>
-            <td>{{ p.categoria }}</td>
-            <td>{{ p.costo }}</td>
-            <td>{{ p.precio }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div style="overflow:auto;">
+  <table class="pedido-table" style="width:100%; border-collapse:collapse;">
+      <thead>
+          <tr>
+              <th style="text-align:left;">ID</th>
+              <th style="text-align:left;">Nombre</th>
+              <th style="text-align:left;">Categoría</th>
+              <th style="text-align:left;">Costo</th>
+              <th style="text-align:left;">Precio</th>
+              <th style="text-align:left;">Acciones</th>
+          </tr>
+      </thead>
+      <tbody>
+          {% for p in productos %}
+          <tr>
+              <td>{{ p.id }}</td>
+              <td>{{ p.nombre }}</td>
+              <td>{{ p.categoria }}</td>
+              <td>{{ p.costo }}</td>
+              <td>{{ p.precio }}</td>
+
+              <td style="white-space:nowrap;">
+                  <form method="post"
+                        action="{{ url_for('eliminar_producto', producto_id=p.id) }}"
+                        onsubmit="return confirm('¿Seguro que quieres eliminar (desactivar) este producto?');"
+                        style="display:inline;">
+                      <button type="submit" class="btn-red">Eliminar</button>
+                  </form>
+              </td>
+          </tr>
+          {% endfor %}
+      </tbody>
+  </table>
+</div>
+
+<style>
+/* Si ya tienes estilos globales, esto no estorba. Es un “fallback” */
+.pedido-table th, .pedido-table td{
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.btn-primary{
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn-red{
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+</style>
+
 {% endblock %}
