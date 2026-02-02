@@ -774,38 +774,40 @@ from db import get_connection
 def productos():
     conn = get_connection()
     try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-
-            # 1) lista de platillos para relacionar
+        with conn.cursor() as cursor:
+            # ===== 1) Platillos para relacionar producto -> platillo =====
             cursor.execute("""
                 SELECT id, nombre
                 FROM platillos
-                WHERE activo = 1
                 ORDER BY nombre
             """)
             platillos = cursor.fetchall()
 
-            # 2) crear producto
+            # ===== 2) Crear producto =====
             if request.method == "POST":
-                nombre = request.form["nombre"].strip()
-                categoria = request.form["categoria"].strip()
-                costo = request.form["costo"]
-                precio = request.form["precio"]
-                platillo_id = request.form.get("platillo_id") or None
+                nombre = (request.form.get("nombre") or "").strip()
+                categoria = (request.form.get("categoria") or "").strip()
+                costo = request.form.get("costo")
+                precio = request.form.get("precio")
+                platillo_id = (request.form.get("platillo_id") or "").strip()
+
+                # platillo_id opcional
+                platillo_id_db = int(platillo_id) if platillo_id.isdigit() else None
 
                 cursor.execute("""
                     INSERT INTO productos (nombre, categoria, costo, precio, platillo_id)
                     VALUES (%s,%s,%s,%s,%s)
-                """, (nombre, categoria, costo, precio, platillo_id))
+                """, (nombre, categoria, costo, precio, platillo_id_db))
 
                 conn.commit()
                 flash("Producto creado correctamente", "success")
                 return redirect(url_for("productos"))
 
-            # 3) listar productos (incluye platillo actual)
+            # ===== 3) Listar productos (incluye nombre del platillo si existe) =====
             cursor.execute("""
-                SELECT p.id, p.nombre, p.categoria, p.costo, p.precio, p.activo, p.platillo_id,
-                       pl.nombre AS platillo_nombre
+                SELECT
+                    p.*,
+                    pl.nombre AS platillo_nombre
                 FROM productos p
                 LEFT JOIN platillos pl ON pl.id = p.platillo_id
                 WHERE p.activo = 1
