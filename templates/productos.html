@@ -1,115 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="pos-title">📦 Productos</h2>
+<h2>Productos</h2>
 
-<div class="pos-layout" style="gap:12px;">
-  <section class="pos-left">
-
-    <div class="card">
-      <div class="card-head">
-        <h3>Agregar producto</h3>
-      </div>
-
-      <form method="post" class="form-grid">
-
+<form method="post" style="display:grid; gap:10px; max-width:900px; margin-bottom:18px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         <div>
-          <label>Nombre</label>
-          <input type="text" name="nombre" required>
+            <label>Nombre:</label>
+            <input type="text" name="nombre" required style="width:100%;">
         </div>
 
         <div>
-          <label>Categoría</label>
-          <input type="text" name="categoria" placeholder="chilaquiles, tortas, bebidas..." required>
+            <label>Categoría:</label>
+            <input type="text" name="categoria" placeholder="chilaquiles, tamal, bebida..." required style="width:100%;">
         </div>
 
         <div>
-          <label>Costo</label>
-          <input type="number" name="costo" step="0.01" min="0" required>
+            <label>Costo:</label>
+            <input type="number" name="costo" step="0.01" required style="width:100%;">
         </div>
 
         <div>
-          <label>Precio</label>
-          <input type="number" name="precio" step="0.01" min="0" required>
+            <label>Precio:</label>
+            <input type="number" name="precio" step="0.01" required style="width:100%;">
         </div>
 
         <div style="grid-column: 1 / -1;">
-          <label>Platillo (receta)</label>
-          <select name="platillo_id">
-            <option value="">— Sin receta (no descuenta stock) —</option>
-            {% for pl in platillos %}
-              <option value="{{ pl.id }}">{{ pl.nombre }}</option>
-            {% endfor %}
-          </select>
-          <small class="hint">Si lo dejas vacío, este producto NO podrá descontar inventario.</small>
+            <label>Platillo (para receta / descuento inventario):</label>
+            <select name="platillo_id" style="width:100%;">
+                <option value="">— Sin platillo (no descuenta inventario) —</option>
+                {% for pl in platillos %}
+                    <option value="{{ pl.id }}">{{ pl.nombre }}</option>
+                {% endfor %}
+            </select>
+            <small style="opacity:.7;">
+                Si lo relacionas, al cerrar pedido se puede descontar stock usando recetas/recetas_proteina (vía productos.platillo_id).
+            </small>
         </div>
-
-        <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end;">
-          <button type="submit" class="btn-primary">➕ Agregar</button>
-        </div>
-
-      </form>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <h3>Lista de productos</h3>
-        <div class="hint">Relaciona cada producto con su platillo/receta</div>
-      </div>
-
-      <div style="overflow:auto;">
-        <table class="pedido-table">
-          <thead>
-            <tr>
-              <th style="width:60px;">ID</th>
-              <th>Nombre</th>
-              <th style="width:140px;">Categoría</th>
-              <th style="width:110px;">Costo</th>
-              <th style="width:110px;">Precio</th>
-              <th style="width:260px;">Platillo (receta)</th>
-              <th style="width:120px;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for p in productos %}
-            <tr>
-              <td>{{ p.id }}</td>
-              <td class="td-left">{{ p.nombre }}</td>
-              <td>{{ p.categoria }}</td>
-              <td>{{ p.costo | money }}</td>
-              <td><strong>{{ p.precio | money }}</strong></td>
-
-              <td>
-                <form method="post" action="{{ url_for('productos_set_platillo', producto_id=p.id) }}" style="display:flex; gap:8px; align-items:center;">
-                  <select name="platillo_id" style="flex:1;">
-                    <option value="">— Sin receta —</option>
-                    {% for pl in platillos %}
-                      <option value="{{ pl.id }}" {% if p.platillo_id == pl.id %}selected{% endif %}>
-                        {{ pl.nombre }}
-                      </option>
-                    {% endfor %}
-                  </select>
-              </td>
-
-              <td>
-                  <button type="submit" class="btn-gray">Guardar</button>
-                </form>
-              </td>
-
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="submit">Agregar</button>
     </div>
+</form>
 
-  </section>
-</div>
-
-<style>
-.pedido-table{ width:100%; table-layout:fixed; border-collapse:collapse; }
-.pedido-table th,.pedido-table td{ padding:10px; border-bottom:1px solid #eee; vertical-align:top; }
-.td-left{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
-</style>
-
+<table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Costo</th>
+            <th>Precio</th>
+            <th>Platillo ligado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in productos %}
+        <tr>
+            <td>{{ p.id }}</td>
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.categoria }}</td>
+            <td>{{ p.costo }}</td>
+            <td>{{ p.precio }}</td>
+            <td>
+                {% if p.platillo_id %}
+                    {{ p.platillo_nombre }} <small style="opacity:.7;">(#{{ p.platillo_id }})</small>
+                {% else %}
+                    <span style="opacity:.6;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}
