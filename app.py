@@ -1304,6 +1304,127 @@ def agregar_stock():
         conn.close()
 
 
+from decimal import Decimal
+import pymysql
+from db import get_connection
+
+def descontar_stock_por_pedido(pedido_id: int) -> None:
+    """
+    Inserta movimientos 'salida_venta' en inventario_movimientos en base a:
+      1) receta base: recetas (platillo_id -> insumo_id)
+      2) receta por proteína: recetas_proteina (platillo_id + proteina_id -> insumo_id)
+
+    Reglas:
+      - Usa productos.platillo_id para mapear producto -> platillo.
+      - Usa pedido_items.proteina_id para mapear proteína seleccionada (si viene NULL, solo receta base).
+      - Respeta insumos.descuenta_stock=1 (salsas fuera).
+      - Idempotente gracias a UNIQUE KEY (tipo, ref_tabla, ref_id, insumo_id) + INSERT IGNORE.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            conn.begin()
+
+            # 0) Traer items del pedido con platillo_id + proteina_id
+            cur.execute("""
+                SELECT
+                    pi.cantidad AS cantidad_vendida,
+                    p.platillo_id,
+                    pi.proteina_id
+                FROM pedido_items pi
+                JOIN productos p ON p.id = pi.producto_id
+                WHERE pi.pedido_id = %s
+            """, (pedido_id,))
+            items = cur.fetchall()
+
+            if not items:
+                conn.commit()
+                return
+
+            # 1) Acumular consumo por insumo (Decimal)
+            consumo = {}  # insumo_id -> Decimal(total_salida)
+
+            for it in items:
+                platillo_id = it["platillo_id"]
+                proteina_id = it["proteina_id"]
+                qty = Decimal(str(it["cantidad_vendida"] or 0))
+
+                if not platillo_id or qty <= 0:
+                    continue
+
+                # 1A) Receta base (siempre)
+                cur.execute("""
+                    SELECT r.insumo_id, r.cantidad_base
+                    FROM recetas r
+                    JOIN insumos i ON i.id = r.insumo_id
+                    WHERE r.platillo_id = %s
+                      AND i.descuenta_stock = 1
+                """, (platillo_id,))
+                base_rows = cur.fetchall()
+
+                for r in base_rows:
+                    insumo_id = int(r["insumo_id"])
+                    cant_base = Decimal(str(r["cantidad_base"]))
+                    total = cant_base * qty
+                    consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + total
+
+                # 1B) Receta por proteína (solo si hay proteina_id)
+                if proteina_id:
+                    cur.execute("""
+                        SELECT rp.insumo_id, rp.cantidad_base
+                        FROM recetas_proteina rp
+                        JOIN insumos i ON i.id = rp.insumo_id
+                        WHERE rp.platillo_id = %s
+                          AND rp.proteina_id = %s
+                          AND i.descuenta_stock = 1
+                    """, (platillo_id, proteina_id))
+                    prot_rows = cur.fetchall()
+
+                    for r in prot_rows:
+                        insumo_id = int(r["insumo_id"])
+                        cant_base = Decimal(str(r["cantidad_base"]))
+                        total = cant_base * qty
+                        consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + total
+
+            if not consumo:
+                conn.commit()
+                return
+
+            # 2) Insertar movimientos negativos (salida_venta)
+            rows = []
+            for insumo_id, total_salida in consumo.items():
+                # salida = NEGATIVO
+                rows.append((
+                    insumo_id,
+                    str(-total_salida),  # Decimal -> str seguro
+                    "salida_venta",
+                    "pedidos",
+                    pedido_id,
+                    f"Salida automática por pedido #{pedido_id}"
+                ))
+
+            # INSERT IGNORE para idempotencia con tu UNIQUE KEY
+            cur.executemany("""
+                INSERT IGNORE INTO inventario_movimientos
+                    (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s)
+            """, rows)
+
+            conn.commit()
+
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
+
+
+
+
 # ================== RUN ==================
 if __name__ == "__main__":
     app.run(debug=True)
