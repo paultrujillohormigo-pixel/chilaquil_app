@@ -23,10 +23,35 @@
                    style="width:100%;">
         </div>
 
-        <div>
-            <label>Costo</label>
-            <input type="number" name="costo" step="0.01" required style="width:100%;">
-        </div>
+            <div>
+                          <label>Costo</label>
+                          <input type="number"
+                                 name="costo"
+                                 id="costoInput"
+                                 step="0.01"
+                                 required
+                                 style="width:100%;">
+                        </div>
+                        
+                        <div style="grid-column: 1 / -1;">
+                          <label>Platillo (para receta / inventario)</label>
+                          <select name="platillo_id"
+                                  id="platilloSelect"
+                                  style="width:100%;">
+                            <option value="">— Sin platillo (costo manual) —</option>
+                            {% for pl in platillos %}
+                              <option value="{{ pl.id }}"
+                                      data-costo="{{ pl.costo_base }}">
+                                {{ pl.nombre }} — ${{ "%.2f"|format(pl.costo_base) }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                        
+                          <small style="opacity:.7;">
+                            Si eliges un platillo, el costo se toma automáticamente de su receta.
+                          </small>
+            </div>
+
 
         <div>
             <label>Precio</label>
@@ -108,5 +133,24 @@
         {% endfor %}
     </tbody>
 </table>
+<script>
+const platilloSelect = document.getElementById("platilloSelect");
+const costoInput = document.getElementById("costoInput");
+
+platilloSelect.addEventListener("change", () => {
+  const opt = platilloSelect.options[platilloSelect.selectedIndex];
+  const costo = opt.getAttribute("data-costo");
+
+  if (costo && platilloSelect.value !== "") {
+    costoInput.value = Number(costo).toFixed(2);
+    costoInput.readOnly = true;
+    costoInput.style.background = "#f5f5f5";
+  } else {
+    costoInput.value = "";
+    costoInput.readOnly = false;
+    costoInput.style.background = "#fff";
+  }
+});
+</script>
 
 {% endblock %}
