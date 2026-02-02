@@ -144,6 +144,12 @@
     </div>
 
     <div class="custom-section">
+      <label><strong>Salsa</strong></label>
+      <div id="salsaRadios" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Opcional (si no aplica, déjalo vacío).</p>
+    </div>
+
+    <div class="custom-section">
       <label><strong>Quitar</strong></label>
       <div id="sinChecks" class="custom-grid"></div>
       <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
@@ -456,8 +462,14 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
-/* ========= Config modificadores ========= */
-const PROTEINAS = ["Pollo","Arrachera","Chorizo","Cochinita","Huevo","Sin proteína"];
+/* ========= Datos desde BD (Jinja) ========= */
+const PROTEINAS_DB = {{ proteinas|tojson }};  // [{id, nombre, ...}]
+const SALSAS_DB    = {{ salsas|tojson }};     // [{id, nombre, ...}]
+
+/* "Sin proteína" como opción válida (id vacío) */
+const PROTEINA_NONE = { id: "", nombre: "Sin proteína" };
+
+/* Opciones quitar */
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
 /* Categorías o palabras clave donde NO se deben abrir modificadores */
@@ -500,6 +512,18 @@ function productoTieneModificadores(nombre, categoria){
   return true;
 }
 
+/* helpers: lookup nombres */
+function nombreProteinaPorId(id){
+  if (!id) return "";
+  const x = PROTEINAS_DB.find(p => String(p.id) === String(id));
+  return x ? x.nombre : "";
+}
+function nombreSalsaPorId(id){
+  if (!id) return "";
+  const x = SALSAS_DB.find(s => String(s.id) === String(id));
+  return x ? x.nombre : "";
+}
+
 /* Click producto */
 function agregarProducto(id, nombre, precio, categoria) {
   const uid = uidLinea(id);
@@ -509,7 +533,16 @@ function agregarProducto(id, nombre, precio, categoria) {
     nombre: nombre,
     precio: Number(precio),
     cantidad: 1,
-    custom: { proteina: "", sin: [], nota: "" }
+    custom: {
+      // IDs para persistencia
+      proteina_id: "",
+      salsa_id: "",
+      // texto para cocina / UI
+      proteina: "",
+      salsa: "",
+      sin: [],
+      nota: ""
+    }
   };
 
   renderCarrito();
@@ -526,17 +559,43 @@ function agregarProducto(id, nombre, precio, categoria) {
 function abrirCustomModal(){
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
+  // ===== Proteínas radios (desde BD + Sin proteína) =====
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
-  for (let i=0; i<PROTEINAS.length; i++){
-    const p = PROTEINAS[i];
+
+  const proteinasAll = [...PROTEINAS_DB, PROTEINA_NONE];
+
+  for (let i=0; i<proteinasAll.length; i++){
+    const p = proteinasAll[i];
+    const val = (p.id === "" ? "" : String(p.id));
     radios.innerHTML +=
       '<label class="custom-pill">' +
-        '<input type="radio" name="proteina_radio" value="' + escapeHtml(p) + '" ' + (i===0 ? "checked" : "") + '>' +
-        '<span>' + escapeHtml(p) + '</span>' +
+        '<input type="radio" name="proteina_radio" value="' + escapeHtml(val) + '" ' + (i===0 ? "checked" : "") + '>' +
+        '<span>' + escapeHtml(p.nombre) + '</span>' +
       '</label>';
   }
 
+  // ===== Salsas radios (desde BD) =====
+  const sr = document.getElementById("salsaRadios");
+  sr.innerHTML = "";
+
+  // opción vacía al inicio
+  sr.innerHTML +=
+    '<label class="custom-pill">' +
+      '<input type="radio" name="salsa_radio" value="" checked>' +
+      '<span>— (sin seleccionar)</span>' +
+    '</label>';
+
+  for (let i=0; i<SALSAS_DB.length; i++){
+    const s = SALSAS_DB[i];
+    sr.innerHTML +=
+      '<label class="custom-pill">' +
+        '<input type="radio" name="salsa_radio" value="' + escapeHtml(String(s.id)) + '">' +
+        '<span>' + escapeHtml(s.nombre) + '</span>' +
+      '</label>';
+  }
+
+  // ===== Quitar checks =====
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   for (let i=0; i<SIN_OPCIONES.length; i++){
@@ -564,13 +623,27 @@ function cerrarCustomModal(){
 
 function confirmarCustom(){
   const protEl = document.querySelector("input[name='proteina_radio']:checked");
-  const proteina = protEl ? protEl.value : "";
+  const proteina_id = protEl ? (protEl.value || "") : "";
+
+  const salsaEl = document.querySelector("input[name='salsa_radio']:checked");
+  const salsa_id = salsaEl ? (salsaEl.value || "") : "";
+
   const sin = [];
   document.querySelectorAll("input[name='sin_check']:checked").forEach(x => sin.push(x.value));
   const nota = document.getElementById("notaInput").value || "";
 
+  const proteina_nombre = proteina_id ? nombreProteinaPorId(proteina_id) : "Sin proteína";
+  const salsa_nombre = salsa_id ? nombreSalsaPorId(salsa_id) : "";
+
   if (editandoUid && carrito[editandoUid]) {
-    carrito[editandoUid].custom = { proteina: proteina, sin: sin, nota: nota };
+    carrito[editandoUid].custom = {
+      proteina_id: proteina_id,
+      salsa_id: salsa_id,
+      proteina: proteina_nombre || "",
+      salsa: salsa_nombre || "",
+      sin: sin,
+      nota: nota
+    };
   }
 
   cerrarCustomModal();
@@ -603,12 +676,31 @@ function editarLinea(uid){
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
   abrirCustomModal();
 
-  const targetProt = it.custom && it.custom.proteina ? it.custom.proteina : "";
+  // set proteína
+  const targetProtId = (it.custom && it.custom.proteina_id) ? String(it.custom.proteina_id) : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
-  protRadios.forEach((r, idx) => {
-    r.checked = (r.value === targetProt) || (!targetProt && idx === 0);
+  let protMatched = false;
+  protRadios.forEach((r) => {
+    if (String(r.value) === targetProtId){
+      r.checked = true;
+      protMatched = true;
+    }
   });
+  if (!protMatched && protRadios.length) protRadios[0].checked = true;
 
+  // set salsa
+  const targetSalsaId = (it.custom && it.custom.salsa_id) ? String(it.custom.salsa_id) : "";
+  const salsaRadios = document.querySelectorAll("input[name='salsa_radio']");
+  let salsaMatched = false;
+  salsaRadios.forEach((r) => {
+    if (String(r.value) === targetSalsaId){
+      r.checked = true;
+      salsaMatched = true;
+    }
+  });
+  if (!salsaMatched && salsaRadios.length) salsaRadios[0].checked = true; // vacío
+
+  // set quitar
   const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
 
@@ -629,15 +721,17 @@ function renderCarrito(){
     const subtotal = Number(item.precio) * Number(item.cantidad);
     total += subtotal;
 
-    const prot = (item.custom && item.custom.proteina) ? ("PROT: " + item.custom.proteina) : "";
-    const sin = (item.custom && item.custom.sin && item.custom.sin.length) ? ("SIN: " + item.custom.sin.join(", ")) : "";
+    const protTxt = (item.custom && item.custom.proteina) ? ("PROT: " + item.custom.proteina) : "";
+    const salsaTxt = (item.custom && item.custom.salsa) ? ("SALSA: " + item.custom.salsa) : "";
+    const sinTxt = (item.custom && item.custom.sin && item.custom.sin.length) ? ("SIN: " + item.custom.sin.join(", ")) : "";
     const nota = (item.custom && item.custom.nota && item.custom.nota.trim()) ? item.custom.nota.trim() : "";
 
     let cocinaHtml = "";
-    if (prot || sin || nota){
+    if (protTxt || salsaTxt || sinTxt || nota){
       cocinaHtml += '<div class="cocina-meta">';
-      if (prot) cocinaHtml += '<div><span class="tag">' + escapeHtml(prot) + '</span></div>';
-      if (sin)  cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>';
+      if (protTxt) cocinaHtml += '<div><span class="tag">' + escapeHtml(protTxt) + '</span></div>';
+      if (salsaTxt) cocinaHtml += '<div><span class="tag">' + escapeHtml(salsaTxt) + '</span></div>';
+      if (sinTxt)  cocinaHtml += '<div><span class="tag tag-warn">' + escapeHtml(sinTxt) + '</span></div>';
       if (nota) cocinaHtml += '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>';
       cocinaHtml += '</div>';
     }
@@ -648,24 +742,34 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
+
+    // ===== Hidden inputs (legacy + nuevos IDs) =====
+    const proteina_id = (item.custom && item.custom.proteina_id) ? String(item.custom.proteina_id) : "";
+    const salsa_id = (item.custom && item.custom.salsa_id) ? String(item.custom.salsa_id) : "";
 
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(item.producto_id) + '">' +
       '<input type="hidden" name="cantidad[]" value="' + escapeHtml(item.cantidad) + '">' +
+
+      // ✅ nuevos (IDs)
+      '<input type="hidden" name="proteina_id[]" value="' + escapeHtml(proteina_id) + '">' +
+      '<input type="hidden" name="salsa_id[]" value="' + escapeHtml(salsa_id) + '">' +
+
+      // legacy (texto)
       '<input type="hidden" name="proteina[]" value="' + escapeHtml(item.custom ? (item.custom.proteina || "") : "") + '">' +
       '<input type="hidden" name="sin[]" value="' + escapeHtml(item.custom && item.custom.sin ? item.custom.sin.join(",") : "") + '">' +
       '<input type="hidden" name="nota[]" value="' + escapeHtml(item.custom ? (item.custom.nota || "") : "") + '">';
@@ -698,7 +802,9 @@ function abrirVistaCocina(){
   let html = "";
   uids.forEach(uid => {
     const it = carrito[uid];
+
     const prot = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
+    const salsa = it.custom && it.custom.salsa ? ("SALSA: " + it.custom.salsa) : "SALSA: —";
     const sin  = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
     const nota = it.custom && it.custom.nota && it.custom.nota.trim() ? it.custom.nota.trim() : "";
 
@@ -710,6 +816,7 @@ function abrirVistaCocina(){
         '</div>' +
         '<div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">' +
           '<div><span class="tag">' + escapeHtml(prot) + '</span></div>' +
+          '<div><span class="tag">' + escapeHtml(salsa) + '</span></div>' +
           '<div><span class="tag tag-warn">' + escapeHtml(sin) + '</span></div>' +
           (nota ? '<div class="nota"><strong>NOTA:</strong> ' + escapeHtml(nota) + '</div>' : "") +
         '</div>' +
