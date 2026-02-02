@@ -367,20 +367,32 @@ def cerrar_pedido(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            # 1) Validar estado
+            cursor.execute("SELECT estado FROM pedidos WHERE id=%s", (pedido_id,))
+            row = cursor.fetchone()
+            if not row:
+                flash("Pedido no encontrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            if row["estado"] != "abierto":
+                flash("Este pedido ya está cerrado", "error")
+                return redirect(url_for("pedidos_abiertos"))
+
+            # 2) Cerrar
             cursor.execute("""
                 UPDATE pedidos
                 SET estado = 'cerrado'
                 WHERE id = %s
             """, (pedido_id,))
+
+            # 3) Descontar inventario (MISMO cursor)
+            descontar_stock_por_pedido_cursor(cursor, pedido_id)
+
             conn.commit()
-            flash("Pedido cerrado correctamente", "success")
+            flash("Pedido cerrado correctamente (inventario actualizado)", "success")
+            return redirect(url_for("pedidos_abiertos"))
     finally:
         conn.close()
-
-    # ✅ DESCONTAR INVENTARIO
-    descontar_stock_por_pedido(pedido_id)
-
-    return redirect(url_for("pedidos_abiertos"))
 
 
 
@@ -406,30 +418,38 @@ def cerrar_pedido_whatsapp(pedido_id):
                 return redirect(url_for("pedidos_abiertos"))
 
             phone = pedido.get("telefono_whatsapp")
-            if not phone:
-                cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
-                conn.commit()
-                flash("Pedido cerrado. (Sin WhatsApp porque no hay teléfono)", "success")
-                return redirect(url_for("pedidos_abiertos"))
 
             # 1) Cerrar pedido
             cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
 
-            # 2) Sumar totopos (MVP: +1 por compra)
-            earned = 1
-            customer_id = loyalty_get_or_create_customer(cursor, phone)
-            balance = loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, earned)
+            # 2) Totopos si hay teléfono
+            earned = 0
+            balance = None
+            if phone:
+                earned = 1
+                customer_id = loyalty_get_or_create_customer(cursor, phone)
+                balance = loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, earned)
 
-            # 3) Ticket + totopos (TEXTO CRUDO, SIN QUOTE)
-            ticket_text = generar_ticket_texto(pedido_id, cursor)
-            msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(pedido["total"]))
-            full_message = ticket_text + "\n\n" + msg_loyalty
-            descontar_stock_por_pedido(pedido_id)
+            # 3) Descontar inventario (MISMO cursor)
+            descontar_stock_por_pedido_cursor(cursor, pedido_id)
+
+            # 4) Armar mensaje WhatsApp (si aplica)
+            if phone:
+                ticket_text = generar_ticket_texto(pedido_id, cursor)  # usa el cursor actual
+                msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(pedido["total"]))
+                full_message = ticket_text + "\n\n" + msg_loyalty
+
+                conn.commit()
+                return redirect(wa_me_link(phone, full_message))
 
             conn.commit()
-            return redirect(wa_me_link(phone, full_message))
+            flash("Pedido cerrado. (Sin WhatsApp porque no hay teléfono)", "success")
+            return redirect(url_for("pedidos_abiertos"))
     finally:
         conn.close()
+
+
+
 
 
 # ================== PRODUCTOS ==================
