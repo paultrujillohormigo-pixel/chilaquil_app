@@ -767,8 +767,8 @@ def cerrar_pedido_whatsapp(pedido_id):
 # =========================================================
 
 import pymysql
-from flask import render_template, request, redirect, url_for, flash
-from db import get_connection
+from decimal import Decimal
+from flask import request, redirect, url_for, flash, render_template
 
 @app.route("/productos", methods=["GET", "POST"])
 def productos():
@@ -776,62 +776,54 @@ def productos():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            # ================== POST: crear producto ==================
-            if request.method == "POST":
-                nombre = request.form["nombre"]
-                categoria = request.form["categoria"]
-                precio = request.form["precio"]
-                platillo_id = request.form.get("platillo_id") or None
+            # ====== Platillos para dropdown (tu tabla NO tiene activo) ======
+            cursor.execute("""
+                SELECT id, nombre
+                FROM platillos
+                ORDER BY nombre
+            """)
+            platillos = cursor.fetchall()
 
-                # 👉 El costo SOLO se guarda si NO hay platillo
+            # ====== POST: crear producto ======
+            if request.method == "POST":
+                nombre = (request.form.get("nombre") or "").strip()
+                categoria = (request.form.get("categoria") or "").strip()
+                precio_txt = (request.form.get("precio") or "").strip()
+                platillo_id_txt = (request.form.get("platillo_id") or "").strip()
+
+                if not nombre or not categoria or not precio_txt:
+                    flash("Faltan campos requeridos.", "error")
+                    return redirect(url_for("productos"))
+
+                try:
+                    precio = Decimal(precio_txt)
+                except Exception:
+                    flash("Precio inválido.", "error")
+                    return redirect(url_for("productos"))
+
+                platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
+
+                # ✅ costo automático si hay platillo; si no, costo manual
                 if platillo_id:
-                    costo = 0
+                    costo = calcular_costo_platillo(cursor, platillo_id)
                 else:
-                    costo = request.form["costo"]
+                    costo_txt = (request.form.get("costo") or "0").strip()
+                    try:
+                        costo = Decimal(costo_txt)
+                    except Exception:
+                        flash("Costo inválido.", "error")
+                        return redirect(url_for("productos"))
 
                 cursor.execute("""
-                    INSERT INTO productos
-                        (nombre, categoria, costo, precio, platillo_id)
-                    VALUES (%s,%s,%s,%s,%s)
-                """, (
-                    nombre,
-                    categoria,
-                    costo,
-                    precio,
-                    platillo_id
-                ))
+                    INSERT INTO productos (nombre, categoria, costo, precio, platillo_id, activo)
+                    VALUES (%s,%s,%s,%s,%s,1)
+                """, (nombre, categoria, str(costo), str(precio), platillo_id))
 
                 conn.commit()
                 flash("Producto agregado correctamente", "success")
                 return redirect(url_for("productos"))
 
-            # ================== GET ==================
-
-            # ---- 1) Platillos con costo calculado desde receta ----
-            cursor.execute("""
-                SELECT
-                    p.id,
-                    p.nombre,
-                    COALESCE(
-                        SUM(
-                            r.cantidad_base *
-                            CASE
-                                WHEN r.usa_precio_manual = 1
-                                THEN r.precio_manual
-                                ELSE i.costo_unitario
-                            END
-                        ),
-                        0
-                    ) AS costo_base
-                FROM platillos p
-                LEFT JOIN recetas r ON r.platillo_id = p.id
-                LEFT JOIN insumos i ON i.id = r.insumo_id
-                GROUP BY p.id
-                ORDER BY p.nombre
-            """)
-            platillos = cursor.fetchall()
-
-            # ---- 2) Productos con nombre del platillo ligado ----
+            # ====== GET: listar productos ======
             cursor.execute("""
                 SELECT
                     pr.id,
@@ -843,18 +835,72 @@ def productos():
                     pl.nombre AS platillo_nombre
                 FROM productos pr
                 LEFT JOIN platillos pl ON pl.id = pr.platillo_id
+                WHERE pr.activo = 1
                 ORDER BY pr.categoria, pr.nombre
             """)
-            productos = cursor.fetchall()
+            productos_rows = cursor.fetchall()
 
     finally:
         conn.close()
 
     return render_template(
         "productos.html",
-        productos=productos,
+        productos=productos_rows,
         platillos=platillos
     )
+
+
+@app.post("/productos/<int:producto_id>/actualizar_platillo")
+def actualizar_platillo_producto(producto_id):
+    platillo_id_txt = (request.form.get("platillo_id") or "").strip()
+    platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # valida que exista producto activo
+            cursor.execute("SELECT id FROM productos WHERE id=%s AND activo=1", (producto_id,))
+            pr = cursor.fetchone()
+            if not pr:
+                flash("Producto no encontrado.", "error")
+                return redirect(url_for("productos"))
+
+            if platillo_id:
+                costo = calcular_costo_platillo(cursor, platillo_id)
+            else:
+                costo = Decimal("0")
+
+            cursor.execute("""
+                UPDATE productos
+                SET platillo_id=%s, costo=%s
+                WHERE id=%s
+            """, (platillo_id, str(costo), producto_id))
+
+            conn.commit()
+            flash("Producto actualizado (platillo + costo).", "success")
+            return redirect(url_for("productos"))
+    finally:
+        conn.close()
+
+
+@app.post("/productos/<int:producto_id>/eliminar")
+def eliminar_producto(producto_id):
+    """
+    Soft delete para no romper FK con pedido_items.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                UPDATE productos
+                SET activo = 0
+                WHERE id = %s
+            """, (producto_id,))
+            conn.commit()
+            flash("Producto eliminado (desactivado).", "success")
+            return redirect(url_for("productos"))
+    finally:
+        conn.close()
 
 
 # ====== Guardar relación producto -> platillo (por fila) ======
@@ -1477,6 +1523,55 @@ def eliminar_producto(producto_id):
         conn.close()
 
     return redirect(url_for("productos"))
+
+
+import pymysql
+from decimal import Decimal
+from flask import jsonify
+
+def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
+    """
+    Costo platillo = SUM( cantidad_base * costo_unitario_insumo )
+    - Si recetas.usa_precio_manual=1 usa recetas.precio_manual (por unidad_base)
+    - Si no, usa última compra: insumos_compras.costo_unitario (ORDER BY fecha desc, id desc)
+    - Aplica merma_pct: cantidad_base * (1 + merma_pct/100)
+    """
+    cursor.execute("""
+        SELECT
+            COALESCE(SUM(
+                (r.cantidad_base * (1 + (i.merma_pct / 100))) *
+                (
+                    CASE
+                        WHEN r.usa_precio_manual = 1 AND r.precio_manual IS NOT NULL
+                            THEN r.precio_manual
+                        ELSE COALESCE((
+                            SELECT ic.costo_unitario
+                            FROM insumos_compras ic
+                            WHERE ic.insumo_id = r.insumo_id
+                              AND ic.costo_unitario IS NOT NULL
+                            ORDER BY ic.fecha DESC, ic.id DESC
+                            LIMIT 1
+                        ), 0)
+                    END
+                )
+            ), 0) AS costo_platillo
+        FROM recetas r
+        JOIN insumos i ON i.id = r.insumo_id
+        WHERE r.platillo_id = %s
+    """, (platillo_id,))
+    row = cursor.fetchone()
+    return Decimal(str(row["costo_platillo"] or 0))
+
+
+@app.get("/api/platillos/<int:platillo_id>/costo")
+def api_platillo_costo(platillo_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            costo = calcular_costo_platillo(cursor, platillo_id)
+            return jsonify({"platillo_id": platillo_id, "costo": float(costo)})
+    finally:
+        conn.close()
 
 
 
