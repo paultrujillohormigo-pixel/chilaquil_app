@@ -22,14 +22,36 @@
     </style>
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
-        <a href="/pedidos_abiertos">Pedidos abiertos</a>
-        <a href="{{ url_for('productos_view') }}">Productos</a>
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('borrar_pedidos') }}">🗑️ Borrar pedidos</a>
+    <nav class="navbar">
+  <div class="nav-left">
+    <strong>Señor Chilaquil</strong>
+  </div>
 
-    </nav>
+  <div class="nav-links">
+    <!-- OPERACIÓN -->
+    <a href="{{ url_for('nuevo_pedido') }}">➕ Nuevo pedido</a>
+    <a href="{{ url_for('pedidos_abiertos') }}">🧾 Pedidos</a>
+    <a href="{{ url_for('borrar_pedidos') }}">🗑️ Borrar pedidos</a>
+
+    <span class="nav-sep">|</span>
+
+    <!-- PRODUCTOS / RECETAS -->
+    <a href="{{ url_for('productos') }}">🍽️ Productos</a>
+    <a href="{{ url_for('costeo.index') }}">📐 Costeo</a>
+
+    <span class="nav-sep">|</span>
+
+    <!-- INVENTARIO -->
+    <a href="{{ url_for('compras') }}">🛒 Compras</a>
+    <a href="{{ url_for('ver_stock') }}">📦 Stock</a>
+
+    <span class="nav-sep">|</span>
+
+    <!-- ANÁLISIS -->
+    <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+  </div>
+</nav>
+
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
