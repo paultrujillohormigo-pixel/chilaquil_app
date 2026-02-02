@@ -452,7 +452,7 @@ function abrirCustomModal(){
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
 
-  const proteinasAll = [...PROTEINAS_DB, PROTEINA_NONE];
+    const proteinasAll = [PROTEINA_NONE, ...PROTEINAS_DB];
 
   // default: primera opción = checked (si quieres default Sin proteína, mueve PROTEINA_NONE al inicio)
   for (let i=0; i<proteinasAll.length; i++){
