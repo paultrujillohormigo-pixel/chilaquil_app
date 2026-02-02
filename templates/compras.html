@@ -100,7 +100,6 @@
               <label>Nombre del insumo / concepto (otro)</label>
               <input type="text" id="otroTexto" placeholder="Ej. Chile guajillo, Servilletas premium..." autocomplete="off">
               <!-- Se manda en concepto -->
-              <input type="hidden" name="concepto" id="conceptoHidden">
               <small class="hint">Si pones “Otro”, se registra la compra pero NO suma stock porque no existe insumo_id.</small>
             </div>
 
@@ -124,10 +123,9 @@
             </div>
 
           </div>
+            <input type="hidden" name="concepto" id="concepto">
 
-          <!-- concepto normal si no es "otro" -->
-          <input type="hidden" name="concepto" id="conceptoNormal">
-        </div>
+                </div>
 
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
           <button type="submit" class="btn-primary">💾 Guardar compra</button>
