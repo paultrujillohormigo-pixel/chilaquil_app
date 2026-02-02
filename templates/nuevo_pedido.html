@@ -35,7 +35,6 @@
           <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-        <!-- ✅ WhatsApp opcional -->
         <div>
           <label>WhatsApp (opcional)</label>
           <input type="tel" name="telefono_whatsapp" placeholder="4497419166" inputmode="numeric">
@@ -67,23 +66,23 @@
         <div class="hint">Toca para agregar (+1)</div>
       </div>
 
-            <div class="productos-grid" id="productosGrid">
-            {% for p in productos %}
-              <button
-                type="button"
-                class="producto-card js-add"
-                data-id="{{ p.id }}"
-                data-nombre="{{ p.nombre }}"
-                data-precio="{{ p.precio }}"
-                data-categoria="{{ p.categoria or '' }}"
-              >
-                <div class="producto-nombre">{{ p.nombre }}</div>
-                <div class="producto-meta">
-                  <span class="categoria">{{ p.categoria }}</span>
-                  <span class="precio">{{ p.precio | money }}</span>
-                </div>
-              </button>
-            {% endfor %}
+      <div class="productos-grid" id="productosGrid">
+        {% for p in productos %}
+          <button
+            type="button"
+            class="producto-card js-add"
+            data-id="{{ p.id }}"
+            data-nombre="{{ p.nombre }}"
+            data-precio="{{ p.precio }}"
+            data-categoria="{{ p.categoria or '' }}"
+          >
+            <div class="producto-nombre">{{ p.nombre }}</div>
+            <div class="producto-meta">
+              <span class="categoria">{{ p.categoria }}</span>
+              <span class="precio">{{ p.precio | money }}</span>
+            </div>
+          </button>
+        {% endfor %}
       </div>
 
     </div>
@@ -193,166 +192,105 @@
 
 <!-- ================== ESTILOS (tablet/móvil + modal iPad) ================== -->
 <style>
-/* ====== FIXES BASE iPad/Safari (no rompe desktop) ====== */
-html{
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-*, *::before, *::after{
-  box-sizing: border-box;
-}
+html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+*, *::before, *::after{ box-sizing: border-box; }
 
-/* Ajustes layout en tablet/móvil para que no se encime */
 @media (max-width: 1100px){
-  .pos-layout{
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .pos-left, .pos-right{
-    width: 100%;
-  }
-  .card-sticky{
-    position: static !important;
-    top: auto !important;
-  }
-  #carritoTable th, #carritoTable td{
-    font-size: 0.95rem;
-  }
+  .pos-layout{ display:flex; flex-direction:column; gap:12px; }
+  .pos-left,.pos-right{ width:100%; }
+  .card-sticky{ position:static !important; top:auto !important; }
+  #carritoTable th, #carritoTable td{ font-size:.95rem; }
 }
-
-/* header carrito */
-.carrito-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
+.carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .carrito-title{ margin:0; }
 
-/* ===== Modal robusto (desktop + iPad + móvil) ===== */
 .modal{
-  position: fixed;
-  left: 0; top: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,.45);
-  z-index: 2147483647;
-  padding: 14px;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: auto;
-  overscroll-behavior: contain;
+  position:fixed; left:0; top:0;
+  width:100vw; height:100vh; height:100dvh;
+  display:none; justify-content:center; align-items:center;
+  background:rgba(0,0,0,.45);
+  z-index:2147483647;
+  padding:14px;
+  -webkit-overflow-scrolling:auto;
+  overscroll-behavior:contain;
 }
-.modal.is-open{ display: flex; }
+.modal.is-open{ display:flex; }
 
-/* caja del modal */
 .modal-box{
-  background: #fff;
-  border-radius: 14px;
-  padding: 16px;
-  width: min(640px, 94vw);
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-
-  max-height: calc(var(--vh, 1vh) * 88);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  width:min(640px, 94vw);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  max-height:calc(var(--vh, 1vh) * 88);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  transform:translateZ(0);
 }
-
-/* cerrar sticky */
 .modal-close{
-  position: sticky;
-  top: 0;
-  float: right;
-  margin-left: auto;
-  border: 0;
-  background: rgba(255,255,255,.88);
-  backdrop-filter: blur(6px);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 10px;
+  position:sticky;
+  top:0;
+  float:right;
+  margin-left:auto;
+  border:0;
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(6px);
+  font-size:18px;
+  cursor:pointer;
+  padding:6px 10px;
+  border-radius:10px;
 }
+.modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
 
-/* Evita zoom iOS en inputs */
-.modal-box input,
-.modal-box textarea,
-.modal-box select{
-  font-size: 16px;
-}
-
-/* Tablet/móvil: bottom-sheet */
 @media (max-width: 1100px){
-  .modal{
-    align-items: flex-end;
-    padding: 10px;
-  }
+  .modal{ align-items:flex-end; padding:10px; }
   .modal-box{
-    width: 100%;
-    border-radius: 18px 18px 14px 14px;
-    max-height: calc(var(--vh, 1vh) * 92);
+    width:100%;
+    border-radius:18px 18px 14px 14px;
+    max-height:calc(var(--vh, 1vh) * 92);
   }
 }
+.custom-section{ margin-top:12px; }
 
-/* secciones */
-.custom-section{ margin-top: 12px; }
-
-/* grid modificadores */
 .custom-grid{
   display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 8px;
-  align-items: stretch;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:8px;
+  align-items:stretch;
 }
-@media (max-width: 1100px){
-  .custom-grid{ grid-template-columns: 1fr; }
-}
+@media (max-width: 1100px){ .custom-grid{ grid-template-columns:1fr; } }
 
-/* pills touch-friendly */
 .custom-pill{
   border:1px solid #ddd;
   border-radius:12px;
-  padding: 12px;
-
+  padding:12px;
   display:flex;
   gap:10px;
   align-items:center;
-
-  width: 100%;
-  min-height: 48px;
-  justify-content: flex-start;
-  line-height: 1.2;
-  background: #fff;
-  cursor: pointer;
-
-  overflow: hidden;
+  width:100%;
+  min-height:48px;
+  justify-content:flex-start;
+  line-height:1.2;
+  background:#fff;
+  cursor:pointer;
+  overflow:hidden;
 }
 .custom-pill input[type="radio"],
 .custom-pill input[type="checkbox"]{
-  margin: 0;
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  transform: translateY(0);
+  margin:0;
+  flex:0 0 20px;
+  width:20px;
+  height:20px;
 }
 .custom-pill span{
-  flex: 1;
-  display: block;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
+  flex:1;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  white-space:normal;
 }
-.custom-pill:active{
-  transform: scale(.99);
-  background: #f6f6f6;
-}
+.custom-pill:active{ transform:scale(.99); background:#f6f6f6; }
 
-/* resumen modificadores dentro del carrito */
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .tag{
   display:inline-block;
@@ -363,10 +301,7 @@ html{
   font-weight:700;
   font-size:.85rem;
 }
-.tag-warn{
-  background:#fff3cd;
-  border-color:#f0c36d;
-}
+.tag-warn{ background:#fff3cd; border-color:#f0c36d; }
 .nota{
   padding:6px 8px;
   border-radius:8px;
@@ -374,71 +309,24 @@ html{
   background:#fff;
   font-size:.85rem;
 }
-
-/* acciones sticky dentro modal */
 .modal-actions{
-  position: sticky;
-  bottom: 0;
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(6px);
-  padding-top: 10px;
+  position:sticky;
+  bottom:0;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(6px);
+  padding-top:10px;
   display:flex;
   gap:10px;
   justify-content:flex-end;
 }
+.pos-layout,.card,.carrito-wrap,#carritoTable,.modal-box{ max-width:100%; }
+body{ overflow-x:hidden; }
 
-/* iOS específico */
-@supports (-webkit-touch-callout: none) {
-  .modal { -webkit-transform: translateZ(0); }
-}
+#carritoTable{ width:100%; table-layout:fixed; }
+#carritoTable th,#carritoTable td{ overflow:hidden; text-overflow:ellipsis; vertical-align:top; }
+#carritoTable td.td-left,#carritoTable td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
 
-/* ===== Fix: que no se salga a la derecha ===== */
-.pos-layout,
-.card,
-.carrito-wrap,
-#carritoTable,
-.modal-box{
-  max-width: 100%;
-}
-body{ overflow-x: hidden; }
-
-#carritoTable{
-  width: 100%;
-  table-layout: fixed;
-}
-#carritoTable th,
-#carritoTable td{
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: top;
-}
-#carritoTable td.td-left,
-#carritoTable td:first-child{
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.tag,
-.nota,
-.cocina-meta{
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.qty-controls{
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-@media (max-width: 1100px){
-  #carritoTable th:nth-child(3),
-  #carritoTable td:nth-child(3),
-  #carritoTable th:nth-child(4),
-  #carritoTable td:nth-child(4){
-    font-size: 0.9rem;
-  }
-}
+.qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
 </style>
 
 <script>
@@ -452,16 +340,11 @@ window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
 /* ========= Datos desde BD (Jinja) ========= */
-const PROTEINAS_DB = {{ proteinas|tojson }};  // [{id, nombre, ...}]
-const SALSAS_DB    = {{ salsas|tojson }};     // [{id, nombre, ...}]
-
-/* "Sin proteína" como opción válida (id vacío) */
+const PROTEINAS_DB = {{ proteinas|tojson }};
+const SALSAS_DB    = {{ salsas|tojson }};
 const PROTEINA_NONE = { id: "", nombre: "Sin proteína" };
-
-/* Opciones quitar */
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-/* Categorías o palabras clave donde NO se deben abrir modificadores */
 const NO_MOD_CATEGORIAS = ["bebidas", "extras", "extra", "complementos", "postres"];
 const NO_MOD_KEYWORDS = ["coca", "refresco", "agua", "café", "cafe", "chai", "capuccino", "capuchino", "jugo", "jarrito"];
 
@@ -477,28 +360,22 @@ function escapeHtml(str){
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
 function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
-
-function normaliza(str){
-  return (str || "").toString().trim().toLowerCase();
-}
+function normaliza(str){ return (str || "").toString().trim().toLowerCase(); }
 
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
 
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
-
   for (const kw of NO_MOD_KEYWORDS){
     if (nom.includes(kw)) return false;
   }
   return true;
 }
 
-/* helpers: lookup nombres */
 function nombreProteinaPorId(id){
   if (!id) return "";
   const x = PROTEINAS_DB.find(p => String(p.id) === String(id));
@@ -510,6 +387,36 @@ function nombreSalsaPorId(id){
   return x ? x.nombre : "";
 }
 
+/* ✅ Listener estable: click en producto -> agrega */
+document.addEventListener("DOMContentLoaded", () => {
+  toggleUberBox();
+  document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
+
+  const grid = document.getElementById("productosGrid");
+  if (grid){
+    grid.addEventListener("click", (e) => {
+      const btn = e.target.closest(".js-add");
+      if (!btn) return;
+
+      const id = btn.getAttribute("data-id");
+      const nombre = btn.getAttribute("data-nombre");
+      const precio = btn.getAttribute("data-precio");
+      const categoria = btn.getAttribute("data-categoria") || "";
+
+      agregarProducto(id, nombre, precio, categoria);
+    });
+  }
+
+  // cerrar modales clic fuera
+  document.addEventListener("click", (e) => {
+    const cm = document.getElementById("customModal");
+    if (cm && cm.classList.contains("is-open") && e.target === cm) cerrarCustomModal();
+
+    const km = document.getElementById("cocinaModal");
+    if (km && km.classList.contains("is-open") && e.target === km) cerrarVistaCocina();
+  });
+});
+
 /* Click producto */
 function agregarProducto(id, nombre, precio, categoria) {
   const uid = uidLinea(id);
@@ -520,10 +427,8 @@ function agregarProducto(id, nombre, precio, categoria) {
     precio: Number(precio),
     cantidad: 1,
     custom: {
-      // IDs para persistencia
       proteina_id: "",
       salsa_id: "",
-      // texto para cocina / UI
       proteina: "",
       salsa: "",
       sin: [],
@@ -533,7 +438,6 @@ function agregarProducto(id, nombre, precio, categoria) {
 
   renderCarrito();
 
-  /* Solo abrir modal si aplica */
   if (productoTieneModificadores(nombre, categoria)){
     editandoUid = uid;
     modalState = { producto_id: id, nombre: nombre, precio: Number(precio), uid: uid };
@@ -541,16 +445,16 @@ function agregarProducto(id, nombre, precio, categoria) {
   }
 }
 
-/* Modal open/close (por clase) */
+/* Modal open/close */
 function abrirCustomModal(){
   document.getElementById("customProductoNombre").innerText = modalState.nombre;
 
-  // ===== Proteínas radios (desde BD + Sin proteína) =====
   const radios = document.getElementById("proteinaRadios");
   radios.innerHTML = "";
 
   const proteinasAll = [...PROTEINAS_DB, PROTEINA_NONE];
 
+  // default: primera opción = checked (si quieres default Sin proteína, mueve PROTEINA_NONE al inicio)
   for (let i=0; i<proteinasAll.length; i++){
     const p = proteinasAll[i];
     const val = (p.id === "" ? "" : String(p.id));
@@ -561,11 +465,8 @@ function abrirCustomModal(){
       '</label>';
   }
 
-  // ===== Salsas radios (desde BD) =====
   const sr = document.getElementById("salsaRadios");
   sr.innerHTML = "";
-
-  // opción vacía al inicio
   sr.innerHTML +=
     '<label class="custom-pill">' +
       '<input type="radio" name="salsa_radio" value="" checked>' +
@@ -581,7 +482,6 @@ function abrirCustomModal(){
       '</label>';
   }
 
-  // ===== Quitar checks =====
   const checks = document.getElementById("sinChecks");
   checks.innerHTML = "";
   for (let i=0; i<SIN_OPCIONES.length; i++){
@@ -662,31 +562,22 @@ function editarLinea(uid){
   modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: Number(it.precio), uid: uid };
   abrirCustomModal();
 
-  // set proteína
   const targetProtId = (it.custom && it.custom.proteina_id) ? String(it.custom.proteina_id) : "";
   const protRadios = document.querySelectorAll("input[name='proteina_radio']");
   let protMatched = false;
   protRadios.forEach((r) => {
-    if (String(r.value) === targetProtId){
-      r.checked = true;
-      protMatched = true;
-    }
+    if (String(r.value) === targetProtId){ r.checked = true; protMatched = true; }
   });
   if (!protMatched && protRadios.length) protRadios[0].checked = true;
 
-  // set salsa
   const targetSalsaId = (it.custom && it.custom.salsa_id) ? String(it.custom.salsa_id) : "";
   const salsaRadios = document.querySelectorAll("input[name='salsa_radio']");
   let salsaMatched = false;
   salsaRadios.forEach((r) => {
-    if (String(r.value) === targetSalsaId){
-      r.checked = true;
-      salsaMatched = true;
-    }
+    if (String(r.value) === targetSalsaId){ r.checked = true; salsaMatched = true; }
   });
-  if (!salsaMatched && salsaRadios.length) salsaRadios[0].checked = true; // vacío
+  if (!salsaMatched && salsaRadios.length) salsaRadios[0].checked = true;
 
-  // set quitar
   const setSin = new Set((it.custom && it.custom.sin) ? it.custom.sin : []);
   document.querySelectorAll("input[name='sin_check']").forEach(c => c.checked = setSin.has(c.value));
 
@@ -728,34 +619,29 @@ function renderCarrito(){
           escapeHtml(item.nombre) +
           cocinaHtml +
           '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-gray" onclick="editarLinea(\\'' + uid + '\\')">Editar</button>' +
+            '<button type="button" class="btn btn-gray" onclick="editarLinea(\'' + uid + '\')">Editar</button>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="qty-controls">' +
-            '<button type="button" class="btn btn-gray" onclick="restarProducto(\\'' + uid + '\\')">–</button>' +
+            '<button type="button" class="btn btn-gray" onclick="restarProducto(\'' + uid + '\')">–</button>' +
             '<span class="qty">' + item.cantidad + '</span>' +
-            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\\'' + uid + '\\')">+</button>' +
+            '<button type="button" class="btn btn-gray" onclick="sumarProducto(\'' + uid + '\')">+</button>' +
           '</div>' +
         '</td>' +
         '<td>$' + Number(item.precio).toFixed(2) + '</td>' +
         '<td><strong>$' + subtotal.toFixed(2) + '</strong></td>' +
-        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\'' + uid + '\')">✕</button></td>' +
       '</tr>';
 
-    // ===== Hidden inputs (IDs + legacy texto) =====
     const proteina_id = (item.custom && item.custom.proteina_id) ? String(item.custom.proteina_id) : "";
     const salsa_id    = (item.custom && item.custom.salsa_id) ? String(item.custom.salsa_id) : "";
 
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(item.producto_id) + '">' +
       '<input type="hidden" name="cantidad[]" value="' + escapeHtml(item.cantidad) + '">' +
-
-      // ✅ NUEVOS (IDs reales)
       '<input type="hidden" name="proteina_id[]" value="' + escapeHtml(proteina_id) + '">' +
       '<input type="hidden" name="salsa_id[]" value="' + escapeHtml(salsa_id) + '">' +
-
-      // legacy (texto para cocina / compat)
       '<input type="hidden" name="proteina[]" value="' + escapeHtml(item.custom ? (item.custom.proteina || "") : "") + '">' +
       '<input type="hidden" name="sin[]" value="' + escapeHtml(item.custom && item.custom.sin ? item.custom.sin.join(",") : "") + '">' +
       '<input type="hidden" name="nota[]" value="' + escapeHtml(item.custom ? (item.custom.nota || "") : "") + '">';
@@ -788,7 +674,6 @@ function abrirVistaCocina(){
   let html = "";
   uids.forEach(uid => {
     const it = carrito[uid];
-
     const prot = it.custom && it.custom.proteina ? ("PROT: " + it.custom.proteina) : "PROT: —";
     const salsa = it.custom && it.custom.salsa ? ("SALSA: " + it.custom.salsa) : "SALSA: —";
     const sin  = it.custom && it.custom.sin && it.custom.sin.length ? ("SIN: " + it.custom.sin.join(", ")) : "SIN: —";
@@ -819,20 +704,6 @@ function cerrarVistaCocina(){
   document.getElementById("cocinaModal").classList.remove("is-open");
   document.body.style.overflow = "";
 }
-
-/* init + cerrar modales al click fuera */
-document.addEventListener("DOMContentLoaded", () => {
-  toggleUberBox();
-  document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
-
-  document.addEventListener("click", (e) => {
-    const cm = document.getElementById("customModal");
-    if (cm && cm.classList.contains("is-open") && e.target === cm) cerrarCustomModal();
-
-    const km = document.getElementById("cocinaModal");
-    if (km && km.classList.contains("is-open") && e.target === km) cerrarVistaCocina();
-  });
-});
 </script>
 
 {% endblock %}
