@@ -35,7 +35,7 @@
           <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-        <!-- ✅ NUEVO: WhatsApp opcional -->
+        <!-- ✅ WhatsApp opcional -->
         <div>
           <label>WhatsApp (opcional)</label>
           <input type="tel" name="telefono_whatsapp" placeholder="4497419166" inputmode="numeric">
@@ -207,7 +207,7 @@ html{
     width: 100%;
   }
   .card-sticky{
-    position: static !important; /* evita overlays raros en iPad */
+    position: static !important;
     top: auto !important;
   }
   #carritoTable th, #carritoTable td{
@@ -229,9 +229,9 @@ html{
   position: fixed;
   left: 0; top: 0;
   width: 100vw;
-  height: 100vh;        /* fallback */
-  height: 100dvh;       /* iOS moderno */
-  display: none;        /* se activa con .is-open */
+  height: 100vh;
+  height: 100dvh;
+  display: none;
   justify-content: center;
   align-items: center;
   background: rgba(0,0,0,.45);
@@ -241,10 +241,7 @@ html{
   -webkit-overflow-scrolling: auto;
   overscroll-behavior: contain;
 }
-
-.modal.is-open{
-  display: flex;
-}
+.modal.is-open{ display: flex; }
 
 /* caja del modal */
 .modal-box{
@@ -257,7 +254,6 @@ html{
   max-height: calc(var(--vh, 1vh) * 88);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-
   transform: translateZ(0);
 }
 
@@ -308,9 +304,7 @@ html{
   align-items: stretch;
 }
 @media (max-width: 1100px){
-  .custom-grid{
-    grid-template-columns: 1fr;
-  }
+  .custom-grid{ grid-template-columns: 1fr; }
 }
 
 /* pills touch-friendly */
@@ -332,7 +326,6 @@ html{
 
   overflow: hidden;
 }
-
 .custom-pill input[type="radio"],
 .custom-pill input[type="checkbox"]{
   margin: 0;
@@ -341,7 +334,6 @@ html{
   height: 20px;
   transform: translateY(0);
 }
-
 .custom-pill span{
   flex: 1;
   display: block;
@@ -349,7 +341,6 @@ html{
   word-break: break-word;
   white-space: normal;
 }
-
 .custom-pill:active{
   transform: scale(.99);
   background: #f6f6f6;
@@ -395,7 +386,7 @@ html{
   .modal { -webkit-transform: translateZ(0); }
 }
 
-/* ================== FIX: texto se sale a la derecha (iPad) ================== */
+/* ===== Fix: que no se salga a la derecha ===== */
 .pos-layout,
 .card,
 .carrito-wrap,
@@ -403,30 +394,24 @@ html{
 .modal-box{
   max-width: 100%;
 }
-
-body{
-  overflow-x: hidden;
-}
+body{ overflow-x: hidden; }
 
 #carritoTable{
   width: 100%;
   table-layout: fixed;
 }
-
 #carritoTable th,
 #carritoTable td{
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: top;
 }
-
 #carritoTable td.td-left,
 #carritoTable td:first-child{
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-
 .tag,
 .nota,
 .cocina-meta{
@@ -434,14 +419,12 @@ body{
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-
 .qty-controls{
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
 }
-
 @media (max-width: 1100px){
   #carritoTable th:nth-child(3),
   #carritoTable td:nth-child(3),
@@ -481,7 +464,7 @@ let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 let editandoUid = null;
 
 function escapeHtml(str){
-  return String(str)
+  return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -494,10 +477,7 @@ function uidLinea(producto_id){
 }
 
 function normaliza(str){
-  return (str || "")
-    .toString()
-    .trim()
-    .toLowerCase();
+  return (str || "").toString().trim().toLowerCase();
 }
 
 function productoTieneModificadores(nombre, categoria){
@@ -757,19 +737,19 @@ function renderCarrito(){
         '<td><button type="button" class="btn btn-red" onclick="eliminarProducto(\\'' + uid + '\\')">✕</button></td>' +
       '</tr>';
 
-    // ===== Hidden inputs (legacy + nuevos IDs) =====
+    // ===== Hidden inputs (IDs + legacy texto) =====
     const proteina_id = (item.custom && item.custom.proteina_id) ? String(item.custom.proteina_id) : "";
-    const salsa_id = (item.custom && item.custom.salsa_id) ? String(item.custom.salsa_id) : "";
+    const salsa_id    = (item.custom && item.custom.salsa_id) ? String(item.custom.salsa_id) : "";
 
     hidden.innerHTML +=
       '<input type="hidden" name="producto_id[]" value="' + escapeHtml(item.producto_id) + '">' +
       '<input type="hidden" name="cantidad[]" value="' + escapeHtml(item.cantidad) + '">' +
 
-      // ✅ nuevos (IDs)
+      // ✅ NUEVOS (IDs reales)
       '<input type="hidden" name="proteina_id[]" value="' + escapeHtml(proteina_id) + '">' +
       '<input type="hidden" name="salsa_id[]" value="' + escapeHtml(salsa_id) + '">' +
 
-      // legacy (texto)
+      // legacy (texto para cocina / compat)
       '<input type="hidden" name="proteina[]" value="' + escapeHtml(item.custom ? (item.custom.proteina || "") : "") + '">' +
       '<input type="hidden" name="sin[]" value="' + escapeHtml(item.custom && item.custom.sin ? item.custom.sin.join(",") : "") + '">' +
       '<input type="hidden" name="nota[]" value="' + escapeHtml(item.custom ? (item.custom.nota || "") : "") + '">';
