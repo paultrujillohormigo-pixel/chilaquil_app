@@ -1498,13 +1498,6 @@ def eliminar_producto_producto(producto_id):  # ✅ nombre distinto
 
 
 @app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
-
-
-
-import pymysql
-from decimal import Decimal
-from flask import jsonify
-
 def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
     """
     Costo platillo = SUM( cantidad_base * costo_unitario_insumo )
