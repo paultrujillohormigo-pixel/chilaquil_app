@@ -774,51 +774,87 @@ from db import get_connection
 def productos():
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
-            # ===== 1) Platillos para relacionar producto -> platillo =====
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+
+            # ================== POST: crear producto ==================
+            if request.method == "POST":
+                nombre = request.form["nombre"]
+                categoria = request.form["categoria"]
+                precio = request.form["precio"]
+                platillo_id = request.form.get("platillo_id") or None
+
+                # 👉 El costo SOLO se guarda si NO hay platillo
+                if platillo_id:
+                    costo = 0
+                else:
+                    costo = request.form["costo"]
+
+                cursor.execute("""
+                    INSERT INTO productos
+                        (nombre, categoria, costo, precio, platillo_id)
+                    VALUES (%s,%s,%s,%s,%s)
+                """, (
+                    nombre,
+                    categoria,
+                    costo,
+                    precio,
+                    platillo_id
+                ))
+
+                conn.commit()
+                flash("Producto agregado correctamente", "success")
+                return redirect(url_for("productos"))
+
+            # ================== GET ==================
+
+            # ---- 1) Platillos con costo calculado desde receta ----
             cursor.execute("""
-                SELECT id, nombre
-                FROM platillos
-                ORDER BY nombre
+                SELECT
+                    p.id,
+                    p.nombre,
+                    COALESCE(
+                        SUM(
+                            r.cantidad_base *
+                            CASE
+                                WHEN r.usa_precio_manual = 1
+                                THEN r.precio_manual
+                                ELSE i.costo_unitario
+                            END
+                        ),
+                        0
+                    ) AS costo_base
+                FROM platillos p
+                LEFT JOIN recetas r ON r.platillo_id = p.id
+                LEFT JOIN insumos i ON i.id = r.insumo_id
+                GROUP BY p.id
+                ORDER BY p.nombre
             """)
             platillos = cursor.fetchall()
 
-            # ===== 2) Crear producto =====
-            if request.method == "POST":
-                nombre = (request.form.get("nombre") or "").strip()
-                categoria = (request.form.get("categoria") or "").strip()
-                costo = request.form.get("costo")
-                precio = request.form.get("precio")
-                platillo_id = (request.form.get("platillo_id") or "").strip()
-
-                # platillo_id opcional
-                platillo_id_db = int(platillo_id) if platillo_id.isdigit() else None
-
-                cursor.execute("""
-                    INSERT INTO productos (nombre, categoria, costo, precio, platillo_id)
-                    VALUES (%s,%s,%s,%s,%s)
-                """, (nombre, categoria, costo, precio, platillo_id_db))
-
-                conn.commit()
-                flash("Producto creado correctamente", "success")
-                return redirect(url_for("productos"))
-
-            # ===== 3) Listar productos (incluye nombre del platillo si existe) =====
+            # ---- 2) Productos con nombre del platillo ligado ----
             cursor.execute("""
                 SELECT
-                    p.*,
+                    pr.id,
+                    pr.nombre,
+                    pr.categoria,
+                    pr.costo,
+                    pr.precio,
+                    pr.platillo_id,
                     pl.nombre AS platillo_nombre
-                FROM productos p
-                LEFT JOIN platillos pl ON pl.id = p.platillo_id
-                WHERE p.activo = 1
-                ORDER BY p.categoria, p.nombre
+                FROM productos pr
+                LEFT JOIN platillos pl ON pl.id = pr.platillo_id
+                ORDER BY pr.categoria, pr.nombre
             """)
             productos = cursor.fetchall()
 
     finally:
         conn.close()
 
-    return render_template("productos.html", productos=productos, platillos=platillos)
+    return render_template(
+        "productos.html",
+        productos=productos,
+        platillos=platillos
+    )
 
 
 # ====== Guardar relación producto -> platillo (por fila) ======
