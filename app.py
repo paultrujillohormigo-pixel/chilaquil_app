@@ -354,7 +354,11 @@ def cerrar_pedido(pedido_id):
     finally:
         conn.close()
 
+    # ✅ DESCONTAR INVENTARIO
+    descontar_stock_por_pedido(pedido_id)
+
     return redirect(url_for("pedidos_abiertos"))
+
 
 
 # ================== CERRAR PEDIDO + WHATSAPP + TOTOPOS ==================
@@ -397,6 +401,7 @@ def cerrar_pedido_whatsapp(pedido_id):
             ticket_text = generar_ticket_texto(pedido_id, cursor)
             msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(pedido["total"]))
             full_message = ticket_text + "\n\n" + msg_loyalty
+            descontar_stock_por_pedido(pedido_id)
 
             conn.commit()
             return redirect(wa_me_link(phone, full_message))
@@ -561,31 +566,44 @@ def compras():
     try:
         with conn.cursor() as cursor:
             if request.method == "POST":
-                cursor.execute("""
-                    INSERT INTO insumos_compras
-                    (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                """, (
-                    request.form["fecha"],
-                    request.form["lugar"],
-                    request.form["cantidad"],
-                    request.form["unidad"],
-                    request.form["concepto"],
-                    request.form["costo"],
-                    request.form["tipo_costo"],
-                    request.form.get("nota", ""),
-                ))
-                conn.commit()
-                flash("Compra registrada correctamente", "success")
+    cursor.execute("""
+        INSERT INTO insumos_compras
+        (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota, insumo_id, cantidad_base, unidad_base, costo_unitario, es_insumo)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        request.form["fecha"],
+        request.form["lugar"],
+        request.form["cantidad"],
+        request.form["unidad"],
+        request.form["concepto"],
+        request.form["costo"],
+        request.form["tipo_costo"],
+        request.form.get("nota", ""),
+        request.form.get("insumo_id") or None,
+        request.form.get("cantidad_base") or None,
+        request.form.get("unidad_base") or None,
+        request.form.get("costo_unitario") or None,
+        1 if (request.form.get("es_insumo") == "1") else 0,
+    ))
+    compra_id = cursor.lastrowid
 
-            cursor.execute("""
-                SELECT *
-                FROM insumos_compras
-                ORDER BY fecha DESC, id DESC
-            """)
-            compras = cursor.fetchall()
-    finally:
-        conn.close()
+    # ✅ Si es insumo, crea entrada_compra
+    if request.form.get("es_insumo") == "1" and request.form.get("insumo_id") and request.form.get("cantidad_base"):
+        cursor.execute("""
+            INSERT IGNORE INTO inventario_movimientos
+                (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
+            VALUES
+                (%s, %s, 'entrada_compra', 'insumos_compras', %s, %s)
+        """, (
+            int(request.form["insumo_id"]),
+            str(Decimal(request.form["cantidad_base"])),
+            compra_id,
+            f"Entrada por compra #{compra_id}"
+        ))
+
+    conn.commit()
+    flash("Compra registrada correctamente", "success")
+
 
     return render_template("compras.html", compras=compras)
 
@@ -1010,39 +1028,24 @@ def borrar_pedidos_bulk():
     finally:
         conn.close()
 
+
+
+import pymysql
 from decimal import Decimal
 from db import get_connection
 
 def descontar_stock_por_pedido(pedido_id: int) -> None:
-    """
-    Inserta movimientos 'salida_venta' en inventario_movimientos con base en recetas.
-    - Usa productos.platillo_id para encontrar receta.
-    - Respeta insumos.descuenta_stock=1 (salsas fuera).
-    - Evita doble descuento (chequeo + índice único recomendado).
-    """
     conn = get_connection()
     try:
-        with conn.cursor(dictionary=True) as cur:
-            conn.start_transaction()
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            conn.begin()
 
-            # 1) Si ya existe al menos una salida_venta para este pedido, no repetir
-            cur.execute("""
-                SELECT 1
-                FROM inventario_movimientos
-                WHERE tipo='salida_venta'
-                  AND ref_tabla='pedidos'
-                  AND ref_id=%s
-                LIMIT 1
-            """, (pedido_id,))
-            if cur.fetchone():
-                conn.rollback()
-                return
-
-            # 2) Traer items vendidos + platillo_id
+            # Traer items vendidos + platillo_id + proteina_id
             cur.execute("""
                 SELECT
                     pi.cantidad AS cantidad_vendida,
-                    p.platillo_id
+                    p.platillo_id,
+                    pi.proteina_id
                 FROM pedido_items pi
                 JOIN productos p ON p.id = pi.producto_id
                 WHERE pi.pedido_id = %s
@@ -1053,17 +1056,17 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
                 conn.commit()
                 return
 
-            # 3) Acumular consumo por insumo
-            consumo = {}  # insumo_id -> Decimal
+            consumo = {}  # insumo_id -> Decimal total
 
             for it in items:
+                qty = Decimal(str(it["cantidad_vendida"] or 0))
                 platillo_id = it["platillo_id"]
-                if platillo_id is None:
-                    # Producto sin receta ligada -> lo saltamos (no rompe cierre)
+                proteina_id = it["proteina_id"]
+
+                if not platillo_id:
                     continue
 
-                qty = Decimal(str(it["cantidad_vendida"]))
-
+                # (1) Receta base
                 cur.execute("""
                     SELECT r.insumo_id, r.cantidad_base
                     FROM recetas r
@@ -1071,25 +1074,51 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
                     WHERE r.platillo_id = %s
                       AND i.descuenta_stock = 1
                 """, (platillo_id,))
-                receta = cur.fetchall()
+                receta_base = cur.fetchall()
 
-                for r in receta:
+                for r in receta_base:
                     insumo_id = r["insumo_id"]
                     cant_base = Decimal(str(r["cantidad_base"]))
-                    total = cant_base * qty
+                    consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
 
-                    consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + total
+                # (2) Receta por proteína (si aplica)
+                if proteina_id:
+                    cur.execute("""
+                        SELECT cantidad_base
+                        FROM receta_proteinas
+                        WHERE platillo_id = %s AND proteina_id = %s
+                        LIMIT 1
+                    """, (platillo_id, proteina_id))
+                    rp = cur.fetchone()
+
+                    if rp:
+                        cant_prot = Decimal(str(rp["cantidad_base"]))
+
+                        cur.execute("""
+                            SELECT insumo_id
+                            FROM proteinas
+                            WHERE id = %s
+                            LIMIT 1
+                        """, (proteina_id,))
+                        pr = cur.fetchone()
+
+                        if pr and pr["insumo_id"]:
+                            insumo_prot = int(pr["insumo_id"])
+
+                            cur.execute("SELECT descuenta_stock FROM insumos WHERE id=%s", (insumo_prot,))
+                            si = cur.fetchone()
+                            if si and int(si["descuenta_stock"]) == 1:
+                                consumo[insumo_prot] = consumo.get(insumo_prot, Decimal("0")) + (cant_prot * qty)
 
             if not consumo:
                 conn.commit()
                 return
 
-            # 4) Insertar movimientos (negativo)
             rows = []
             for insumo_id, total_salida in consumo.items():
                 rows.append((
                     insumo_id,
-                    -total_salida,
+                    str(-total_salida),
                     "salida_venta",
                     "pedidos",
                     pedido_id,
@@ -1097,7 +1126,7 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
                 ))
 
             cur.executemany("""
-                INSERT INTO inventario_movimientos
+                INSERT IGNORE INTO inventario_movimientos
                     (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
                 VALUES
                     (%s, %s, %s, %s, %s, %s)
@@ -1110,6 +1139,21 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
         raise
     finally:
         conn.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import pymysql
 from flask import render_template, request
