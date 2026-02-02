@@ -67,19 +67,25 @@
         <div class="hint">Toca para agregar (+1)</div>
       </div>
 
-      <div class="productos-grid">
-        {% for p in productos %}
-        <button type="button"
-                class="producto-card"
-                onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
-          <div class="producto-nombre">{{ p.nombre }}</div>
-          <div class="producto-meta">
-            <span class="categoria">{{ p.categoria }}</span>
-            <span class="precio">{{ p.precio | money }}</span>
-          </div>
-        </button>
-        {% endfor %}
+            <div class="productos-grid" id="productosGrid">
+            {% for p in productos %}
+              <button
+                type="button"
+                class="producto-card js-add"
+                data-id="{{ p.id }}"
+                data-nombre="{{ p.nombre }}"
+                data-precio="{{ p.precio }}"
+                data-categoria="{{ p.categoria or '' }}"
+              >
+                <div class="producto-nombre">{{ p.nombre }}</div>
+                <div class="producto-meta">
+                  <span class="categoria">{{ p.categoria }}</span>
+                  <span class="precio">{{ p.precio | money }}</span>
+                </div>
+              </button>
+            {% endfor %}
       </div>
+
     </div>
 
   </section>
