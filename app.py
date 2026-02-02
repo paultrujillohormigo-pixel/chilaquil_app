@@ -801,11 +801,23 @@ def productos_view():
 # ================== COMPRAS ===============================
 # =========================================================
 
+
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+
+            # ====== 1) SIEMPRE cargar insumos para el select ======
+            cursor.execute("""
+                SELECT id, nombre, unidad_base
+                FROM insumos
+                WHERE activo = 1
+                ORDER BY nombre
+            """)
+            insumos = cursor.fetchall()
+
+            # ====== 2) POST: guardar compra + stock ======
             if request.method == "POST":
                 cursor.execute("""
                     INSERT INTO insumos_compras
@@ -830,7 +842,11 @@ def compras():
                 compra_id = cursor.lastrowid
 
                 # ✅ Si es insumo, crea entrada_compra
-                if request.form.get("es_insumo") == "1" and request.form.get("insumo_id") and request.form.get("cantidad_base"):
+                if (
+                    request.form.get("es_insumo") == "1"
+                    and request.form.get("insumo_id")
+                    and request.form.get("cantidad_base")
+                ):
                     cursor.execute("""
                         INSERT IGNORE INTO inventario_movimientos
                             (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
@@ -845,15 +861,22 @@ def compras():
 
                 conn.commit()
                 flash("Compra registrada correctamente", "success")
+                return redirect(url_for("compras"))
 
-            # Si quieres listar compras aquí, agrega tu SELECT.
-            # Por ahora, lo dejo vacío para no inventar tu esquema.
-            compras_rows = []
+            # ====== 3) GET: listar últimas compras (opcional pero recomendado) ======
+            cursor.execute("""
+                SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo
+                FROM insumos_compras
+                ORDER BY fecha DESC
+                LIMIT 200
+            """)
+            compras_rows = cursor.fetchall()
 
     finally:
         conn.close()
 
-    return render_template("compras.html", compras=compras_rows)
+    # ✅ OJO: aquí ya mandas insumos
+    return render_template("compras.html", compras=compras_rows, insumos=insumos)
 
 
 # =========================================================
