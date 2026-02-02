@@ -261,16 +261,16 @@ function toggleStock(){
 function syncConcepto(){
   const isOtro = qs("esOtro").checked;
   if (isOtro){
-    qs("conceptoHidden").value = norm(qs("otroTexto").value) || "Otro";
-    qs("conceptoNormal").value = ""; // evita duplicidad
+    qs("concepto").value = norm(qs("otroTexto").value) || "Otro";
+    qs("concepto").value = ""; // evita duplicidad
   } else {
     // usa el nombre del insumo seleccionado como concepto, si hay
     const sel = qs("insumoSelect");
     const opt = sel.options[sel.selectedIndex];
     const txt = opt ? (opt.textContent || "").trim() : "";
     // quita "(kg)" etc si quieres, pero no es obligatorio
-    qs("conceptoNormal").value = txt || "Compra";
-    qs("conceptoHidden").value = "";
+    qs("concepto").value = txt || "Compra";
+    qs("concepto").value = "";
   }
 }
 
