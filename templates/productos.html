@@ -83,7 +83,7 @@
       </td>
 
       <td>
-        <form method="post" action="{{ url_for('eliminar_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Eliminar (desactivar) este producto?');" style="display:inline;">
+        <form method="post" action="{{ url_for('eliminar_producto_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Eliminar (desactivar) este producto?');" style="display:inline;">
           <button type="submit" class="btn-red">Eliminar</button>
         </form>
       </td>
