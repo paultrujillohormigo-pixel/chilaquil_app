@@ -883,24 +883,7 @@ def actualizar_platillo_producto(producto_id):
         conn.close()
 
 
-@app.post("/productos/<int:producto_id>/eliminar")
-def eliminar_producto(producto_id):
-    """
-    Soft delete para no romper FK con pedido_items.
-    """
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("""
-                UPDATE productos
-                SET activo = 0
-                WHERE id = %s
-            """, (producto_id,))
-            conn.commit()
-            flash("Producto eliminado (desactivado).", "success")
-            return redirect(url_for("productos"))
-    finally:
-        conn.close()
+
 
 
 # ====== Guardar relación producto -> platillo (por fila) ======
@@ -1497,32 +1480,25 @@ def agregar_stock():
         conn.close()
 
 
-
-@app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
-def eliminar_producto(producto_id):
+@app.post("/productos/<int:producto_id>/eliminar")
+def eliminar_producto_producto(producto_id):  # ✅ nombre distinto
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
-            # Soft delete
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute("""
                 UPDATE productos
                 SET activo = 0
                 WHERE id = %s
-                LIMIT 1
             """, (producto_id,))
-
             conn.commit()
             flash("Producto eliminado (desactivado).", "success")
-    except Exception as e:
-        try:
-            conn.rollback()
-        except Exception:
-            pass
-        flash(f"Error eliminando producto: {e}", "error")
+            return redirect(url_for("productos"))
     finally:
         conn.close()
 
-    return redirect(url_for("productos"))
+
+@app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
+
 
 
 import pymysql
