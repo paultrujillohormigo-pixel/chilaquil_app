@@ -198,3 +198,63 @@
     width:min(92vw, 360px);
   }
 }
+/* =========================
+   NAV DROPDOWNS (iPad/touch safe)
+   (usa tus clases: nav-dd / nav-dd-btn / nav-dd-menu)
+========================= */
+
+.navbar { position: relative; z-index: 5000; }
+.nav-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.nav-dd { position: relative; }
+.nav-dd-btn{
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--primary);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nav-dd-btn:active{ transform: scale(.99); }
+
+.nav-dd-menu{
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+
+  min-width: 220px;
+  padding: 8px;
+  z-index: 9999;
+}
+
+.nav-dd-menu a{
+  display: block;
+  padding: 10px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.nav-dd-menu a:hover{
+  background: #f3f4f6;
+}
+
+/* ✅ Apertura por click/tap (iPad) */
+.nav-dd.is-open > .nav-dd-menu{
+  display: block;
+}
+
+/* ✅ Desktop: permitir hover SOLO si el dispositivo soporta hover */
+@media (hover: hover) and (pointer: fine){
+  .nav-dd:hover > .nav-dd-menu{
+    display: block;
+  }
+}
