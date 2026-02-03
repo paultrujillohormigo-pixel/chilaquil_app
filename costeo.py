@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from db import get_connection
 
 costeo_bp = Blueprint("costeo", __name__, url_prefix="/admin")
@@ -48,6 +48,23 @@ def execute_many(sql, rows):
         conn.close()
 
 
+def table_has_column(cursor, table_name: str, col_name: str) -> bool:
+    cursor.execute("""
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = %s
+          AND COLUMN_NAME = %s
+        LIMIT 1
+    """, (table_name, col_name))
+    return cursor.fetchone() is not None
+
+
+def safe_int(val):
+    v = (val or "").strip()
+    return int(v) if v.isdigit() else None
+
+
 # =========================
 # Platillos
 # =========================
@@ -70,7 +87,7 @@ def platillos_create():
     try:
         if precio not in (None, "", " "):
             precio_val = Decimal(precio)
-    except:
+    except Exception:
         flash("Precio inválido.", "error")
         return redirect(url_for("costeo.platillos_index"))
 
@@ -79,6 +96,54 @@ def platillos_create():
         flash("Platillo guardado.", "success")
     except Exception as e:
         flash(f"No se pudo guardar el platillo: {e}", "error")
+
+    return redirect(url_for("costeo.platillos_index"))
+
+
+@costeo_bp.post("/platillos/<int:platillo_id>/precio")
+def platillo_precio_update(platillo_id):
+    precio_txt = (request.form.get("precio_pos") or "").strip()
+
+    try:
+        precio_pos = Decimal(precio_txt)
+    except (InvalidOperation, TypeError):
+        flash("Precio inválido.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    if precio_pos < 0:
+        flash("El precio no puede ser negativo.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            conn.begin()
+
+            # 1) Actualiza precio_actual en platillos (costeo)
+            cursor.execute("""
+                UPDATE platillos
+                SET precio_actual = %s
+                WHERE id = %s
+            """, (precio_pos, platillo_id))
+
+            # 2) Actualiza precio en productos (POS) por platillo_id
+            cursor.execute("""
+                UPDATE productos
+                SET precio = %s
+                WHERE platillo_id = %s
+            """, (precio_pos, platillo_id))
+
+            conn.commit()
+            flash("Precio actualizado ✅", "success")
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        flash(f"Error actualizando precio: {e}", "error")
+    finally:
+        conn.close()
 
     return redirect(url_for("costeo.platillos_index"))
 
@@ -114,7 +179,7 @@ def insumos_create():
     try:
         if merma not in (None, "", " "):
             merma_val = Decimal(merma)
-    except:
+    except Exception:
         flash("Merma inválida. Usa un número (ej. 5 o 12.5).", "error")
         return redirect(url_for("costeo.insumos_index"))
 
@@ -160,7 +225,7 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """)
 
-    # Receta: costo usado = manual si aplica, si no compras.
+    # Receta base: costo usado = manual si aplica, si no compras.
     receta = query_all("""
         SELECT
           r.id AS receta_id,
@@ -209,13 +274,49 @@ def recetas_edit(platillo_id):
     except Exception:
         costeo_compras = None
 
+    # ===== NUEVO: Proteínas para inventario (recetas_proteina) =====
+    # En tu BD SÍ existe proteinas.insumo_id (lo confirmaste), pero lo validamos por seguridad.
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            proteinas_tienen_insumo = table_has_column(cursor, "proteinas", "insumo_id")
+    finally:
+        conn.close()
+
+    if proteinas_tienen_insumo:
+        proteinas = query_all("""
+            SELECT p.id, p.nombre, p.insumo_id, i.unidad_base
+            FROM proteinas p
+            LEFT JOIN insumos i ON i.id = p.insumo_id
+            ORDER BY p.nombre
+        """)
+    else:
+        proteinas = query_all("SELECT id, nombre FROM proteinas ORDER BY nombre")
+
+    receta_proteinas = query_all("""
+        SELECT
+            rp.proteina_id,
+            p.nombre AS proteina_nombre,
+            rp.insumo_id,
+            i.unidad_base,
+            rp.cantidad_base
+        FROM recetas_proteina rp
+        JOIN proteinas p ON p.id = rp.proteina_id
+        JOIN insumos i ON i.id = rp.insumo_id
+        WHERE rp.platillo_id = %s
+        ORDER BY p.nombre
+    """, (platillo_id,))
+
     return render_template(
         "admin/recetas_edit.html",
         platillo=platillo,
         insumos=insumos,
         receta=receta,
         costeo=costeo,
-        costeo_compras=costeo_compras
+        costeo_compras=costeo_compras,
+        proteinas=proteinas,
+        receta_proteinas=receta_proteinas,
+        proteinas_tienen_insumo=proteinas_tienen_insumo
     )
 
 
@@ -236,7 +337,7 @@ def recetas_save(platillo_id):
         try:
             insumo_id_int = int(insumo_id)
             c = Decimal(cant)
-        except:
+        except Exception:
             continue
 
         if c <= 0:
@@ -248,7 +349,7 @@ def recetas_save(platillo_id):
         if pm not in (None, "", " "):
             try:
                 precio_manual_val = Decimal(pm)
-            except:
+            except Exception:
                 precio_manual_val = None
 
         # si marca manual pero no puso precio, desactívalo
@@ -290,6 +391,83 @@ def recetas_save(platillo_id):
 
 
 # =========================
+# NUEVO: Proteínas por platillo (inventario)
+# =========================
+@costeo_bp.post("/recetas/<int:platillo_id>/proteinas")
+def receta_proteina_guardar(platillo_id):
+    proteina_id = safe_int(request.form.get("proteina_id"))
+    cantidad_txt = (request.form.get("cantidad_base") or "").strip()
+
+    if not proteina_id:
+        flash("Selecciona una proteína.", "error")
+        return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+    try:
+        cantidad = Decimal(cantidad_txt)
+    except Exception:
+        flash("Cantidad inválida.", "error")
+        return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+    if cantidad <= 0:
+        flash("La cantidad debe ser mayor a 0.", "error")
+        return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            has_insumo = table_has_column(cursor, "proteinas", "insumo_id")
+
+            insumo_id = None
+            if has_insumo:
+                cursor.execute("SELECT insumo_id FROM proteinas WHERE id=%s", (proteina_id,))
+                row = cursor.fetchone()
+                insumo_id = (row or {}).get("insumo_id")
+
+            if not insumo_id:
+                flash("Esa proteína no tiene insumo_id ligado. Ve a tu tabla proteinas.", "error")
+                return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+            # Validar que el insumo exista y esté activo
+            cursor.execute("SELECT id FROM insumos WHERE id=%s AND activo=1", (insumo_id,))
+            if not cursor.fetchone():
+                flash("El insumo ligado no existe o no está activo.", "error")
+                return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+            # UPSERT por uq_rp (platillo_id, proteina_id)
+            cursor.execute("""
+                INSERT INTO recetas_proteina (platillo_id, proteina_id, insumo_id, cantidad_base)
+                VALUES (%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE
+                    insumo_id = VALUES(insumo_id),
+                    cantidad_base = VALUES(cantidad_base)
+            """, (platillo_id, proteina_id, insumo_id, str(cantidad)))
+
+        conn.commit()
+        flash("Proteína guardada para inventario ✅", "success")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        flash(f"Error guardando proteína: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+
+@costeo_bp.post("/recetas/<int:platillo_id>/proteinas/<int:proteina_id>/borrar")
+def receta_proteina_borrar(platillo_id, proteina_id):
+    try:
+        execute("DELETE FROM recetas_proteina WHERE platillo_id=%s AND proteina_id=%s", (platillo_id, proteina_id))
+        flash("Proteína eliminada ✅", "success")
+    except Exception as e:
+        flash(f"No se pudo borrar: {e}", "error")
+
+    return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+
+# =========================
 # Costeo (listado)
 # =========================
 @costeo_bp.get("/costeo")
@@ -301,56 +479,3 @@ def costeo_index():
         flash("No se pudo cargar el costeo: falta crear v_costeo_platillos o falta costo vigente.", "error")
 
     return render_template("admin/costeo_index.html", data=data)
-
-
-from flask import request, redirect, url_for, flash
-from decimal import Decimal, InvalidOperation
-from db import get_connection
-from costeo import costeo_bp  # (si ya estás dentro de costeo.py, NO lo importes)
-
-@costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
-def platillo_precio_update(platillo_id):
-    precio_txt = (request.form.get("precio_pos") or "").strip()
-
-    try:
-        precio_pos = Decimal(precio_txt)
-    except (InvalidOperation, TypeError):
-        flash("Precio inválido.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    if precio_pos < 0:
-        flash("El precio no puede ser negativo.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            conn.begin()
-
-            # 1) Actualiza precio_actual en platillos (tu módulo de costeo)
-            cursor.execute("""
-                UPDATE platillos
-                SET precio_actual = %s
-                WHERE id = %s
-            """, (precio_pos, platillo_id))
-
-            # 2) Actualiza precio en productos (POS)
-            #    Si tienes un producto por platillo, con esto basta.
-            #    Si tienes varios, esto los actualizará a todos.
-            cursor.execute("""
-                UPDATE productos
-                SET precio = %s
-                WHERE platillo_id = %s
-            """, (precio_pos, platillo_id))
-
-            conn.commit()
-            flash("Precio actualizado ✅", "success")
-
-    except Exception as e:
-        conn.rollback()
-        flash(f"Error actualizando precio: {e}", "error")
-    finally:
-        conn.close()
-
-    return redirect(url_for("costeo.platillos_index"))
-
