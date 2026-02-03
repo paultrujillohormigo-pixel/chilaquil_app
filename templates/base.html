@@ -96,5 +96,42 @@
 
     <hr>
     {% block content %}{% endblock %}
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const dds = document.querySelectorAll(".nav-dd");
+  const buttons = document.querySelectorAll(".nav-dd-btn");
+
+  function closeAll(except = null){
+    dds.forEach(dd => {
+      if (dd !== except) dd.classList.remove("is-open");
+    });
+  }
+
+  buttons.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const dd = btn.closest(".nav-dd");
+      if (!dd) return;
+
+      const willOpen = !dd.classList.contains("is-open");
+      closeAll(dd);
+      if (willOpen) dd.classList.add("is-open");
+      else dd.classList.remove("is-open");
+    });
+  });
+
+  // tap/click fuera cierra
+  document.addEventListener("click", () => closeAll());
+
+  // opcional: ESC cierra (desktop)
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAll();
+  });
+});
+</script>
+
+    
 </body>
 </html>
