@@ -1551,49 +1551,82 @@ def api_platillo_costo(platillo_id):
     finally:
         conn.close()
 
+
+
 @app.post("/platillos/<int:platillo_id>/proteina_qty")
 def platillo_set_proteina_qty(platillo_id):
-    proteina_id = (request.form.get("proteina_id") or "").strip()
+    proteina_id_txt = (request.form.get("proteina_id") or "").strip()
     cantidad_txt = (request.form.get("cantidad_base") or "").strip()
 
-    if not proteina_id.isdigit():
+    if not proteina_id_txt.isdigit():
         flash("Proteína inválida.", "error")
-        return redirect(url_for("editar_platillo", platillo_id=platillo_id))
+        return redirect(request.referrer or url_for("productos"))
 
+    # cantidad en unidad_base del insumo (ej: gramos o kg)
     try:
         cantidad_base = Decimal(cantidad_txt)
     except Exception:
         flash("Cantidad inválida.", "error")
-        return redirect(url_for("editar_platillo", platillo_id=platillo_id))
+        return redirect(request.referrer or url_for("productos"))
 
     if cantidad_base <= 0:
-        flash("La cantidad debe ser > 0", "error")
-        return redirect(url_for("editar_platillo", platillo_id=platillo_id))
+        flash("La cantidad debe ser mayor a 0.", "error")
+        return redirect(request.referrer or url_for("productos"))
+
+    proteina_id = int(proteina_id_txt)
 
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cur:
-            # 1) obtener insumo_id asociado a esa proteína
-            cur.execute("SELECT insumo_id FROM proteinas WHERE id=%s", (int(proteina_id),))
+            conn.begin()
+
+            # 1) obtener el insumo ligado a la proteína
+            cur.execute("SELECT insumo_id, nombre FROM proteinas WHERE id=%s", (proteina_id,))
             pr = cur.fetchone()
             if not pr or not pr.get("insumo_id"):
-                flash("Esa proteína no está ligada a un insumo.", "error")
-                return redirect(url_for("editar_platillo", platillo_id=platillo_id))
+                conn.rollback()
+                flash("Esa proteína no está ligada a ningún insumo (proteinas.insumo_id).", "error")
+                return redirect(request.referrer or url_for("productos"))
 
             insumo_id = int(pr["insumo_id"])
+
+            # (opcional) validar que el insumo descuente stock
+            cur.execute("SELECT descuenta_stock, unidad_base FROM insumos WHERE id=%s", (insumo_id,))
+            ins = cur.fetchone()
+            if not ins:
+                conn.rollback()
+                flash("El insumo ligado a la proteína no existe.", "error")
+                return redirect(request.referrer or url_for("productos"))
+
+            if int(ins.get("descuenta_stock") or 0) != 1:
+                conn.rollback()
+                flash("Ese insumo no descuenta stock (insumos.descuenta_stock=0).", "error")
+                return redirect(request.referrer or url_for("productos"))
 
             # 2) upsert en recetas_proteina
             cur.execute("""
                 INSERT INTO recetas_proteina (platillo_id, proteina_id, insumo_id, cantidad_base)
-                VALUES (%s,%s,%s,%s)
-                ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base)
-            """, (platillo_id, int(proteina_id), insumo_id, str(cantidad_base)))
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    insumo_id = VALUES(insumo_id),
+                    cantidad_base = VALUES(cantidad_base)
+            """, (platillo_id, proteina_id, insumo_id, str(cantidad_base)))
 
             conn.commit()
-            flash("Proteína por platillo guardada ✅", "success")
-            return redirect(url_for("editar_platillo", platillo_id=platillo_id))
+
+            ub = ins.get("unidad_base") or ""
+            flash(f"Guardado ✅ Proteína {pr.get('nombre','')} = {cantidad_base} {ub} para este platillo.", "success")
+            return redirect(request.referrer or url_for("productos"))
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     finally:
         conn.close()
+
 
 
 
