@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta charset="UTF-8">
+
+    <!-- MUY IMPORTANTE PARA iPad -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Señor Chilaquil - Sistema Ventas</title>
+
+    <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='pos.css') }}">
-    
 
-    <meta charset="UTF-8">
-    <title>Señor Chilaquil - Sistema Ventas</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        nav a { margin-right: 10px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        table, th, td { border: 1px solid #ccc; padding: 5px; }
+        body { margin: 0; }
         .flash { padding: 8px; margin: 5px 0; border-radius: 4px; }
         .success { background: #c8e6c9; }
         .error { background: #ffcdd2; }
@@ -30,7 +31,6 @@
 
   <div class="nav-links">
 
-    <!-- POS -->
     <div class="nav-dd">
       <button class="nav-dd-btn" type="button">
         POS <span class="nav-caret">▾</span>
@@ -41,24 +41,15 @@
       </div>
     </div>
 
-    <!-- Catálogos -->
     <div class="nav-dd">
       <button class="nav-dd-btn" type="button">
         Catálogos <span class="nav-caret">▾</span>
       </button>
       <div class="nav-dd-menu">
-        {# OJO: tu error dice que ahora es productos #}
         <a href="{{ url_for('productos') }}">Productos</a>
-
-        {# Si tienes rutas para esto, descomenta/ajusta #}
-        {# <a href="{{ url_for('insumos_view') }}">Insumos</a> #}
-        {# <a href="{{ url_for('platillos_view') }}">Platillos</a> #}
-        {# <a href="{{ url_for('proteinas_view') }}">Proteínas</a> #}
-        {# <a href="{{ url_for('salsas_view') }}">Salsas</a> #}
       </div>
     </div>
 
-    <!-- Inventario -->
     <div class="nav-dd">
       <button class="nav-dd-btn" type="button">
         Inventario <span class="nav-caret">▾</span>
@@ -69,7 +60,6 @@
       </div>
     </div>
 
-    <!-- Finanzas / Admin -->
     <div class="nav-dd">
       <button class="nav-dd-btn" type="button">
         Admin <span class="nav-caret">▾</span>
@@ -83,20 +73,17 @@
   </div>
 </nav>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, msg in messages %}
+      <div class="flash {{ category }}">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-    
+{% block content %}{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, msg in messages %}
-          <div class="flash {{ category }}">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <hr>
-    {% block content %}{% endblock %}
-    <script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   const dds = document.querySelectorAll(".nav-dd");
   const buttons = document.querySelectorAll(".nav-dd-btn");
@@ -107,31 +94,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function toggle(dd){
+    const willOpen = !dd.classList.contains("is-open");
+    closeAll(dd);
+    dd.classList.toggle("is-open", willOpen);
+  }
+
   buttons.forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    const handler = (e) => {
       e.preventDefault();
       e.stopPropagation();
-
       const dd = btn.closest(".nav-dd");
       if (!dd) return;
+      toggle(dd);
+    };
 
-      const willOpen = !dd.classList.contains("is-open");
-      closeAll(dd);
-      if (willOpen) dd.classList.add("is-open");
-      else dd.classList.remove("is-open");
-    });
+    btn.addEventListener("pointerdown", handler);
+    btn.addEventListener("click", handler);
   });
 
-  // tap/click fuera cierra
+  document.addEventListener("pointerdown", () => closeAll());
   document.addEventListener("click", () => closeAll());
 
-  // opcional: ESC cierra (desktop)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAll();
   });
 });
 </script>
 
-    
 </body>
 </html>
