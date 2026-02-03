@@ -1,126 +1,193 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- MUY IMPORTANTE PARA iPad -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Señor Chilaquil - Sistema Ventas</title>
 
-    <title>Señor Chilaquil - Sistema Ventas</title>
+  <!-- CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
+  <style>
+    body { margin: 0; }
 
-    <style>
-        body { margin: 0; }
-        .flash { padding: 8px; margin: 5px 0; border-radius: 4px; }
-        .success { background: #c8e6c9; }
-        .error { background: #ffcdd2; }
-    </style>
+    .flash { padding: 8px; margin: 8px 12px; border-radius: 4px; }
+    .success { background: #c8e6c9; }
+    .error { background: #ffcdd2; }
+
+    /* Navbar mínimo auto-contenido (para evitar que otro CSS lo deje invisible) */
+    .navbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 16px;
+      background:#fff;
+      border-bottom:1px solid #e5e7eb;
+      position:relative;
+      z-index:1000;
+    }
+    .brand{ font-weight:800; font-size:18px; color:#111827; text-decoration:none; }
+    .nav-links{ display:flex; gap:12px; align-items:center; }
+
+    .nav-dd{ position:relative; }
+    .nav-dd-btn{
+      border:0;
+      background:transparent;
+      padding:10px 12px;
+      border-radius:8px;
+      font-weight:700;
+      color:#111827;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-caret{ margin-left:6px; font-size:12px; display:inline-block; transform: translateY(-1px); }
+
+    .nav-dd-menu{
+      display:none;
+      position:absolute;
+      top:calc(100% + 8px);
+      left:0;
+      min-width:210px;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      box-shadow:0 6px 16px rgba(0,0,0,.12);
+      padding:8px;
+      z-index:9999;
+    }
+
+    .nav-dd.is-open > .nav-dd-menu{ display:block; }
+
+    .nav-dd-menu a{
+      display:block;
+      padding:10px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:500;
+      color:#111827;
+    }
+    .nav-dd-menu a:hover{ background:#f3f4f6; }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-dd:hover > .nav-dd-menu { display:block; }
+    }
+  </style>
 </head>
+
 <body>
 
-<nav class="navbar">
-  <div class="nav-left">
-    <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
-  </div>
-
-  <div class="nav-links">
-
-    <div class="nav-dd">
-      <button class="nav-dd-btn" type="button">
-        POS <span class="nav-caret">▾</span>
-      </button>
-      <div class="nav-dd-menu">
-        <a href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
-        <a href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
-      </div>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
     </div>
 
-    <div class="nav-dd">
-      <button class="nav-dd-btn" type="button">
-        Catálogos <span class="nav-caret">▾</span>
-      </button>
-      <div class="nav-dd-menu">
-        <a href="{{ url_for('productos') }}">Productos</a>
+    <div class="nav-links">
+
+      <div class="nav-dd" role="navigation">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          POS <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="POS">
+          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
+          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
+        </div>
       </div>
-    </div>
 
-    <div class="nav-dd">
-      <button class="nav-dd-btn" type="button">
-        Inventario <span class="nav-caret">▾</span>
-      </button>
-      <div class="nav-dd-menu">
-        <a href="{{ url_for('ver_stock') }}">Stock actual</a>
-        <a href="{{ url_for('compras') }}">Compras</a>
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Catálogos <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Catálogos">
+          <a role="menuitem" href="{{ url_for('productos') }}">Productos</a>
+        </div>
       </div>
-    </div>
 
-    <div class="nav-dd">
-      <button class="nav-dd-btn" type="button">
-        Admin <span class="nav-caret">▾</span>
-      </button>
-      <div class="nav-dd-menu">
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Inventario <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Inventario">
+          <a role="menuitem" href="{{ url_for('ver_stock') }}">Stock actual</a>
+          <a role="menuitem" href="{{ url_for('compras') }}">Compras</a>
+        </div>
       </div>
+
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Admin <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Admin">
+          <a role="menuitem" href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
+        </div>
+      </div>
+
     </div>
+  </nav>
 
-  </div>
-</nav>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <div class="flash {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, msg in messages %}
-      <div class="flash {{ category }}">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+  {% block content %}{% endblock %}
 
-{% block content %}{% endblock %}
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const dds = document.querySelectorAll(".nav-dd");
+    const buttons = document.querySelectorAll(".nav-dd-btn");
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const dds = document.querySelectorAll(".nav-dd");
-  const buttons = document.querySelectorAll(".nav-dd-btn");
+    function closeAll(except = null) {
+      dds.forEach(dd => {
+        if (dd !== except) {
+          dd.classList.remove("is-open");
+          const b = dd.querySelector(".nav-dd-btn");
+          if (b) b.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
 
-  function closeAll(except = null){
-    dds.forEach(dd => {
-      if (dd !== except) dd.classList.remove("is-open");
+    function toggle(dd) {
+      const isOpen = dd.classList.contains("is-open");
+      closeAll(dd);
+      dd.classList.toggle("is-open", !isOpen);
+
+      const b = dd.querySelector(".nav-dd-btn");
+      if (b) b.setAttribute("aria-expanded", String(!isOpen));
+    }
+
+    // En iOS: si usas pointerdown global para cerrar, a veces cierra instantáneo.
+    // Aquí cerramos con click fuera, pero ignorando clicks dentro del dropdown.
+    buttons.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const dd = btn.closest(".nav-dd");
+        if (!dd) return;
+        toggle(dd);
+      }, { passive: false });
     });
-  }
 
-  function toggle(dd){
-    const willOpen = !dd.classList.contains("is-open");
-    closeAll(dd);
-    dd.classList.toggle("is-open", willOpen);
-  }
+    // Click fuera cierra
+    document.addEventListener("click", (e) => {
+      // si click fue dentro de cualquier dropdown, no cierres
+      if (e.target.closest && e.target.closest(".nav-dd")) return;
+      closeAll();
+    });
 
-  buttons.forEach(btn => {
-    const handler = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const dd = btn.closest(".nav-dd");
-      if (!dd) return;
-      toggle(dd);
-    };
-
-    btn.addEventListener("pointerdown", handler);
-    btn.addEventListener("click", handler);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAll();
+    });
   });
-
-  document.addEventListener("pointerdown", () => closeAll());
-  document.addEventListener("click", () => closeAll());
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeAll();
-  });
-});
-</script>
+  </script>
 
 </body>
 </html>
