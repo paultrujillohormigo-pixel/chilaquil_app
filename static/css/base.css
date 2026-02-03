@@ -51,3 +51,87 @@ button {
   font-family: inherit;
   cursor: pointer;
 }
+/* =========================
+   NAV + DROPDOWNS (iPad safe)
+   Pegar al final del CSS
+========================= */
+
+.navbar,
+.nav {
+  overflow: visible;
+}
+
+.nav {
+  list-style: none;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* cada item del nav */
+.nav-item {
+  position: relative;
+}
+
+/* botón/trigger del dropdown */
+.dropdown-toggle {
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* feedback */
+.dropdown-toggle:active {
+  transform: scale(.99);
+}
+
+/* el dropdown */
+.dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+
+  min-width: 210px;
+  padding: 8px;
+  z-index: 9999;
+}
+
+/* abierto por click (iPad) */
+.nav-item.is-open > .dropdown {
+  display: block;
+}
+
+/* links dentro del dropdown */
+.dropdown a {
+  display: block;
+  padding: 10px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+}
+
+.dropdown a:hover {
+  background: #f3f4f6;
+}
+
+/* Desktop: permitir hover SOLO si el dispositivo soporta hover */
+@media (hover: hover) and (pointer: fine) {
+  .nav-item.has-dropdown:hover > .dropdown {
+    display: block;
+  }
+}
+
+/* iPad / touch: evitar el "hover fantasma" */
+@media (hover: none) and (pointer: coarse) {
+  .dropdown-toggle:hover {
+    background: transparent;
+  }
+}
