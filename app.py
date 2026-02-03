@@ -232,22 +232,43 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
             cant_base = Decimal(str(r["cantidad_base"]))
             consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
 
-        # 1B) receta por proteína (solo si NO es NULL)
+        # 1B) proteína genérica por platillo:
+        # - cantidad sale de platillos.proteina_cantidad_base
+        # - insumo sale de proteinas.insumo_id (según lo elegido en el POS)
         if proteina_id is not None:
+            # cuánto descuenta este platillo por proteína
             cur.execute("""
-                SELECT rp.insumo_id, rp.cantidad_base
-                FROM recetas_proteina rp
-                JOIN insumos i ON i.id = rp.insumo_id
-                WHERE rp.platillo_id = %s
-                  AND rp.proteina_id = %s
-                  AND i.descuenta_stock = 1
-            """, (platillo_id, proteina_id))
-            prot_rows = cur.fetchall()
+                SELECT proteina_cantidad_base
+                FROM platillos
+                WHERE id = %s
+                LIMIT 1
+            """, (platillo_id,))
+            pr = cur.fetchone()
+            prot_qty_base = Decimal(str((pr or {}).get("proteina_cantidad_base") or 0))
 
-            for r in prot_rows:
-                insumo_id = int(r["insumo_id"])
-                cant_base = Decimal(str(r["cantidad_base"]))
-                consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
+            if prot_qty_base > 0:
+                # insumo al que corresponde la proteína seleccionada
+                cur.execute("""
+                    SELECT insumo_id
+                    FROM proteinas
+                    WHERE id = %s
+                    LIMIT 1
+                """, (proteina_id,))
+                prow = cur.fetchone()
+                insumo_prot = (prow or {}).get("insumo_id")
+
+                if insumo_prot:
+                    # respeta descuenta_stock
+                    cur.execute("""
+                        SELECT descuenta_stock
+                        FROM insumos
+                        WHERE id = %s
+                        LIMIT 1
+                    """, (insumo_prot,))
+                    irow = cur.fetchone()
+                    if irow and int(irow.get("descuenta_stock") or 0) == 1:
+                        insumo_id = int(insumo_prot)
+                        consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (prot_qty_base * qty)
 
     if not consumo:
         return
