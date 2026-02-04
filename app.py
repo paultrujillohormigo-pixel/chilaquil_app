@@ -1,11 +1,3 @@
-# app.py
-from __future__ import annotations
-
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from decimal import Decimal, InvalidOperation
-from db import get_connection
-from costeo import costeo_bp
-
 import urllib.parse
 import re
 import pymysql
@@ -398,6 +390,11 @@ def nuevo_pedido():
                 proteinas_id_sel = request.form.getlist("proteina_id[]")
                 salsas_id_sel = request.form.getlist("salsa_id[]")
 
+                # ✅ NUEVO: descuento total (del POS)
+                descuento_total = Decimal(request.form.get("descuento_total", "0") or "0")
+                if descuento_total < 0:
+                    descuento_total = Decimal("0")
+
                 def safe_get(lst, i, default=""):
                     return lst[i] if i < len(lst) else default
 
@@ -477,13 +474,18 @@ def nuevo_pedido():
                     flash("No hay productos en el carrito.", "error")
                     return redirect(url_for("nuevo_pedido"))
 
-                neto = total + monto_uber
+                # ✅ NUEVO: clamp descuento a total
+                if descuento_total > total:
+                    descuento_total = total
+
+                total_con_descuento = total - descuento_total
+                neto = total_con_descuento + monto_uber
 
                 cursor.execute("""
                     INSERT INTO pedidos
                     (fecha, origen, mesero, telefono_whatsapp, metodo_pago, total, monto_uber, neto, estado)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'abierto')
-                """, (fecha, origen, mesero, telefono_e164, metodo_pago, total, monto_uber, neto))
+                """, (fecha, origen, mesero, telefono_e164, metodo_pago, total_con_descuento, monto_uber, neto))
 
                 pedido_id = cursor.lastrowid
 
