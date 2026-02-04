@@ -2,6 +2,12 @@ import urllib.parse
 import re
 import pymysql
 
+from flask import Flask, request, redirect, url_for, flash, render_template, jsonify
+from decimal import Decimal, InvalidOperation
+
+from db import get_connection
+from costeo import costeo_bp
+
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
@@ -181,9 +187,6 @@ def money_format(value):
 # =============== INVENTARIO: DESCONTAR ===================
 # =========================================================
 
-from decimal import Decimal
-import pymysql
-
 def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
     cur.execute("""
         SELECT
@@ -225,10 +228,7 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
             consumo[insumo_id] = consumo.get(insumo_id, Decimal("0")) + (cant_base * qty)
 
         # 1B) proteína genérica por platillo:
-        # - cantidad sale de platillos.proteina_cantidad_base
-        # - insumo sale de proteinas.insumo_id (según lo elegido en el POS)
         if proteina_id is not None:
-            # cuánto descuenta este platillo por proteína
             cur.execute("""
                 SELECT proteina_cantidad_base
                 FROM platillos
@@ -239,7 +239,6 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
             prot_qty_base = Decimal(str((pr or {}).get("proteina_cantidad_base") or 0))
 
             if prot_qty_base > 0:
-                # insumo al que corresponde la proteína seleccionada
                 cur.execute("""
                     SELECT insumo_id
                     FROM proteinas
@@ -250,7 +249,6 @@ def descontar_stock_por_pedido_cursor(cur, pedido_id: int) -> None:
                 insumo_prot = (prow or {}).get("insumo_id")
 
                 if insumo_prot:
-                    # respeta descuenta_stock
                     cur.execute("""
                         SELECT descuenta_stock
                         FROM insumos
@@ -299,7 +297,6 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
         raise
     finally:
         conn.close()
-
 
 
 # =========================================================
@@ -375,6 +372,14 @@ def nuevo_pedido():
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
 
+                # ✅ NUEVO: descuento (monto fijo)
+                try:
+                    descuento = Decimal(request.form.get("descuento", "0") or "0")
+                except Exception:
+                    descuento = Decimal("0")
+                if descuento < 0:
+                    descuento = Decimal("0")
+
                 tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
                 telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
 
@@ -389,11 +394,6 @@ def nuevo_pedido():
                 # nuevos (IDs)
                 proteinas_id_sel = request.form.getlist("proteina_id[]")
                 salsas_id_sel = request.form.getlist("salsa_id[]")
-
-                # ✅ NUEVO: descuento total (del POS)
-                descuento_total = Decimal(request.form.get("descuento_total", "0") or "0")
-                if descuento_total < 0:
-                    descuento_total = Decimal("0")
 
                 def safe_get(lst, i, default=""):
                     return lst[i] if i < len(lst) else default
@@ -411,7 +411,7 @@ def nuevo_pedido():
                     except Exception:
                         return None
 
-                total = Decimal("0")
+                total_bruto = Decimal("0")
                 items = []
 
                 for i, prod_id in enumerate(productos_ids):
@@ -448,7 +448,7 @@ def nuevo_pedido():
 
                     precio_unit = Decimal(str(row["precio_final"]))
                     subtotal = precio_unit * cant
-                    total += subtotal
+                    total_bruto += subtotal
 
                     # ✅ IDs reales (NULL si "Sin proteína" o si no aplica)
                     prot_id = safe_int_or_none(safe_get(proteinas_id_sel, i, ""))
@@ -474,18 +474,30 @@ def nuevo_pedido():
                     flash("No hay productos en el carrito.", "error")
                     return redirect(url_for("nuevo_pedido"))
 
-                # ✅ NUEVO: clamp descuento a total
-                if descuento_total > total:
-                    descuento_total = total
+                # ✅ clamp descuento: no puede ser mayor al bruto
+                if descuento > total_bruto:
+                    descuento = total_bruto
 
-                total_con_descuento = total - descuento_total
-                neto = total_con_descuento + monto_uber
+                total_final = total_bruto - descuento
+                neto = total_final + monto_uber
 
-                cursor.execute("""
-                    INSERT INTO pedidos
-                    (fecha, origen, mesero, telefono_whatsapp, metodo_pago, total, monto_uber, neto, estado)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'abierto')
-                """, (fecha, origen, mesero, telefono_e164, metodo_pago, total_con_descuento, monto_uber, neto))
+                # ✅ Insert dinámico (descuento opcional en DB)
+                has_desc = table_has_column(cursor, "pedidos", "descuento")
+
+                cols = ["fecha", "origen", "mesero", "telefono_whatsapp", "metodo_pago", "total", "monto_uber", "neto", "estado"]
+                vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, "abierto"]
+
+                if has_desc:
+                    cols.insert(6, "descuento")         # después de total (aprox)
+                    vals.insert(6, descuento)
+
+                placeholders = ",".join(["%s"] * len(cols))
+                colsql = ",".join(cols)
+
+                cursor.execute(f"""
+                    INSERT INTO pedidos ({colsql})
+                    VALUES ({placeholders})
+                """, tuple(vals))
 
                 pedido_id = cursor.lastrowid
 
@@ -494,24 +506,24 @@ def nuevo_pedido():
                 has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
 
                 for it in items:
-                    cols = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
-                    vals = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
+                    cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
+                    vals_it = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
 
                     if has_prot_id:
-                        cols.append("proteina_id")
-                        vals.append(it["proteina_id"])  # ✅ None si “Sin proteína”
+                        cols_it.append("proteina_id")
+                        vals_it.append(it["proteina_id"])
 
                     if has_salsa_id:
-                        cols.append("salsa_id")
-                        vals.append(it["salsa_id"])     # ✅ None si vacío
+                        cols_it.append("salsa_id")
+                        vals_it.append(it["salsa_id"])
 
-                    placeholders = ",".join(["%s"] * len(cols))
-                    colsql = ",".join(cols)
+                    placeholders_it = ",".join(["%s"] * len(cols_it))
+                    colsql_it = ",".join(cols_it)
 
                     cursor.execute(f"""
-                        INSERT INTO pedido_items ({colsql})
-                        VALUES ({placeholders})
-                    """, tuple(vals))
+                        INSERT INTO pedido_items ({colsql_it})
+                        VALUES ({placeholders_it})
+                    """, tuple(vals_it))
 
                 conn.commit()
                 flash(f"Pedido #{pedido_id} creado y abierto", "success")
@@ -521,8 +533,6 @@ def nuevo_pedido():
         conn.close()
 
     return render_template("nuevo_pedido.html", productos=productos, salsas=salsas, proteinas=proteinas)
-
-
 # =========================================================
 # ================== VER / EDITAR PEDIDO ==================
 # =========================================================
@@ -542,7 +552,6 @@ def ver_pedido(pedido_id):
                 flash("Pedido no disponible", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
-            # catálogo para UI/JS
             cursor.execute("SELECT * FROM salsas ORDER BY nombre")
             salsas = cursor.fetchall()
 
@@ -556,7 +565,6 @@ def ver_pedido(pedido_id):
             """)
             productos = cursor.fetchall()
 
-            # items del pedido (si columnas existen, tráelas; si no, ignora)
             has_prot_id = table_has_column(cursor, "pedido_items", "proteina_id")
             has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
 
@@ -583,7 +591,6 @@ def ver_pedido(pedido_id):
             """, (pedido_id,))
             items = cursor.fetchall()
 
-            # si está cerrado, solo mostrar
             if request.method == "POST":
                 if pedido.get("estado") != "abierto":
                     flash("No se puede modificar un pedido cerrado", "error")
@@ -633,7 +640,6 @@ def ver_pedido(pedido_id):
                     precio = Decimal(str(row["precio"]))
                     subtotal_nuevo = precio * cant
 
-                    # buscar línea idéntica (incluye IDs si existen)
                     query = """
                         SELECT id, cantidad
                         FROM pedido_items
@@ -798,8 +804,8 @@ def cerrar_pedido_whatsapp(pedido_id):
 # ================== PRODUCTOS =============================
 # =========================================================
 
-import pymysql
 from decimal import Decimal
+import pymysql
 from flask import request, redirect, url_for, flash, render_template
 
 @app.route("/productos", methods=["GET", "POST"])
@@ -808,7 +814,6 @@ def productos():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            # ====== Platillos para dropdown (tu tabla NO tiene activo) ======
             cursor.execute("""
                 SELECT id, nombre
                 FROM platillos
@@ -816,7 +821,6 @@ def productos():
             """)
             platillos = cursor.fetchall()
 
-            # ====== POST: crear producto ======
             if request.method == "POST":
                 nombre = (request.form.get("nombre") or "").strip()
                 categoria = (request.form.get("categoria") or "").strip()
@@ -835,7 +839,6 @@ def productos():
 
                 platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
 
-                # ✅ costo automático si hay platillo; si no, costo manual
                 if platillo_id:
                     costo = calcular_costo_platillo(cursor, platillo_id)
                 else:
@@ -855,7 +858,6 @@ def productos():
                 flash("Producto agregado correctamente", "success")
                 return redirect(url_for("productos"))
 
-            # ====== GET: listar productos ======
             cursor.execute("""
                 SELECT
                     pr.id,
@@ -890,7 +892,6 @@ def actualizar_platillo_producto(producto_id):
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # valida que exista producto activo
             cursor.execute("SELECT id FROM productos WHERE id=%s AND activo=1", (producto_id,))
             pr = cursor.fetchone()
             if not pr:
@@ -913,10 +914,6 @@ def actualizar_platillo_producto(producto_id):
             return redirect(url_for("productos"))
     finally:
         conn.close()
-
-
-
-
 
 # ====== Guardar relación producto -> platillo (por fila) ======
 @app.post("/productos/<int:producto_id>/set_platillo")
@@ -943,14 +940,12 @@ def productos_set_platillo(producto_id):
 # ================== COMPRAS ===============================
 # =========================================================
 
-
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            # ====== 1) SIEMPRE cargar insumos para el select ======
             cursor.execute("""
                 SELECT id, nombre, unidad_base
                 FROM insumos
@@ -959,18 +954,11 @@ def compras():
             """)
             insumos = cursor.fetchall()
 
-            # ====== 2) POST: guardar compra + stock ======
             if request.method == "POST":
-
-                # ✅ Si el HTML oculta cantidad/unidad (cuando es_insumo=1),
-                #    aquí NO debe reventar por KeyError:
                 cantidad_txt = (request.form.get("cantidad") or "").strip()
                 unidad_txt = (request.form.get("unidad") or "").strip()
 
-                # Opcional (pero útil): si es insumo, puedes “rellenar” cantidad/unidad
-                # con la base para que tus reportes sean consistentes.
                 if request.form.get("es_insumo") == "1":
-                    # Si vienen vacíos, usa la cantidad_base/unidad_base
                     if not cantidad_txt:
                         cantidad_txt = (request.form.get("cantidad_base") or "").strip()
                     if not unidad_txt:
@@ -984,8 +972,8 @@ def compras():
                 """, (
                     request.form["fecha"],
                     request.form["lugar"],
-                    cantidad_txt,                          # ✅ antes request.form["cantidad"]
-                    unidad_txt,                            # ✅ antes request.form["unidad"]
+                    cantidad_txt,
+                    unidad_txt,
                     request.form["concepto"],
                     request.form["costo"],
                     request.form["tipo_costo"],
@@ -998,7 +986,6 @@ def compras():
                 ))
                 compra_id = cursor.lastrowid
 
-                # ✅ Si es insumo, crea entrada_compra
                 if (
                     request.form.get("es_insumo") == "1"
                     and (request.form.get("insumo_id") or "").strip()
@@ -1020,7 +1007,6 @@ def compras():
                 flash("Compra registrada correctamente", "success")
                 return redirect(url_for("compras"))
 
-            # ====== 3) GET: listar últimas compras ======
             cursor.execute("""
                 SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo
                 FROM insumos_compras
@@ -1033,7 +1019,6 @@ def compras():
         conn.close()
 
     return render_template("compras.html", compras=compras_rows, insumos=insumos)
-
 
 
 # =========================================================
@@ -1223,12 +1208,22 @@ def eliminar_pedido(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT id FROM pedidos WHERE id=%s", (pedido_id,))
+            # ✅ traer estado para saber si hay que regresar inventario
+            cursor.execute("SELECT id, estado FROM pedidos WHERE id=%s", (pedido_id,))
             pedido = cursor.fetchone()
 
             if not pedido:
                 flash("Pedido no encontrado", "error")
                 return redirect(url_for("borrar_pedidos"))
+
+            # ✅ Si estaba CERRADO: borrar movimientos salida_venta => regresa stock
+            if (pedido.get("estado") or "") == "cerrado":
+                cursor.execute("""
+                    DELETE FROM inventario_movimientos
+                    WHERE tipo='salida_venta'
+                      AND ref_tabla='pedidos'
+                      AND ref_id=%s
+                """, (pedido_id,))
 
             # si tienes loyalty_tx referenciando pedido_id, borrar primero
             if table_has_column(cursor, "loyalty_tx", "pedido_id"):
@@ -1423,6 +1418,25 @@ def borrar_pedidos_bulk():
                 return redirect(url_for("borrar_pedidos"))
 
             placeholders = ",".join(["%s"] * len(ids_int))
+
+            # ✅ NUEVO: regresar inventario de los pedidos CERRADOS que se van a borrar
+            cursor.execute(f"""
+                SELECT id
+                FROM pedidos
+                WHERE id IN ({placeholders})
+                  AND estado = 'cerrado'
+            """, ids_int)
+            cerrados = [r["id"] for r in cursor.fetchall()]
+
+            if cerrados:
+                ph2 = ",".join(["%s"] * len(cerrados))
+                cursor.execute(f"""
+                    DELETE FROM inventario_movimientos
+                    WHERE tipo='salida_venta'
+                      AND ref_tabla='pedidos'
+                      AND ref_id IN ({ph2})
+                """, cerrados)
+
             cursor.execute(f"DELETE FROM pedido_items WHERE pedido_id IN ({placeholders})", ids_int)
             cursor.execute(f"DELETE FROM pedidos WHERE id IN ({placeholders})", ids_int)
 
@@ -1531,12 +1545,6 @@ def eliminar_producto_producto(producto_id):  # ✅ nombre distinto
 
 @app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
 def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
-    """
-    Costo platillo = SUM( cantidad_base * costo_unitario_insumo )
-    - Si recetas.usa_precio_manual=1 usa recetas.precio_manual (por unidad_base)
-    - Si no, usa última compra: insumos_compras.costo_unitario (ORDER BY fecha desc, id desc)
-    - Aplica merma_pct: cantidad_base * (1 + merma_pct/100)
-    """
     cursor.execute("""
         SELECT
             COALESCE(SUM(
@@ -1575,7 +1583,6 @@ def api_platillo_costo(platillo_id):
         conn.close()
 
 
-
 @app.post("/platillos/<int:platillo_id>/proteina_qty")
 def platillo_set_proteina_qty(platillo_id):
     proteina_id_txt = (request.form.get("proteina_id") or "").strip()
@@ -1585,7 +1592,6 @@ def platillo_set_proteina_qty(platillo_id):
         flash("Proteína inválida.", "error")
         return redirect(request.referrer or url_for("productos"))
 
-    # cantidad en unidad_base del insumo (ej: gramos o kg)
     try:
         cantidad_base = Decimal(cantidad_txt)
     except Exception:
@@ -1603,7 +1609,6 @@ def platillo_set_proteina_qty(platillo_id):
         with conn.cursor(pymysql.cursors.DictCursor) as cur:
             conn.begin()
 
-            # 1) obtener el insumo ligado a la proteína
             cur.execute("SELECT insumo_id, nombre FROM proteinas WHERE id=%s", (proteina_id,))
             pr = cur.fetchone()
             if not pr or not pr.get("insumo_id"):
@@ -1613,7 +1618,6 @@ def platillo_set_proteina_qty(platillo_id):
 
             insumo_id = int(pr["insumo_id"])
 
-            # (opcional) validar que el insumo descuente stock
             cur.execute("SELECT descuenta_stock, unidad_base FROM insumos WHERE id=%s", (insumo_id,))
             ins = cur.fetchone()
             if not ins:
@@ -1626,7 +1630,6 @@ def platillo_set_proteina_qty(platillo_id):
                 flash("Ese insumo no descuenta stock (insumos.descuenta_stock=0).", "error")
                 return redirect(request.referrer or url_for("productos"))
 
-            # 2) upsert en recetas_proteina
             cur.execute("""
                 INSERT INTO recetas_proteina (platillo_id, proteina_id, insumo_id, cantidad_base)
                 VALUES (%s, %s, %s, %s)
@@ -1641,7 +1644,7 @@ def platillo_set_proteina_qty(platillo_id):
             flash(f"Guardado ✅ Proteína {pr.get('nombre','')} = {cantidad_base} {ub} para este platillo.", "success")
             return redirect(request.referrer or url_for("productos"))
 
-    except Exception as e:
+    except Exception:
         try:
             conn.rollback()
         except Exception:
@@ -1649,9 +1652,6 @@ def platillo_set_proteina_qty(platillo_id):
         raise
     finally:
         conn.close()
-
-
-
 
 
 # ================== RUN ==================
