@@ -1543,7 +1543,7 @@ def eliminar_producto_producto(producto_id):  # ✅ nombre distinto
         conn.close()
 
 
-@app.route("/productos/<int:producto_id>/eliminar", methods=["POST"])
+
 def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
     cursor.execute("""
         SELECT
@@ -1570,6 +1570,8 @@ def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
     """, (platillo_id,))
     row = cursor.fetchone()
     return Decimal(str(row["costo_platillo"] or 0))
+
+
 
 
 @app.get("/api/platillos/<int:platillo_id>/costo")
