@@ -116,12 +116,46 @@
           <tbody></tbody>
         </table>
 
-        <div class="total-box">
-          <div>Total</div>
-          <div class="total-amount" id="totalPedido">$0.00</div>
+        <!-- ✅ NUEVO: Subtotal + Descuento + Total -->
+        <div class="total-box" style="display:flex; flex-direction:column; gap:10px;">
+
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <div>Subtotal</div>
+            <div class="total-amount" id="subtotalPedido">$0.00</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-end;">
+            <div>
+              <label style="font-weight:800;">Descuento ($)</label>
+              <input
+                type="number"
+                id="descuentoInput"
+                step="0.01"
+                min="0"
+                value="0"
+                inputmode="decimal"
+                style="width:140px; margin-top:6px; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:16px;"
+                placeholder="0.00"
+              >
+              <div class="hint" style="margin-top:4px;">Se aplica al total</div>
+            </div>
+
+            <div style="text-align:right;">
+              <div class="hint">Descuento</div>
+              <div style="font-weight:900;" id="descuentoMostrado">$0.00</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px dashed #ddd; padding-top:10px;">
+            <div style="font-size:1.05rem; font-weight:900;">Total</div>
+            <div class="total-amount" id="totalPedido">$0.00</div>
+          </div>
+
         </div>
 
         <div id="inputsHidden"></div>
+        <!-- ✅ NUEVO: hidden para backend -->
+        <input type="hidden" name="descuento_total" id="descuentoHidden" value="0">
 
         <button type="submit" class="btn-guardar">
           💾 Guardar pedido
@@ -352,6 +386,14 @@ let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 let editandoUid = null;
 
+/* ✅ NUEVO: descuento global */
+let descuentoTotal = 0;
+function clampMin0(n){
+  n = Number(n);
+  if (isNaN(n) || n < 0) return 0;
+  return n;
+}
+
 function escapeHtml(str){
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -404,6 +446,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const categoria = btn.getAttribute("data-categoria") || "";
 
       agregarProducto(id, nombre, precio, categoria);
+    });
+  }
+
+  /* ✅ NUEVO: listener descuento */
+  const descInput = document.getElementById("descuentoInput");
+  if (descInput){
+    descInput.addEventListener("input", () => {
+      descuentoTotal = clampMin0(descInput.value);
+      renderCarrito();
+    });
+
+    descInput.addEventListener("blur", () => {
+      descuentoTotal = clampMin0(descInput.value);
+      descInput.value = descuentoTotal.toFixed(2);
+      renderCarrito();
     });
   }
 
@@ -591,12 +648,12 @@ function renderCarrito(){
   tbody.innerHTML = "";
   hidden.innerHTML = "";
 
-  let total = 0;
+  let subtotalGeneral = 0;
 
   Object.keys(carrito).forEach(uid => {
     const item = carrito[uid];
     const subtotal = Number(item.precio) * Number(item.cantidad);
-    total += subtotal;
+    subtotalGeneral += subtotal;
 
     const protTxt = (item.custom && item.custom.proteina) ? ("PROT: " + item.custom.proteina) : "";
     const salsaTxt = (item.custom && item.custom.salsa) ? ("SALSA: " + item.custom.salsa) : "";
@@ -647,7 +704,20 @@ function renderCarrito(){
       '<input type="hidden" name="nota[]" value="' + escapeHtml(item.custom ? (item.custom.nota || "") : "") + '">';
   });
 
-  document.getElementById("totalPedido").innerText = "$" + total.toFixed(2);
+  /* ✅ NUEVO: aplicar descuento y actualizar UI */
+  const descuentoAplicado = Math.min(clampMin0(descuentoTotal), subtotalGeneral);
+  const totalFinal = Math.max(0, subtotalGeneral - descuentoAplicado);
+
+  const elSub = document.getElementById("subtotalPedido");
+  if (elSub) elSub.innerText = "$" + subtotalGeneral.toFixed(2);
+
+  const elDesc = document.getElementById("descuentoMostrado");
+  if (elDesc) elDesc.innerText = "-$" + descuentoAplicado.toFixed(2);
+
+  document.getElementById("totalPedido").innerText = "$" + totalFinal.toFixed(2);
+
+  const h = document.getElementById("descuentoHidden");
+  if (h) h.value = descuentoAplicado.toFixed(2);
 }
 
 /* Uber box */
