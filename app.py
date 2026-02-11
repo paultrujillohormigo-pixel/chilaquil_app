@@ -90,6 +90,34 @@ BAR_ON = "#"
 BAR_OFF = "-"
 
 
+def parse_decimal_mx(val: str | None) -> Decimal | None:
+    """
+    Acepta '1', '1.5', '1,5', ' 1 234,50 ', y rechaza 'Na', 'NaN', 'N/A', ''.
+    Devuelve Decimal o None si no es válido.
+    """
+    if val is None:
+        return None
+    s = str(val).strip()
+    if s == "" or s.lower() in {"na", "nan", "n/a", "none", "null", "-"}:
+        return None
+
+    s = re.sub(r"\s+", "", s)
+
+    # coma decimal -> punto
+    if "," in s and "." not in s:
+        s = s.replace(",", ".")
+    else:
+        # comas de miles
+        s = s.replace(",", "")
+
+    try:
+        return Decimal(s)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+
+
 def make_bar(balance: int, goal: int) -> str:
     if goal <= 0:
         return ""
@@ -943,6 +971,7 @@ def productos_set_platillo(producto_id):
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
     conn = get_connection()
+    conn.ping(reconnect=True)  # ✅ reconexión si MySQL reinició
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
@@ -958,11 +987,73 @@ def compras():
                 cantidad_txt = (request.form.get("cantidad") or "").strip()
                 unidad_txt = (request.form.get("unidad") or "").strip()
 
-                if request.form.get("es_insumo") == "1":
+                sumar_stock = (request.form.get("es_insumo") == "1")
+
+                # Si sumar stock, preferimos cantidad_base / unidad_base
+                if sumar_stock:
                     if not cantidad_txt:
                         cantidad_txt = (request.form.get("cantidad_base") or "").strip()
                     if not unidad_txt:
                         unidad_txt = (request.form.get("unidad_base") or "").strip()
+
+                # -------------------------------
+                # ✅ VALIDACIONES (anti 'Na')
+                # -------------------------------
+                if not request.form.get("fecha"):
+                    flash("Fecha requerida.", "error")
+                    return redirect(url_for("compras"))
+
+                if not (request.form.get("lugar") or "").strip():
+                    flash("Lugar requerido.", "error")
+                    return redirect(url_for("compras"))
+
+                if not (request.form.get("concepto") or "").strip():
+                    flash("Concepto requerido.", "error")
+                    return redirect(url_for("compras"))
+
+                # costo total
+                costo_dec = parse_decimal_mx(request.form.get("costo"))
+                if costo_dec is None or costo_dec < 0:
+                    flash("Costo total inválido.", "error")
+                    return redirect(url_for("compras"))
+
+                # cantidad (decimal) obligatoria
+                cantidad_dec = parse_decimal_mx(cantidad_txt)
+                if cantidad_dec is None or cantidad_dec <= 0:
+                    flash("Cantidad inválida. Usa un número mayor a 0.", "error")
+                    return redirect(url_for("compras"))
+
+                if not unidad_txt:
+                    flash("Unidad requerida.", "error")
+                    return redirect(url_for("compras"))
+
+                insumo_id_val = request.form.get("insumo_id") or None
+                cantidad_base_val = request.form.get("cantidad_base") or None
+                unidad_base_val = request.form.get("unidad_base") or None
+                costo_unitario_val = request.form.get("costo_unitario") or None
+
+                # Si sumar stock, exige insumo_id y cantidad_base válida
+                cant_base_dec = None
+                if sumar_stock:
+                    if not (insumo_id_val or "").strip().isdigit():
+                        flash("Para sumar stock debes seleccionar un insumo válido.", "error")
+                        return redirect(url_for("compras"))
+
+                    cant_base_dec = parse_decimal_mx(cantidad_base_val)
+                    if cant_base_dec is None or cant_base_dec <= 0:
+                        flash("Cantidad base inválida (> 0).", "error")
+                        return redirect(url_for("compras"))
+
+                    # normaliza también costo_unitario si viene
+                    cu_dec = parse_decimal_mx(costo_unitario_val)
+                    costo_unitario_val = str(cu_dec) if cu_dec is not None else None
+
+                    # guardamos cantidad/cantidad_base consistente (numérico)
+                    cantidad_txt = str(cant_base_dec)
+                    cantidad_base_val = str(cant_base_dec)
+                else:
+                    # no sumar stock: guarda cantidad numérica (string limpio)
+                    cantidad_txt = str(cantidad_dec)
 
                 cursor.execute("""
                     INSERT INTO insumos_compras
@@ -975,30 +1066,27 @@ def compras():
                     cantidad_txt,
                     unidad_txt,
                     request.form["concepto"],
-                    request.form["costo"],
+                    str(costo_dec),
                     request.form["tipo_costo"],
                     request.form.get("nota", ""),
-                    request.form.get("insumo_id") or None,
-                    request.form.get("cantidad_base") or None,
-                    request.form.get("unidad_base") or None,
-                    request.form.get("costo_unitario") or None,
-                    1 if (request.form.get("es_insumo") == "1") else 0,
+                    int(insumo_id_val) if (insumo_id_val and str(insumo_id_val).isdigit()) else None,
+                    cantidad_base_val,
+                    unidad_base_val,
+                    costo_unitario_val,
+                    1 if sumar_stock else 0,
                 ))
                 compra_id = cursor.lastrowid
 
-                if (
-                    request.form.get("es_insumo") == "1"
-                    and (request.form.get("insumo_id") or "").strip()
-                    and (request.form.get("cantidad_base") or "").strip()
-                ):
+                # ✅ si sumar stock: crear movimiento entrada_compra
+                if sumar_stock and insumo_id_val and cant_base_dec is not None:
                     cursor.execute("""
                         INSERT IGNORE INTO inventario_movimientos
                             (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
                         VALUES
                             (%s, %s, 'entrada_compra', 'insumos_compras', %s, %s)
                     """, (
-                        int(request.form["insumo_id"]),
-                        str(Decimal(request.form["cantidad_base"])),
+                        int(insumo_id_val),
+                        str(cant_base_dec),
                         compra_id,
                         f"Entrada por compra #{compra_id}",
                     ))
