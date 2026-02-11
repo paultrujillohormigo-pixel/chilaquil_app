@@ -341,27 +341,36 @@ function validar(e){
   const isOtro = qs("esOtro").checked;
 
   if (!sumarStock){
-    // modo normal: requiere cantidad/unidad texto
-    if (!norm(qs("cantidadTxt").value) || !norm(qs("unidadTxt").value)){
-      alert("Completa Cantidad y Unidad (texto libre) si NO estás sumando stock.");
+    // modo normal: cantidad debe ser número > 0, unidad requerida
+    const cantStr = norm(qs("cantidadTxt").value);
+
+    // Soporta "1,5" (coma decimal)
+    const cantNum = Number(cantStr.replace(",", "."));
+
+    if (!cantStr || !Number.isFinite(cantNum) || !(cantNum > 0) || !norm(qs("unidadTxt").value)){
+      alert("Completa Cantidad (número > 0) y Unidad.");
       e.preventDefault();
       return false;
     }
+
     if (isOtro && !norm(qs("otroTexto").value)){
       alert("Escribe el nombre del concepto en “Otro”.");
       e.preventDefault();
       return false;
     }
   } else {
-    // modo stock: requiere insumo + cantidad_base
+    // modo stock: requiere insumo + cantidad_base numérica > 0
     const insumoId = norm(qs("insumoSelect").value);
-    const cantBase = Number(qs("cantidadBase").value || "0");
+    const cantBaseStr = norm(qs("cantidadBase").value);
+    const cantBase = Number(cantBaseStr.replace(",", "."));
+
     if (!insumoId){
       alert("Para sumar stock debes seleccionar un insumo existente.");
       e.preventDefault();
       return false;
     }
-    if (!(cantBase > 0)){
+
+    if (!cantBaseStr || !Number.isFinite(cantBase) || !(cantBase > 0)){
       alert("Ingresa una cantidad base válida (> 0) para sumar stock.");
       e.preventDefault();
       return false;
@@ -370,6 +379,7 @@ function validar(e){
 
   return true;
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   togglePanels();
