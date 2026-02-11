@@ -341,10 +341,8 @@ function validar(e){
   const isOtro = qs("esOtro").checked;
 
   if (!sumarStock){
-    // modo normal: cantidad debe ser número > 0, unidad requerida
+    // cantidad debe ser número > 0, unidad requerida
     const cantStr = norm(qs("cantidadTxt").value);
-
-    // Soporta "1,5" (coma decimal)
     const cantNum = Number(cantStr.replace(",", "."));
 
     if (!cantStr || !Number.isFinite(cantNum) || !(cantNum > 0) || !norm(qs("unidadTxt").value)){
@@ -379,6 +377,7 @@ function validar(e){
 
   return true;
 }
+
 
 
 document.addEventListener("DOMContentLoaded", () => {
