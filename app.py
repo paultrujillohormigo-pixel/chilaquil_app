@@ -332,8 +332,9 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
 # =========================================================
 
 @app.route("/")
-def index():
-    return redirect(url_for("nuevo_pedido"))
+
+def home():
+    return render_template("index.html")
 
 
 # ================== PEDIDOS ABIERTOS ==================
