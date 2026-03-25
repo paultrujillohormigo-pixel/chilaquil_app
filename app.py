@@ -16,7 +16,9 @@ app.secret_key = "super_secret_key"  # cámbiala en prod
 app.register_blueprint(costeo_bp)
 
 
-
+@app.route("/test")
+def test():
+    return "FUNCIONA"
 
 @app.route("/landing")
 def landing():
