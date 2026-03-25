@@ -16,7 +16,7 @@ app.secret_key = "super_secret_key"  # cámbiala en prod
 app.register_blueprint(costeo_bp)
 
 @app.route("/")
-def api_home():
+def index():
     return render_template("index.html")
 
 
