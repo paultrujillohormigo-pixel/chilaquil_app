@@ -16,9 +16,7 @@ app.secret_key = "super_secret_key"  # cámbiala en prod
 app.register_blueprint(costeo_bp)
 
 
-@app.route("/dashboard")
-def dashboard():
-    return render_template("dashboard.html")
+
 
 @app.route("/landing")
 def landing():
