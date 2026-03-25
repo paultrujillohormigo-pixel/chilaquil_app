@@ -1,41 +1,212 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Señor Chilaquil</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial;
-            background: linear-gradient(135deg, #ff3c00, #ffcc00);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-        }
-        h1 {
-            font-size: 3rem;
-        }
-        a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: white;
-            color: #ff3c00;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Señor Chilaquil</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --crema: #f4e8c7;
+      --rojo: #b32417;
+      --negro: #010101;
+      --rojo-oscuro: #6f150c;
+      --blanco: #f2efe8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    body {
+      background: var(--blanco);
+      color: var(--negro);
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: var(--negro);
+      color: var(--crema);
+    }
+
+    nav h1 {
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    nav a {
+      color: var(--crema);
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 600;
+    }
+
+    /* HERO */
+    .hero {
+      height: 90vh;
+      background: url('https://images.unsplash.com/photo-1604908176997-4317e4a3dc75') center/cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      position: relative;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero h2 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      background: var(--rojo);
+      padding: 15px 30px;
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: var(--rojo-oscuro);
+    }
+
+    /* SECCION PRODUCTOS */
+    .section {
+      padding: 80px 40px;
+      text-align: center;
+      background: var(--crema);
+    }
+
+    .section h3 {
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+      color: var(--rojo);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    .card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .card h4 {
+      padding: 15px;
+    }
+
+    /* PROMO */
+    .promo {
+      background: var(--rojo);
+      color: white;
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    .promo h3 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--negro);
+      color: var(--crema);
+      text-align: center;
+      padding: 30px;
+    }
+
+  </style>
 </head>
 <body>
+
+  <nav>
+    <h1>SEÑOR CHILAQUIL</h1>
     <div>
-        <h1>Señor Chilaquil 🔥</h1>
-        <p>Los mejores chilaquiles de Aguascalientes</p>
-        <a href="https://wa.me/521XXXXXXXXXX">Ordena por WhatsApp</a>
+      <a href="#menu">Menú</a>
+      <a href="#promo">Promos</a>
+      <a href="https://wa.me/524497419166">Ordenar</a>
     </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h2>LOS CHILAQUILES MÁS CABRONES DE AGUASCALIENTES</h2>
+      <p>Rápido, delicioso y directo hasta tu puerta</p>
+      <a href="https://wa.me/524497419166" class="btn">Ordenar ahora</a>
+    </div>
+  </section>
+
+  <section id="menu" class="section">
+    <h3>Lo más pedido</h3>
+
+    <div class="cards">
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1625944192186-8c3c1c92f651">
+        <h4>Chilaquiles Verdes</h4>
+      </div>
+
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1617196034183-421b4917c92d">
+        <h4>Chilaquiles Rojos</h4>
+      </div>
+
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1604908176997-4317e4a3dc75">
+        <h4>Combo con proteína</h4>
+      </div>
+    </div>
+  </section>
+
+  <section id="promo" class="promo">
+    <h3>🔥 Promo del día</h3>
+    <p>Compra unos chilaquiles y llévate bebida GRATIS</p>
+    <a href="https://wa.me/524497419166" class="btn">Aprovechar</a>
+  </section>
+
+  <footer>
+    <p>© 2026 Señor Chilaquil - Todos los derechos reservados</p>
+  </footer>
+
 </body>
 </html>
