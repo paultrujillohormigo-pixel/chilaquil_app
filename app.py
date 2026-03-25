@@ -342,10 +342,6 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
 
 
     
-@app.route("/")
-def api_home():
-    return render_template("dashboard.html")
-
 
 # ================== PEDIDOS ABIERTOS ==================
 @app.route("/pedidos_abiertos")
