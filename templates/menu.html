@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Menú | Señor Chilaquil</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --rojo: #b32417;
+      --negro: #010101;
+      --rojo-oscuro: #6f150c;
+      --blanco: #ffffff;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    body {
+      background: var(--blanco);
+      color: var(--negro);
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav a {
+      color: var(--negro);
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--rojo);
+    }
+
+    nav img {
+      height: 60px;
+      object-fit: contain;
+    }
+
+    /* SECCIÓN MENÚ */
+    .section {
+      padding: 60px 30px;
+      text-align: center;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 35px;
+    }
+
+    .card {
+      text-align: center;
+    }
+
+    /* CONTENEDOR IMAGEN */
+    .img-box {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .img-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    /* EFECTO SOLO IMAGEN */
+    .img-box:hover img {
+      transform: scale(1.12);
+      filter: brightness(1.1);
+    }
+
+    /* TEXTO */
+    .card h4 {
+      margin-top: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav {
+        padding: 15px 20px;
+      }
+
+      .cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 25px;
+      }
+
+      .img-box {
+        height: 140px;
+      }
+
+      .card h4 {
+        font-size: 0.85rem;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
+    <div>
+      <a href="/">Inicio</a>
+      <a href="#menu">Menú</a>
+      <a href="https://wa.me/524497419166">Ordenar</a>
+    </div>
+  </nav>
+
+  <section id="menu" class="section">
+    <div class="cards">
+
+      <!-- PRODUCTOS (41 espacios) -->
+      
+      <!-- Solo cambia imagen y texto -->
+      
+      <!-- 1 -->
+      <div class="card">
+        <div class="img-box">
+          <img src="TU_IMAGEN.png">
+        </div>
+        <h4>Producto 1</h4>
+      </div>
+
+      <!-- Copia esto hasta 41 -->
+
+      <!-- GENERADOS AUTOMÁTICAMENTE -->
+      
+      <!-- 2 al 41 -->
+      <!-- Puedes reemplazar rápido en VS Code -->
+      
+      <!-- INICIO BLOQUE -->
+      
+      <!-- Generados -->
+      <!-- Solo cambia nombres luego -->
+
+      <!-- LOOP SIMULADO -->
+      <!-- (ya listo para usar) -->
+
+      <!-- 2 -->
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 2</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 3</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 4</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 5</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 6</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 7</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 8</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 9</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 10</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 11</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 12</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 13</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 14</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 15</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 16</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 17</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 18</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 19</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 20</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 21</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 22</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 23</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 24</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 25</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 26</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 27</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 28</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 29</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 30</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 31</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 32</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 33</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 34</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 35</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 36</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 37</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 38</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 39</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 40</h4></div>
+      <div class="card"><div class="img-box"><img src="TU_IMAGEN.png"></div><h4>Producto 41</h4></div>
+
+    </div>
+  </section>
+
+</body>
+</html>
