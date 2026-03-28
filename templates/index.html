@@ -9,11 +9,11 @@
 
   <style>
     :root {
-      --crema: #f4e8c7;
       --rojo: #b32417;
       --negro: #010101;
       --rojo-oscuro: #6f150c;
-      --blanco: #f2efe8;
+      --blanco: #ffffff;
+      --gris-suave: #f5f5f5;
     }
 
     * {
@@ -34,18 +34,27 @@
       justify-content: space-between;
       align-items: center;
       padding: 20px 40px;
-      background: var(--crema);
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* 🔥 sombra */
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     nav a {
-      color: var(--rojo-oscuro);
+      color: var(--negro);
       text-decoration: none;
       margin-left: 20px;
       font-weight: 600;
+      transition: 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--rojo);
     }
 
     nav img {
-      height: 70px;
+      height: 60px;
       object-fit: contain;
     }
 
@@ -53,35 +62,32 @@
     .hero {
       height: 90vh;
       background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
+      
       display: flex;
-      align-items: center;
+      align-items: flex-end; /* 🔥 contenido abajo */
       justify-content: center;
+
+      padding-bottom: 60px;
       text-align: center;
       color: white;
-      position: relative;
-    }
-
-    .hero::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
     }
 
     .hero-content {
-      position: relative;
-      z-index: 2;
+      max-width: 800px;
+      background: rgba(0,0,0,0.35); /* leve fondo para legibilidad */
+      padding: 20px 30px;
+      border-radius: 10px;
     }
 
     .hero h2 {
-      font-size: 3.5rem;
+      font-size: 3.2rem;
       font-weight: 800;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .hero p {
       font-size: 1.2rem;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     .btn {
@@ -102,7 +108,7 @@
     .section {
       padding: 80px 40px;
       text-align: center;
-      background: var(--crema);
+      background: var(--gris-suave);
     }
 
     .section h3 {
@@ -121,7 +127,12 @@
       background: white;
       border-radius: 15px;
       overflow: hidden;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
     }
 
     .card img {
@@ -135,20 +146,20 @@
     }
 
     /* PROMO SOLO IMAGEN */
- .promo {
-  background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
-  background-size: contain; /* IMPORTANTE */
-  background-position: center;
-  background-repeat: no-repeat;
-
-  aspect-ratio: 16 / 9; /* ajusta si es necesario */
-  width: 100%;
-}
+    .promo {
+      background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      background-color: white;
+    }
 
     /* FOOTER */
     footer {
       background: var(--negro);
-      color: var(--crema);
+      color: white;
       text-align: center;
       padding: 30px;
     }
@@ -195,7 +206,6 @@
     </div>
   </section>
 
-  <!-- SOLO IMAGEN -->
   <section id="promo" class="promo"></section>
 
   <footer>
