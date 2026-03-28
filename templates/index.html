@@ -35,12 +35,6 @@
       align-items: center;
       padding: 20px 40px;
       background: var(--crema);
-      color: var(--rojo-oscuro);
-    }
-
-    nav h1 {
-      font-weight: 800;
-      letter-spacing: 1px;
     }
 
     nav a {
@@ -50,10 +44,15 @@
       font-weight: 600;
     }
 
+    nav img {
+      height: 70px;
+      object-fit: contain;
+    }
+
     /* HERO */
     .hero {
       height: 90vh;
-      background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover;
+      background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -135,19 +134,13 @@
       padding: 15px;
     }
 
-    /* PROMO */
+    /* PROMO SOLO IMAGEN */
     .promo {
-      
-      background: "https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png";
-      color: white;
-      padding: 80px 40px 60px;
-      text-align: center;
-      position: relative;
-    }
-
-    .promo h3 {
-      font-size: 2.5rem;
-      margin-bottom: 20px;
+      background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      height: 400px; /* ajustable */
     }
 
     /* FOOTER */
@@ -158,12 +151,6 @@
       padding: 30px;
     }
 
-          nav img {
-        height: 100px;
-        width: auto;
-        object-fit: contain;
-      }
-    
   </style>
 </head>
 <body>
@@ -206,11 +193,8 @@
     </div>
   </section>
 
-  <section id="promo" class="promo">
-    <h3>🔥 Promo del día</h3>
-    <p style="margin-bottom:40px;">Compra unos chilaquiles y llévate bebida GRATIS</p>
-    <a href="https://wa.me/524497419166" class="btn" style="position: absolute; left: 50%; bottom: -25px; transform: translateX(-50%);">Aprovechar</a>
-  </section>
+  <!-- SOLO IMAGEN -->
+  <section id="promo" class="promo"></section>
 
   <footer>
     <p>© 2026 Señor Chilaquil - Todos los derechos reservados</p>
