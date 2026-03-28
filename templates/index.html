@@ -135,13 +135,15 @@
     }
 
     /* PROMO SOLO IMAGEN */
-    .promo {
-      background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      height: 400px; /* ajustable */
-    }
+ .promo {
+  background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
+  background-size: contain; /* IMPORTANTE */
+  background-position: center;
+  background-repeat: no-repeat;
+
+  aspect-ratio: 16 / 9; /* ajusta si es necesario */
+  width: 100%;
+}
 
     /* FOOTER */
     footer {
