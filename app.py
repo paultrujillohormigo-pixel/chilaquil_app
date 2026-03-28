@@ -19,6 +19,11 @@ app.register_blueprint(costeo_bp)
 def index():
     return render_template("index.html")
 
+@app.route('/menu')
+def menu():
+    return render_template('menu.html')
+
+
 
 # =========================================================
 # ================== HELPERS ==============================
