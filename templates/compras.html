@@ -2,58 +2,42 @@
 {% block content %}
 
 <header class="page-head">
-  <div>
-    <h2 class="page-title">🧾 Compras</h2>
-  </div>
+  <h2>🧾 Compras</h2>
 </header>
 
 <div class="layout-2col">
 
   <section class="card">
-    <div class="card-head">
-      <h3>Registrar compra</h3>
-    </div>
-
     <form method="post" id="compraForm" class="form">
 
-      <!-- ===== MODO ===== -->
-      <div class="section">
-        <div class="toggles">
+      <!-- MODO -->
+      <div class="section toggles">
+        <label class="toggle">
+          <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
+          <span>Sumar stock</span>
+        </label>
 
-          <label class="toggle">
-            <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
-            <span class="toggle-ui"></span>
-            <span><strong>Sumar stock</strong></span>
-          </label>
-
-          <label class="toggle" id="toggleOtroLabel">
-            <input type="checkbox" id="esOtro" name="es_otro" value="1">
-            <span class="toggle-ui"></span>
-            <span><strong>Otro</strong></span>
-          </label>
-
-        </div>
+        <label class="toggle">
+          <input type="checkbox" id="esOtro" name="es_otro" value="1">
+          <span>Otro</span>
+        </label>
       </div>
 
-      <!-- ===== DATOS ===== -->
-      <div class="section">
-        <div class="grid">
+      <!-- DATOS -->
+      <div class="section grid">
+        <input type="date" name="fecha" required>
+        <input type="text" name="lugar" placeholder="Lugar" required>
 
-          <input type="date" name="fecha" required>
-          <input type="text" name="lugar" placeholder="Lugar" required>
+        <select name="tipo_costo" required>
+          <option value="insumos">Insumos</option>
+          <option value="operativo">Operativo</option>
+          <option value="servicios">Servicios</option>
+        </select>
 
-          <select name="tipo_costo" required>
-            <option value="insumos">Insumos</option>
-            <option value="operativo">Operativo</option>
-            <option value="servicios">Servicios</option>
-          </select>
-
-          <input type="number" name="costo" step="0.01" required placeholder="Costo">
-
-        </div>
+        <input type="number" name="costo" step="0.01" required placeholder="Costo">
       </div>
 
-      <!-- ===== TARJETAS INSUMOS ===== -->
+      <!-- TARJETAS -->
       <div class="section">
         <div class="cards" id="insumoCards">
 
@@ -78,25 +62,25 @@
         <input type="hidden" name="concepto" id="concepto">
       </div>
 
-      <!-- ===== OTRO ===== -->
+      <!-- OTRO -->
       <div class="section" id="otroWrap" style="display:none;">
         <input type="text" id="otroTexto" placeholder="Escribe el concepto...">
       </div>
 
-      <!-- ===== TEXTO ===== -->
+      <!-- TEXTO -->
       <div class="section" id="textoFields">
         <input type="number" name="cantidad" id="cantidadTxt" placeholder="Cantidad">
         <input type="text" name="unidad" id="unidadTxt" placeholder="Unidad">
       </div>
 
-      <!-- ===== STOCK ===== -->
+      <!-- STOCK -->
       <div class="section" id="stockPanel" style="display:none;">
         <input type="number" name="cantidad_base" id="cantidadBase" placeholder="Cantidad base">
         <input type="text" name="unidad_base" id="unidadBase" readonly>
         <input type="number" name="costo_unitario" id="costoUnitario" readonly>
       </div>
 
-      <button type="submit">Guardar</button>
+      <button type="submit">Guardar compra</button>
 
     </form>
   </section>
@@ -104,30 +88,110 @@
 </div>
 
 <style>
+
+/* ===== MOBILE FIRST ===== */
+
+body{
+  background:#f6f7f9;
+}
+
+.layout-2col{
+  display:flex;
+  flex-direction:column;
+}
+
+/* TARJETAS */
 .cards{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
+  grid-template-columns:repeat(2, 1fr);
   gap:10px;
+}
+
+@media (min-width:768px){
+  .cards{
+    grid-template-columns:repeat(3, 1fr);
+  }
+}
+
+@media (min-width:1100px){
+  .cards{
+    grid-template-columns:repeat(4, 1fr);
+  }
 }
 
 .card-option{
   border:1px solid #ddd;
-  padding:10px;
-  border-radius:10px;
-  cursor:pointer;
+  border-radius:14px;
+  padding:14px;
   background:#fff;
+  cursor:pointer;
+
+  min-height:70px;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+
+  transition:.12s;
+}
+
+.card-option:active{
+  transform:scale(.97);
 }
 
 .card-option.active{
   border:2px solid #000;
+  background:#f2f2f2;
 }
 
 .card-option.otro{
   border-style:dashed;
 }
+
+/* INPUTS */
+input, select{
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  border-radius:12px;
+  border:1px solid #ddd;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+/* SECCIONES */
+.section{
+  padding:14px;
+}
+
+/* BOTÓN FIJO */
+button{
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  padding:16px;
+  font-size:1.1rem;
+  font-weight:bold;
+  border:none;
+  background:#000;
+  color:#fff;
+  z-index:999;
+}
+
+.form{
+  padding-bottom:90px;
+}
+
 </style>
 
 <script>
+
 function qs(id){ return document.getElementById(id); }
 
 function selectCard(card){
@@ -139,6 +203,12 @@ function selectCard(card){
     qs("insumoSelect").value = "";
     qs("otroWrap").style.display = "block";
     qs("concepto").value = "Otro";
+
+    setTimeout(()=>{
+      qs("otroTexto").focus();
+      qs("otroWrap").scrollIntoView({behavior:"smooth", block:"center"});
+    },100);
+
   }else{
     qs("esOtro").checked = false;
     qs("otroWrap").style.display = "none";
@@ -157,6 +227,10 @@ function togglePanels(){
 
   qs("stockPanel").style.display = (stock && hasInsumo) ? "block" : "none";
   qs("textoFields").style.display = stock ? "none" : "block";
+
+  if(qs("stockPanel").style.display === "block"){
+    qs("stockPanel").scrollIntoView({behavior:"smooth", block:"center"});
+  }
 }
 
 function calcCostoUnitario(){
@@ -179,6 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("input[name='costo']").addEventListener("input", calcCostoUnitario);
 
 });
+
 </script>
 
 {% endblock %}
