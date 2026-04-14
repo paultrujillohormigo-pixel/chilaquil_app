@@ -1,22 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ===== HEADER CON HAMBURGUESA ===== -->
 <header class="mobile-header">
   <button id="menuBtn">☰</button>
   <h2>Compras</h2>
 </header>
 
-<!-- ===== MENÚ ===== -->
 <nav id="mobileMenu" class="mobile-menu">
   <a href="#">Dashboard</a>
   <a href="#">Inventario</a>
   <a href="#">Compras</a>
-  <a href="#">Reportes</a>
 </nav>
 
 <div class="layout">
 
+  <!-- FORM -->
   <form method="post" id="compraForm" class="form">
 
     <!-- MODO -->
@@ -30,13 +28,13 @@
       <input type="date" name="fecha" required>
       <input type="text" name="lugar" placeholder="Lugar" required>
 
-      <select name="tipo_costo">
+      <select name="tipo_costo" required>
         <option value="insumos">Insumos</option>
         <option value="operativo">Operativo</option>
         <option value="servicios">Servicios</option>
       </select>
 
-      <input type="number" name="costo" placeholder="Costo">
+      <input type="number" name="costo" step="0.01" required placeholder="Costo">
     </div>
 
     <!-- TARJETAS -->
@@ -53,7 +51,6 @@
         </div>
         {% endfor %}
 
-        <!-- OTRO COMO CARD -->
         <div class="card-option otro" id="cardOtro">
           <strong>+ Otro</strong>
           <span>No está en la lista</span>
@@ -83,64 +80,71 @@
       <input type="number" name="costo_unitario" id="costoUnitario" readonly>
     </div>
 
-    <!-- BOTÓN FIJO -->
     <button type="submit" class="cta">Guardar compra</button>
 
   </form>
+
+  <!-- ÚLTIMAS COMPRAS -->
+  <div class="section card">
+    <h3>Últimas compras</h3>
+
+    {% if compras %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Concepto</th>
+              <th>Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in compras %}
+              <tr>
+                <td>{{ c.fecha }}</td>
+                <td>{{ c.concepto }}</td>
+                <td>{{ c.costo | money }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No hay compras aún</p>
+    {% endif %}
+  </div>
 
 </div>
 
 <style>
 
-/* HEADER */
+body{background:#f6f7f9;font-family:sans-serif;}
+
 .mobile-header{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:12px;
-  background:#fff;
-  border-bottom:1px solid #eee;
+  display:flex;align-items:center;gap:10px;
+  padding:12px;background:#fff;border-bottom:1px solid #eee;
 }
 
-#menuBtn{
-  font-size:20px;
-  border:none;
-  background:none;
-}
+#menuBtn{font-size:20px;border:none;background:none;}
 
-/* MENÚ */
 .mobile-menu{
-  position:fixed;
-  top:0;
-  left:-100%;
-  width:70%;
-  height:100%;
-  background:#fff;
-  padding:20px;
-  display:flex;
-  flex-direction:column;
-  gap:15px;
-  transition:.3s;
-  z-index:1000;
+  position:fixed;top:0;left:-100%;
+  width:70%;height:100%;
+  background:#fff;padding:20px;
+  display:flex;flex-direction:column;gap:15px;
+  transition:.3s;z-index:1000;
 }
 
-.mobile-menu.active{
-  left:0;
-}
+.mobile-menu.active{left:0;}
 
-/* LAYOUT */
-.layout{
-  padding:10px;
-}
+.layout{padding:10px;}
 
-/* GRID */
 .grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
 }
 
-/* TARJETAS */
 .cards{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -152,50 +156,40 @@
 }
 
 .card-option{
-  padding:14px;
-  border:1px solid #ddd;
-  border-radius:12px;
-  background:#fff;
-  cursor:pointer;
+  padding:14px;border:1px solid #ddd;border-radius:12px;
+  background:#fff;cursor:pointer;
 }
 
 .card-option.active{
-  border:2px solid #000;
+  border:2px solid #000;background:#f2f2f2;
 }
 
-.card-option.otro{
-  border-style:dashed;
+.card-option.otro{border-style:dashed;}
+
+input,select{
+  width:100%;padding:12px;font-size:16px;
+  border-radius:10px;border:1px solid #ddd;
 }
 
-/* INPUTS */
-input, select{
-  width:100%;
-  padding:12px;
-  font-size:16px;
-  border-radius:10px;
-  border:1px solid #ddd;
-}
-
-/* CTA */
 .cta{
-  position:fixed;
-  bottom:0;
-  left:0;
+  position:fixed;bottom:0;left:0;width:100%;
+  padding:16px;background:#000;color:#fff;
+  font-size:18px;border:none;
+}
+
+.form{padding-bottom:90px;}
+
+.section{margin-bottom:12px;}
+
+.table{
   width:100%;
-  padding:16px;
-  background:#000;
-  color:#fff;
-  font-size:18px;
-  border:none;
+  border-collapse:collapse;
 }
 
-/* SPACING */
-.form{
-  padding-bottom:90px;
-}
-
-.section{
-  margin-bottom:12px;
+.table th,.table td{
+  padding:8px;
+  border-bottom:1px solid #ddd;
+  font-size:14px;
 }
 
 </style>
@@ -209,7 +203,7 @@ qs("menuBtn").addEventListener("click",()=>{
   qs("mobileMenu").classList.toggle("active");
 });
 
-/* CARDS */
+/* SELECT CARD */
 function selectCard(card){
   document.querySelectorAll(".card-option").forEach(c=>c.classList.remove("active"));
   card.classList.add("active");
@@ -218,6 +212,8 @@ function selectCard(card){
     qs("esOtro").checked=true;
     qs("otroWrap").style.display="block";
     qs("insumoSelect").value="";
+    qs("concepto").value = qs("otroTexto").value || "Otro";
+    setTimeout(()=>qs("otroTexto").focus(),100);
   }else{
     qs("esOtro").checked=false;
     qs("otroWrap").style.display="none";
@@ -237,8 +233,39 @@ function togglePanels(){
   qs("textoFields").style.display=stock?"none":"block";
 }
 
+function calcCostoUnitario(){
+  const costo=parseFloat(document.querySelector("input[name='costo']").value||0);
+  const cant=parseFloat(qs("cantidadBase").value||0);
+
+  if(cant>0){
+    qs("costoUnitario").value=(costo/cant).toFixed(4);
+  }
+}
+
 document.querySelectorAll(".card-option").forEach(c=>{
   c.addEventListener("click",()=>selectCard(c));
+});
+
+qs("esInsumo").addEventListener("change",togglePanels);
+qs("cantidadBase").addEventListener("input",calcCostoUnitario);
+document.querySelector("input[name='costo']").addEventListener("input",calcCostoUnitario);
+
+qs("otroTexto").addEventListener("input", ()=>{
+  qs("concepto").value = qs("otroTexto").value || "Otro";
+});
+
+qs("compraForm").addEventListener("submit", function(e){
+
+  if(qs("esOtro").checked && !qs("otroTexto").value.trim()){
+    alert("Escribe el concepto en 'Otro'");
+    e.preventDefault();
+    return;
+  }
+
+  if(!qs("concepto").value){
+    qs("concepto").value = "Compra";
+  }
+
 });
 
 </script>
