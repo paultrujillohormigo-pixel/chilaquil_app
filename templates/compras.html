@@ -1,147 +1,166 @@
 {% extends "base.html" %}
 {% block content %}
 
-<header class="page-head">
-  <h2>🧾 Compras</h2>
+<!-- ===== HEADER CON HAMBURGUESA ===== -->
+<header class="mobile-header">
+  <button id="menuBtn">☰</button>
+  <h2>Compras</h2>
 </header>
 
-<div class="layout-2col">
+<!-- ===== MENÚ ===== -->
+<nav id="mobileMenu" class="mobile-menu">
+  <a href="#">Dashboard</a>
+  <a href="#">Inventario</a>
+  <a href="#">Compras</a>
+  <a href="#">Reportes</a>
+</nav>
 
-  <section class="card">
-    <form method="post" id="compraForm" class="form">
+<div class="layout">
 
-      <!-- MODO -->
-      <div class="section toggles">
-        <label class="toggle">
-          <input type="checkbox" id="esInsumo" name="es_insumo" value="1">
-          <span>Sumar stock</span>
-        </label>
+  <form method="post" id="compraForm" class="form">
 
-        <label class="toggle">
-          <input type="checkbox" id="esOtro" name="es_otro" value="1">
-          <span>Otro</span>
-        </label>
-      </div>
+    <!-- MODO -->
+    <div class="section toggles">
+      <label><input type="checkbox" id="esInsumo" name="es_insumo"> Sumar stock</label>
+      <label><input type="checkbox" id="esOtro" name="es_otro"> Otro</label>
+    </div>
 
-      <!-- DATOS -->
-      <div class="section grid">
-        <input type="date" name="fecha" required>
-        <input type="text" name="lugar" placeholder="Lugar" required>
+    <!-- DATOS -->
+    <div class="section grid">
+      <input type="date" name="fecha" required>
+      <input type="text" name="lugar" placeholder="Lugar" required>
 
-        <select name="tipo_costo" required>
-          <option value="insumos">Insumos</option>
-          <option value="operativo">Operativo</option>
-          <option value="servicios">Servicios</option>
-        </select>
+      <select name="tipo_costo">
+        <option value="insumos">Insumos</option>
+        <option value="operativo">Operativo</option>
+        <option value="servicios">Servicios</option>
+      </select>
 
-        <input type="number" name="costo" step="0.01" required placeholder="Costo">
-      </div>
+      <input type="number" name="costo" placeholder="Costo">
+    </div>
 
-      <!-- TARJETAS -->
-      <div class="section">
-        <div class="cards" id="insumoCards">
+    <!-- TARJETAS -->
+    <div class="section">
+      <div class="cards" id="insumoCards">
 
-          {% for ins in insumos %}
-          <div class="card-option"
-               data-id="{{ ins.id }}"
-               data-unidad="{{ ins.unidad_base }}"
-               data-nombre="{{ ins.nombre }}">
-            <strong>{{ ins.nombre }}</strong>
-            <span>{{ ins.unidad_base }}</span>
-          </div>
-          {% endfor %}
+        {% for ins in insumos %}
+        <div class="card-option"
+             data-id="{{ ins.id }}"
+             data-unidad="{{ ins.unidad_base }}"
+             data-nombre="{{ ins.nombre }}">
+          <strong>{{ ins.nombre }}</strong>
+          <span>{{ ins.unidad_base }}</span>
+        </div>
+        {% endfor %}
 
-          <div class="card-option otro" id="cardOtro">
-            <strong>+ Otro</strong>
-            <span>No está en la lista</span>
-          </div>
-
+        <!-- OTRO COMO CARD -->
+        <div class="card-option otro" id="cardOtro">
+          <strong>+ Otro</strong>
+          <span>No está en la lista</span>
         </div>
 
-        <input type="hidden" name="insumo_id" id="insumoSelect">
-        <input type="hidden" name="concepto" id="concepto">
       </div>
 
-      <!-- OTRO -->
-      <div class="section" id="otroWrap" style="display:none;">
-        <input type="text" id="otroTexto" placeholder="Escribe el concepto...">
-      </div>
+      <input type="hidden" name="insumo_id" id="insumoSelect">
+      <input type="hidden" name="concepto" id="concepto">
+    </div>
 
-      <!-- TEXTO -->
-      <div class="section" id="textoFields">
-        <input type="number" name="cantidad" id="cantidadTxt" placeholder="Cantidad">
-        <input type="text" name="unidad" id="unidadTxt" placeholder="Unidad">
-      </div>
+    <!-- OTRO -->
+    <div class="section" id="otroWrap" style="display:none;">
+      <input type="text" id="otroTexto" placeholder="Escribe el concepto...">
+    </div>
 
-      <!-- STOCK -->
-      <div class="section" id="stockPanel" style="display:none;">
-        <input type="number" name="cantidad_base" id="cantidadBase" placeholder="Cantidad base">
-        <input type="text" name="unidad_base" id="unidadBase" readonly>
-        <input type="number" name="costo_unitario" id="costoUnitario" readonly>
-      </div>
+    <!-- TEXTO -->
+    <div class="section" id="textoFields">
+      <input type="number" name="cantidad" id="cantidadTxt" placeholder="Cantidad">
+      <input type="text" name="unidad" id="unidadTxt" placeholder="Unidad">
+    </div>
 
-      <button type="submit">Guardar compra</button>
+    <!-- STOCK -->
+    <div class="section" id="stockPanel" style="display:none;">
+      <input type="number" name="cantidad_base" id="cantidadBase" placeholder="Cantidad base">
+      <input type="text" name="unidad_base" id="unidadBase" readonly>
+      <input type="number" name="costo_unitario" id="costoUnitario" readonly>
+    </div>
 
-    </form>
-  </section>
+    <!-- BOTÓN FIJO -->
+    <button type="submit" class="cta">Guardar compra</button>
+
+  </form>
 
 </div>
 
 <style>
 
-/* ===== MOBILE FIRST ===== */
-
-body{
-  background:#f6f7f9;
+/* HEADER */
+.mobile-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  background:#fff;
+  border-bottom:1px solid #eee;
 }
 
-.layout-2col{
+#menuBtn{
+  font-size:20px;
+  border:none;
+  background:none;
+}
+
+/* MENÚ */
+.mobile-menu{
+  position:fixed;
+  top:0;
+  left:-100%;
+  width:70%;
+  height:100%;
+  background:#fff;
+  padding:20px;
   display:flex;
   flex-direction:column;
+  gap:15px;
+  transition:.3s;
+  z-index:1000;
+}
+
+.mobile-menu.active{
+  left:0;
+}
+
+/* LAYOUT */
+.layout{
+  padding:10px;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
 }
 
 /* TARJETAS */
 .cards{
   display:grid;
-  grid-template-columns:repeat(2, 1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:10px;
 }
 
-@media (min-width:768px){
-  .cards{
-    grid-template-columns:repeat(3, 1fr);
-  }
-}
-
-@media (min-width:1100px){
-  .cards{
-    grid-template-columns:repeat(4, 1fr);
-  }
+@media(min-width:768px){
+  .cards{grid-template-columns:repeat(3,1fr);}
 }
 
 .card-option{
-  border:1px solid #ddd;
-  border-radius:14px;
   padding:14px;
+  border:1px solid #ddd;
+  border-radius:12px;
   background:#fff;
   cursor:pointer;
-
-  min-height:70px;
-
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-
-  transition:.12s;
-}
-
-.card-option:active{
-  transform:scale(.97);
 }
 
 .card-option.active{
   border:2px solid #000;
-  background:#f2f2f2;
 }
 
 .card-option.otro{
@@ -153,39 +172,30 @@ input, select{
   width:100%;
   padding:12px;
   font-size:16px;
-  border-radius:12px;
+  border-radius:10px;
   border:1px solid #ddd;
 }
 
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-/* SECCIONES */
-.section{
-  padding:14px;
-}
-
-/* BOTÓN FIJO */
-button{
+/* CTA */
+.cta{
   position:fixed;
   bottom:0;
   left:0;
   width:100%;
   padding:16px;
-  font-size:1.1rem;
-  font-weight:bold;
-  border:none;
   background:#000;
   color:#fff;
-  z-index:999;
+  font-size:18px;
+  border:none;
 }
 
+/* SPACING */
 .form{
   padding-bottom:90px;
+}
+
+.section{
+  margin-bottom:12px;
 }
 
 </style>
@@ -194,64 +204,41 @@ button{
 
 function qs(id){ return document.getElementById(id); }
 
+/* MENU */
+qs("menuBtn").addEventListener("click",()=>{
+  qs("mobileMenu").classList.toggle("active");
+});
+
+/* CARDS */
 function selectCard(card){
-  document.querySelectorAll(".card-option").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".card-option").forEach(c=>c.classList.remove("active"));
   card.classList.add("active");
 
-  if(card.id === "cardOtro"){
-    qs("esOtro").checked = true;
-    qs("insumoSelect").value = "";
-    qs("otroWrap").style.display = "block";
-    qs("concepto").value = "Otro";
-
-    setTimeout(()=>{
-      qs("otroTexto").focus();
-      qs("otroWrap").scrollIntoView({behavior:"smooth", block:"center"});
-    },100);
-
+  if(card.id==="cardOtro"){
+    qs("esOtro").checked=true;
+    qs("otroWrap").style.display="block";
+    qs("insumoSelect").value="";
   }else{
-    qs("esOtro").checked = false;
-    qs("otroWrap").style.display = "none";
-
-    qs("insumoSelect").value = card.dataset.id;
-    qs("unidadBase").value = card.dataset.unidad;
-    qs("concepto").value = card.dataset.nombre;
+    qs("esOtro").checked=false;
+    qs("otroWrap").style.display="none";
+    qs("insumoSelect").value=card.dataset.id;
+    qs("unidadBase").value=card.dataset.unidad;
+    qs("concepto").value=card.dataset.nombre;
   }
 
   togglePanels();
 }
 
 function togglePanels(){
-  const stock = qs("esInsumo").checked;
-  const hasInsumo = qs("insumoSelect").value;
+  const stock=qs("esInsumo").checked;
+  const has=qs("insumoSelect").value;
 
-  qs("stockPanel").style.display = (stock && hasInsumo) ? "block" : "none";
-  qs("textoFields").style.display = stock ? "none" : "block";
-
-  if(qs("stockPanel").style.display === "block"){
-    qs("stockPanel").scrollIntoView({behavior:"smooth", block:"center"});
-  }
+  qs("stockPanel").style.display=(stock && has)?"block":"none";
+  qs("textoFields").style.display=stock?"none":"block";
 }
 
-function calcCostoUnitario(){
-  const costo = parseFloat(document.querySelector("input[name='costo']").value || 0);
-  const cantidad = parseFloat(qs("cantidadBase").value || 0);
-
-  if(cantidad > 0){
-    qs("costoUnitario").value = (costo / cantidad).toFixed(4);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-
-  document.querySelectorAll(".card-option").forEach(card => {
-    card.addEventListener("click", () => selectCard(card));
-  });
-
-  qs("esInsumo").addEventListener("change", togglePanels);
-  qs("cantidadBase").addEventListener("input", calcCostoUnitario);
-  document.querySelector("input[name='costo']").addEventListener("input", calcCostoUnitario);
-
+document.querySelectorAll(".card-option").forEach(c=>{
+  c.addEventListener("click",()=>selectCard(c));
 });
 
 </script>
