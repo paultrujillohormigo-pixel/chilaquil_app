@@ -65,30 +65,37 @@ nav img { height:60px; }
   max-width:400px;
   max-height:90vh;
   overflow:auto;
-  overflow-x: hidden; /* 🔥 importante */
+  overflow-x:hidden;
+  display:block;
 }
 
-/* FIX CHECKBOX */
+/* FIX CHECKBOX (FINAL) */
 .option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 8px 0;
-  font-size: 14px;
-  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  margin:8px 0;
+  font-size:14px;
+  width:100%;
 }
 
 .option input {
-  flex: 0 0 auto;
-  margin: 0; /* evita espacios raros en iOS */
+  flex:0 0 20px;
+  margin:0;
 }
 
 .option span {
-  display: block;
-  flex: 1;
-  text-align: left;      /* 🔥 clave */
-  word-break: normal;
-}/* CART BUTTON */
+  flex:0 1 auto;
+  text-align:left;
+}
+
+label.option {
+  text-align:left !important;
+  direction:ltr;
+}
+
+/* CART BUTTON */
 #cart-tab {
   position: fixed;
   bottom: 15px;
