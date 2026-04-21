@@ -8,9 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --rojo: #b32417;
-}
+:root { --rojo:#b32417; }
 
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Montserrat', sans-serif;}
 
@@ -37,7 +35,9 @@ nav img { height:60px; }
 
 .img-box {
   height:120px;
-  display:flex; align-items:center; justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .img-box img {
@@ -51,7 +51,9 @@ nav img { height:60px; }
   top:0; left:0;
   width:100%; height:100%;
   background:rgba(0,0,0,0.6);
-  display:flex; justify-content:center; align-items:center;
+  display:flex;
+  justify-content:center;
+  align-items:center;
   z-index:500;
 }
 
@@ -63,6 +65,14 @@ nav img { height:60px; }
   max-width:400px;
   max-height:90vh;
   overflow:auto;
+}
+
+/* CHECKBOX UI */
+.option {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:5px 0;
 }
 
 /* CART BUTTON */
@@ -81,7 +91,7 @@ nav img { height:60px; }
   z-index: 200;
 }
 
-/* CART PANEL (BOTTOM SHEET) */
+/* CART PANEL */
 #cart-panel {
   position: fixed;
   bottom: -100%;
@@ -97,9 +107,7 @@ nav img { height:60px; }
   overflow-y: auto;
 }
 
-#cart-panel.open {
-  bottom: 0;
-}
+#cart-panel.open { bottom:0; }
 
 button {
   background:var(--rojo);
@@ -161,7 +169,11 @@ input, select {
 <!-- CART -->
 <div id="cart-panel">
 
-<h3>Tu pedido</h3>
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h3>Tu pedido</h3>
+  <button onclick="toggleCart(true)" style="width:auto;">✕</button>
+</div>
+
 <div id="cart-items"></div>
 
 <hr>
@@ -201,8 +213,12 @@ modal.innerHTML=`
 <div class="modal-content">
 <h3>${el.dataset.name}</h3>
 
-<b>Salsas (máx 2)</b><br>
-${salsas.map(s=>`<input type="checkbox" class="salsa" value="${s}"> ${s}<br>`).join("")}
+<b>Salsas (máx 2)</b>
+${salsas.map(s=>`
+<label class="option">
+<input type="checkbox" class="salsa" value="${s}">
+${s}
+</label>`).join("")}
 
 <b>Proteína</b>
 <select id="proteina">
@@ -210,13 +226,21 @@ ${proteinas.map(p=>`<option>${p}</option>`).join("")}
 </select>
 
 <b>Extras +20</b>
-${[...extrasBase,...proteinas,...salsas].map(e=>`<input type="checkbox" class="extra" value="${e}"> ${e}<br>`).join("")}
+${[...extrasBase,...proteinas,...salsas].map(e=>`
+<label class="option">
+<input type="checkbox" class="extra" value="${e}">
+${e}
+</label>`).join("")}
 
 <button onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar</button>
 <button onclick="closeModal()">Cerrar</button>
 </div>`
 
 document.body.appendChild(modal)
+
+modal.addEventListener("click",(e)=>{
+if(e.target.id==="modal") closeModal()
+})
 }
 
 function closeModal(){ document.getElementById("modal").remove() }
@@ -239,8 +263,10 @@ updateCartUI()
 toggleCart()
 }
 
-function toggleCart(){
-document.getElementById("cart-panel").classList.toggle("open")
+function toggleCart(forceClose=false){
+let panel=document.getElementById("cart-panel")
+if(forceClose){ panel.classList.remove("open") }
+else{ panel.classList.toggle("open") }
 }
 
 function showDir(){
