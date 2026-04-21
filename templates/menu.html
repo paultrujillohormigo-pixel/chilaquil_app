@@ -67,12 +67,14 @@ nav img { height:60px; }
   overflow:auto;
 }
 
-/* CHECKBOX UI */
+/* CHECKBOX FIX */
 .option {
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   gap:8px;
-  margin:5px 0;
+  margin:6px 0;
+  font-size:14px;
+  line-height:1.2;
 }
 
 /* CART BUTTON */
@@ -118,6 +120,18 @@ button {
   width:100%;
 }
 
+/* BOTON ELIMINAR PEQUEÑO */
+.remove-btn {
+  background:#ddd;
+  color:#000;
+  border:none;
+  padding:3px 6px;
+  font-size:12px;
+  border-radius:5px;
+  margin-left:8px;
+}
+
+/* INPUTS */
 input, select {
   width:100%;
   padding:12px;
@@ -217,7 +231,7 @@ modal.innerHTML=`
 ${salsas.map(s=>`
 <label class="option">
 <input type="checkbox" class="salsa" value="${s}">
-${s}
+<span>${s}</span>
 </label>`).join("")}
 
 <b>Proteína</b>
@@ -229,7 +243,7 @@ ${proteinas.map(p=>`<option>${p}</option>`).join("")}
 ${[...extrasBase,...proteinas,...salsas].map(e=>`
 <label class="option">
 <input type="checkbox" class="extra" value="${e}">
-${e}
+<span>${e}</span>
 </label>`).join("")}
 
 <button onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar</button>
@@ -249,9 +263,10 @@ function addCustomProduct(name,price){
 let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
 if(s.length>2){alert("Máx 2 salsas");return}
 
+let p=document.getElementById("proteina").value
 let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
 
-cart.push({name,s,e,price:price+e.length*20})
+cart.push({name,s,p,e,price:price+e.length*20})
 closeModal()
 updateCartUI()
 toggleCart()
@@ -288,7 +303,13 @@ total.innerText=calculateTotal()
 
 cart.forEach((i,index)=>{
 let div=document.createElement("div")
-div.innerHTML=`${i.name} - $${i.price} <button onclick="removeItem(${index})">X</button><hr>`
+div.innerHTML=`
+<b>${i.name}</b> - $${i.price}
+<button class="remove-btn" onclick="removeItem(${index})">✕</button><br>
+${i.s ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
+${i.p ? "Proteína: "+i.p+"<br>" : ""}
+${i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
+<hr>`
 c.appendChild(div)
 })
 }
@@ -315,10 +336,14 @@ let pago=document.getElementById("pago").value
 let msg="Pedido:%0A%0A"
 
 cart.forEach(i=>{
-msg+=`- ${i.name} $${i.price}%0A`
+msg+=`- ${i.name}%0A`
+if(i.s) msg+=`  Salsas: ${i.s.join(", ")}%0A`
+if(i.p) msg+=`  Proteína: ${i.p}%0A`
+if(i.e.length) msg+=`  Extras: ${i.e.join(", ")}%0A`
+msg+=`  $${i.price}%0A%0A`
 })
 
-msg+=`%0ATotal: $${calculateTotal()}%0A`
+msg+=`Total: $${calculateTotal()}%0A`
 msg+=`Tipo: ${tipo.value}%0A`
 if(dir)msg+=`Dir: ${dir}%0A`
 msg+=`Nombre: ${nombre}%0A`
