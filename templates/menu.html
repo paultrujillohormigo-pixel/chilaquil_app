@@ -14,14 +14,6 @@
 
 body { background:#fff; }
 
-/* NAV */
-nav {
-  padding:20px;
-  text-align:center;
-  box-shadow:0 4px 20px rgba(0,0,0,0.08);
-}
-nav img { height:60px; }
-
 /* GRID */
 .section { padding:20px; }
 
@@ -67,17 +59,21 @@ nav img { height:60px; }
   overflow:auto;
 }
 
-/* CHECKBOX FIX */
+/* FIX CHECKBOX */
 .option {
   display:flex;
   align-items:flex-start;
   gap:8px;
   margin:6px 0;
   font-size:14px;
-  line-height:1.2;
 }
 
-/* CART BUTTON */
+.option span {
+  flex:1;
+  word-break: break-word;
+}
+
+/* CART */
 #cart-tab {
   position: fixed;
   bottom: 15px;
@@ -90,10 +86,8 @@ nav img { height:60px; }
   font-weight: 700;
   width: 90%;
   text-align: center;
-  z-index: 200;
 }
 
-/* CART PANEL */
 #cart-panel {
   position: fixed;
   bottom: -100%;
@@ -102,33 +96,18 @@ nav img { height:60px; }
   height: 85%;
   background: white;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
   padding: 20px;
   transition: 0.3s;
-  z-index: 300;
   overflow-y: auto;
 }
 
 #cart-panel.open { bottom:0; }
 
-button {
-  background:var(--rojo);
-  color:white;
-  border:none;
-  padding:12px;
-  margin-top:10px;
-  width:100%;
-}
-
-/* BOTON ELIMINAR PEQUEÑO */
 .remove-btn {
   background:#ddd;
-  color:#000;
-  border:none;
   padding:3px 6px;
   font-size:12px;
   border-radius:5px;
-  margin-left:8px;
 }
 
 /* INPUTS */
@@ -138,16 +117,11 @@ input, select {
   margin-top:10px;
   border-radius:8px;
   border:1px solid #ddd;
-  font-size:16px;
 }
 </style>
 </head>
 
 <body>
-
-<nav>
-<img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
-</nav>
 
 <section class="section">
 <div class="cards">
@@ -157,35 +131,18 @@ input, select {
 <h4>Chilaquiles</h4>
 </div>
 
-<div class="card" onclick="openProduct(this)" data-name="Torta de Chilaquiles" data-price="80">
-<div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774793308/ChatGPT_Image_29_mar_2026_08_08_06_a.m._qxis4h.png"></div>
-<h4>Torta</h4>
-</div>
-
-<div class="card" onclick="openProduct(this)" data-name="Burrito Gringo" data-price="90">
-<div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774797345/Burrito_kukeyh.png"></div>
-<h4>Burrito</h4>
-</div>
-
-<div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola" data-price="35">
-<div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731790/coca_qpg383.webp"></div>
-<h4>Coca Cola</h4>
-</div>
-
 </div>
 </section>
 
-<!-- BOTON -->
 <div id="cart-tab" onclick="toggleCart()">
 🧾 Ver pedido (<span id="cart-count">0</span>) | Total: $<span id="total">0</span>
 </div>
 
-<!-- CART -->
 <div id="cart-panel">
 
-<div style="display:flex; justify-content:space-between; align-items:center;">
-  <h3>Tu pedido</h3>
-  <button onclick="toggleCart(true)" style="width:auto;">✕</button>
+<div style="display:flex; justify-content:space-between;">
+<h3>Tu pedido</h3>
+<button onclick="toggleCart(true)">✕</button>
 </div>
 
 <div id="cart-items"></div>
@@ -208,7 +165,7 @@ input, select {
 <option>Transferencia</option>
 </select>
 
-<button onclick="generarPedido()">PEDIR POR WHATSAPP</button>
+<button onclick="generarPedido()">PEDIR</button>
 
 </div>
 
@@ -218,6 +175,7 @@ let cart=[]
 const salsas=["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
 const proteinas=["Pollo","Huevo","Chicharrón","Arrachera"]
 const extrasBase=["Aguacate","Queso","Nopal"]
+const removibles=["Crema","Queso","Cebolla","Aguacate"]
 
 function openProduct(el){
 let modal=document.createElement("div")
@@ -246,6 +204,13 @@ ${[...extrasBase,...proteinas,...salsas].map(e=>`
 <span>${e}</span>
 </label>`).join("")}
 
+<b>Quitar ingredientes</b>
+${removibles.map(r=>`
+<label class="option">
+<input type="checkbox" class="remove" value="${r}">
+<span>Sin ${r}</span>
+</label>`).join("")}
+
 <button onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar</button>
 <button onclick="closeModal()">Cerrar</button>
 </div>`
@@ -265,23 +230,18 @@ if(s.length>2){alert("Máx 2 salsas");return}
 
 let p=document.getElementById("proteina").value
 let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
+let r=[...document.querySelectorAll(".remove:checked")].map(x=>x.value)
 
-cart.push({name,s,p,e,price:price+e.length*20})
+cart.push({name,s,p,e,r,price:price+e.length*20})
 closeModal()
 updateCartUI()
 toggleCart()
 }
 
-function addSimpleProduct(el){
-cart.push({name:el.dataset.name,price:parseInt(el.dataset.price)})
-updateCartUI()
-toggleCart()
-}
-
-function toggleCart(forceClose=false){
+function toggleCart(force=false){
 let panel=document.getElementById("cart-panel")
-if(forceClose){ panel.classList.remove("open") }
-else{ panel.classList.toggle("open") }
+if(force) panel.classList.remove("open")
+else panel.classList.toggle("open")
 }
 
 function showDir(){
@@ -302,15 +262,14 @@ count.innerText=cart.length
 total.innerText=calculateTotal()
 
 cart.forEach((i,index)=>{
-let div=document.createElement("div")
-div.innerHTML=`
+c.innerHTML+=`
 <b>${i.name}</b> - $${i.price}
 <button class="remove-btn" onclick="removeItem(${index})">✕</button><br>
-${i.s ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
+${i.s.length ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
 ${i.p ? "Proteína: "+i.p+"<br>" : ""}
 ${i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
+${i.r.length ? "Sin: "+i.r.join(", ")+"<br>" : ""}
 <hr>`
-c.appendChild(div)
 })
 }
 
@@ -323,32 +282,18 @@ function generarPedido(){
 let tipo=document.querySelector('input[name="tipo"]:checked')
 if(!tipo)return alert("Selecciona tipo")
 
-let dir=""
-if(tipo.value==="Domicilio"){
-dir=document.getElementById("direccion").value
-if(!dir)return alert("Pon dirección")
-}
-
-let nombre=document.getElementById("nombre").value
-let tel=document.getElementById("telefono").value
-let pago=document.getElementById("pago").value
-
 let msg="Pedido:%0A%0A"
 
 cart.forEach(i=>{
 msg+=`- ${i.name}%0A`
-if(i.s) msg+=`  Salsas: ${i.s.join(", ")}%0A`
+if(i.s.length) msg+=`  Salsas: ${i.s.join(", ")}%0A`
 if(i.p) msg+=`  Proteína: ${i.p}%0A`
 if(i.e.length) msg+=`  Extras: ${i.e.join(", ")}%0A`
+if(i.r.length) msg+=`  Sin: ${i.r.join(", ")}%0A`
 msg+=`  $${i.price}%0A%0A`
 })
 
 msg+=`Total: $${calculateTotal()}%0A`
-msg+=`Tipo: ${tipo.value}%0A`
-if(dir)msg+=`Dir: ${dir}%0A`
-msg+=`Nombre: ${nombre}%0A`
-msg+=`Tel: ${tel}%0A`
-msg+=`Pago: ${pago}`
 
 window.open(`https://wa.me/524491971799?text=${msg}`)
 }
