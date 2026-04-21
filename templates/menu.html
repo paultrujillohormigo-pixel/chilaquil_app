@@ -69,22 +69,25 @@ nav img { height:60px; }
 
 /* FIX CHECKBOX */
 .option {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin:6px 0;
-  font-size:14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 .option input {
-  flex-shrink:0;
+  flex: 0 0 auto;
 }
 
 .option span {
-  flex:1;
-  word-break:break-word;
+  display: block;
+  white-space: nowrap;      /* 🔥 evita texto vertical */
+  writing-mode: horizontal-tb; /* 🔥 fuerza horizontal */
+  width: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
 /* CART BUTTON */
 #cart-tab {
   position: fixed;
