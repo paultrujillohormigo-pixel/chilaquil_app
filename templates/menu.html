@@ -10,47 +10,40 @@
 <style>
 :root {
   --rojo: #b32417;
-  --negro: #010101;
-  --blanco: #ffffff;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Montserrat', sans-serif;}
 
-body { background:var(--blanco); color:var(--negro); }
+body { background:#fff; }
 
 /* NAV */
 nav {
-  display:flex; justify-content:space-between; align-items:center;
   padding:20px;
-  background:white;
+  text-align:center;
   box-shadow:0 4px 20px rgba(0,0,0,0.08);
 }
-
 nav img { height:60px; }
 
 /* GRID */
-.section { padding:40px 20px; }
+.section { padding:20px; }
 
 .cards {
   display:grid;
   grid-template-columns:repeat(2,1fr);
-  gap:20px;
+  gap:15px;
 }
 
 .card { cursor:pointer; text-align:center; }
 
 .img-box {
-  height:140px;
+  height:120px;
   display:flex; align-items:center; justify-content:center;
 }
 
 .img-box img {
   max-width:100%;
   max-height:100%;
-  transition:0.3s;
 }
-
-.img-box:hover img { transform:scale(1.1); }
 
 /* MODAL */
 #modal {
@@ -72,44 +65,58 @@ nav img { height:60px; }
   overflow:auto;
 }
 
-/* CART */
+/* CART BUTTON */
 #cart-tab {
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#b32417;
-  color:white;
-  padding:12px 18px;
-  border-radius:30px;
-  cursor:pointer;
-  z-index:200;
-  font-weight:600;
+  position: fixed;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #b32417;
+  color: white;
+  padding: 14px;
+  border-radius: 40px;
+  font-weight: 700;
+  width: 90%;
+  text-align: center;
+  z-index: 200;
 }
 
+/* CART PANEL (BOTTOM SHEET) */
 #cart-panel {
-  position:fixed;
-  top:0;
-  right:-100%;
-  width:350px;
-  height:100%;
-  background:white;
-  box-shadow:-5px 0 20px rgba(0,0,0,0.2);
-  padding:20px;
-  transition:0.3s;
-  z-index:300;
-  overflow-y:auto;
+  position: fixed;
+  bottom: -100%;
+  left: 0;
+  width: 100%;
+  height: 85%;
+  background: white;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+  padding: 20px;
+  transition: 0.3s;
+  z-index: 300;
+  overflow-y: auto;
 }
 
-#cart-panel.open { right:0; }
+#cart-panel.open {
+  bottom: 0;
+}
 
 button {
   background:var(--rojo);
   color:white;
   border:none;
-  padding:10px;
+  padding:12px;
   margin-top:10px;
-  cursor:pointer;
   width:100%;
+}
+
+input, select {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:16px;
 }
 </style>
 </head>
@@ -123,25 +130,21 @@ button {
 <section class="section">
 <div class="cards">
 
-<!-- CHILAQUILES -->
 <div class="card" onclick="openProduct(this)" data-name="Chilaquiles" data-price="120">
 <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png"></div>
 <h4>Chilaquiles</h4>
 </div>
 
-<!-- TORTA -->
 <div class="card" onclick="openProduct(this)" data-name="Torta de Chilaquiles" data-price="80">
 <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774793308/ChatGPT_Image_29_mar_2026_08_08_06_a.m._qxis4h.png"></div>
-<h4>Torta de Chilaquiles</h4>
+<h4>Torta</h4>
 </div>
 
-<!-- BURRITO -->
 <div class="card" onclick="openProduct(this)" data-name="Burrito Gringo" data-price="90">
 <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774797345/Burrito_kukeyh.png"></div>
-<h4>Burrito Gringo</h4>
+<h4>Burrito</h4>
 </div>
 
-<!-- COCA -->
 <div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola" data-price="35">
 <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731790/coca_qpg383.webp"></div>
 <h4>Coca Cola</h4>
@@ -150,19 +153,21 @@ button {
 </div>
 </section>
 
-<!-- CART -->
+<!-- BOTON -->
 <div id="cart-tab" onclick="toggleCart()">
-🧾 Ver pedido (<span id="cart-count">0</span>)
+🧾 Ver pedido (<span id="cart-count">0</span>) | Total: $<span id="total">0</span>
 </div>
 
+<!-- CART -->
 <div id="cart-panel">
+
 <h3>Tu pedido</h3>
 <div id="cart-items"></div>
 
 <hr>
 
-<label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label><br>
-<label><input type="radio" name="tipo" value="Recoger"> Recoger</label><br>
+<label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label>
+<label><input type="radio" name="tipo" value="Recoger"> Recoger</label>
 <label><input type="radio" name="tipo" value="Domicilio" onclick="showDir()"> Domicilio</label>
 
 <div id="dir" style="display:none;">
@@ -178,36 +183,34 @@ button {
 </select>
 
 <button onclick="generarPedido()">PEDIR POR WHATSAPP</button>
+
 </div>
 
 <script>
-let cart = []
+let cart=[]
 
-const salsas = ["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
-const proteinas = ["Pollo","Huevo","Chicharrón","Arrachera"]
-const extrasBase = ["Aguacate","Queso","Nopal"]
+const salsas=["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
+const proteinas=["Pollo","Huevo","Chicharrón","Arrachera"]
+const extrasBase=["Aguacate","Queso","Nopal"]
 
 function openProduct(el){
-let modal = document.createElement("div")
+let modal=document.createElement("div")
 modal.id="modal"
 
-modal.innerHTML = `
+modal.innerHTML=`
 <div class="modal-content">
 <h3>${el.dataset.name}</h3>
 
 <b>Salsas (máx 2)</b><br>
 ${salsas.map(s=>`<input type="checkbox" class="salsa" value="${s}"> ${s}<br>`).join("")}
 
-<b>Proteína</b><br>
+<b>Proteína</b>
 <select id="proteina">
 ${proteinas.map(p=>`<option>${p}</option>`).join("")}
 </select>
 
-<b>Extras +20</b><br>
+<b>Extras +20</b>
 ${[...extrasBase,...proteinas,...salsas].map(e=>`<input type="checkbox" class="extra" value="${e}"> ${e}<br>`).join("")}
-
-<b>Quitar</b><br>
-${["Crema","Queso","Cebolla","Aguacate"].map(i=>`<input type="checkbox" class="remove" value="${i}"> Sin ${i}<br>`).join("")}
 
 <button onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar</button>
 <button onclick="closeModal()">Cerrar</button>
@@ -218,22 +221,22 @@ document.body.appendChild(modal)
 
 function closeModal(){ document.getElementById("modal").remove() }
 
-function addCustomProduct(name, price){
+function addCustomProduct(name,price){
 let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
-if(s.length>2){ alert("Máx 2 salsas"); return }
+if(s.length>2){alert("Máx 2 salsas");return}
 
-let p=document.getElementById("proteina").value
 let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
-let r=[...document.querySelectorAll(".remove:checked")].map(x=>x.value)
 
-cart.push({name,s,p,e,r,price:price + e.length*20})
+cart.push({name,s,e,price:price+e.length*20})
 closeModal()
 updateCartUI()
+toggleCart()
 }
 
 function addSimpleProduct(el){
 cart.push({name:el.dataset.name,price:parseInt(el.dataset.price)})
 updateCartUI()
+toggleCart()
 }
 
 function toggleCart(){
@@ -244,21 +247,23 @@ function showDir(){
 document.getElementById("dir").style.display="block"
 }
 
+function calculateTotal(){
+return cart.reduce((sum,i)=>sum+i.price,0)
+}
+
 function updateCartUI(){
-let container=document.getElementById("cart-items")
+let c=document.getElementById("cart-items")
 let count=document.getElementById("cart-count")
+let total=document.getElementById("total")
 
-container.innerHTML=""
+c.innerHTML=""
 count.innerText=cart.length
+total.innerText=calculateTotal()
 
-cart.forEach((item,i)=>{
+cart.forEach((i,index)=>{
 let div=document.createElement("div")
-div.innerHTML=`
-<b>${item.name}</b> - $${item.price}<br>
-<button onclick="removeItem(${i})">Eliminar</button>
-<hr>
-`
-container.appendChild(div)
+div.innerHTML=`${i.name} - $${i.price} <button onclick="removeItem(${index})">X</button><hr>`
+c.appendChild(div)
 })
 }
 
@@ -269,12 +274,12 @@ updateCartUI()
 
 function generarPedido(){
 let tipo=document.querySelector('input[name="tipo"]:checked')
-if(!tipo) return alert("Selecciona tipo")
+if(!tipo)return alert("Selecciona tipo")
 
 let dir=""
 if(tipo.value==="Domicilio"){
 dir=document.getElementById("direccion").value
-if(!dir) return alert("Pon dirección")
+if(!dir)return alert("Pon dirección")
 }
 
 let nombre=document.getElementById("nombre").value
@@ -284,16 +289,12 @@ let pago=document.getElementById("pago").value
 let msg="Pedido:%0A%0A"
 
 cart.forEach(i=>{
-msg+=`- ${i.name}%0A`
-if(i.s) msg+=`  Salsas: ${i.s.join(", ")}%0A`
-if(i.p) msg+=`  Prot: ${i.p}%0A`
-if(i.e.length) msg+=`  Extras: ${i.e.join(", ")}%0A`
-if(i.r.length) msg+=`  Sin: ${i.r.join(", ")}%0A`
-msg+=`  $${i.price}%0A%0A`
+msg+=`- ${i.name} $${i.price}%0A`
 })
 
+msg+=`%0ATotal: $${calculateTotal()}%0A`
 msg+=`Tipo: ${tipo.value}%0A`
-if(dir) msg+=`Dir: ${dir}%0A`
+if(dir)msg+=`Dir: ${dir}%0A`
 msg+=`Nombre: ${nombre}%0A`
 msg+=`Tel: ${tel}%0A`
 msg+=`Pago: ${pago}`
