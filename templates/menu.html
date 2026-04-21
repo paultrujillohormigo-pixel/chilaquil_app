@@ -66,14 +66,12 @@ nav img { height:60px; }
   max-height:90vh;
   overflow:auto;
   overflow-x:hidden;
-  display:block;
 }
 
-/* FIX CHECKBOX (FINAL) */
+/* FIX CHECKBOX (REAL) */
 .option {
   display:flex;
   align-items:center;
-  justify-content:flex-start;
   gap:10px;
   margin:8px 0;
   font-size:14px;
@@ -81,18 +79,14 @@ nav img { height:60px; }
 }
 
 .option input {
-  flex:0 0 20px;
+  flex:0 0 auto;
   margin:0;
 }
 
 .option span {
-  flex:0 1 auto;
+  flex:1;
+  min-width:0; /* 🔥 ESTA ES LA CLAVE */
   text-align:left;
-}
-
-label.option {
-  text-align:left !important;
-  direction:ltr;
 }
 
 /* CART BUTTON */
