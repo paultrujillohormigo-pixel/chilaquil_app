@@ -65,27 +65,30 @@ nav img { height:60px; }
   max-width:400px;
   max-height:90vh;
   overflow:auto;
+  overflow-x: hidden; /* 🔥 importante */
 }
 
 /* FIX CHECKBOX */
 .option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 6px 0;
+  gap: 10px;
+  margin: 8px 0;
   font-size: 14px;
   width: 100%;
 }
 
 .option input {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  margin: 0; /* evita espacios raros en iOS */
 }
 
 .option span {
+  display: block;
   flex: 1;
-  line-height: 1.2;
-}
-/* CART BUTTON */
+  text-align: left;      /* 🔥 clave */
+  word-break: normal;
+}/* CART BUTTON */
 #cart-tab {
   position: fixed;
   bottom: 15px;
