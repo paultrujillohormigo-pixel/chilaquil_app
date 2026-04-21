@@ -71,22 +71,19 @@ nav img { height:60px; }
 .option {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 8px 0;
+  gap: 8px;
+  margin: 6px 0;
   font-size: 14px;
+  width: 100%;
 }
 
 .option input {
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .option span {
-  display: block;
-  white-space: nowrap;      /* 🔥 evita texto vertical */
-  writing-mode: horizontal-tb; /* 🔥 fuerza horizontal */
-  width: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
+  line-height: 1.2;
 }
 /* CART BUTTON */
 #cart-tab {
