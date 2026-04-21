@@ -250,52 +250,15 @@
 
 <body>
 
-  <nav class="navbar">
-    <div class="nav-left">
-      <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
-    </div>
-
-    <div class="nav-links">
-      <div class="nav-dd" role="navigation">
-        <button class="nav-dd-btn" type="button" aria-expanded="false">
-          POS <span class="nav-caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="nav-dd-menu" role="menu" aria-label="POS">
-          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
-          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
-        </div>
-      </div>
-
-      <div class="nav-dd">
-        <button class="nav-dd-btn" type="button" aria-expanded="false">
-          Catálogos <span class="nav-caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Catálogos">
-          <a role="menuitem" href="{{ url_for('productos') }}">Productos</a>
-        </div>
-      </div>
-
-      <div class="nav-dd">
-        <button class="nav-dd-btn" type="button" aria-expanded="false">
-          Inventario <span class="nav-caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Inventario">
-          <a role="menuitem" href="{{ url_for('ver_stock') }}">Stock actual</a>
-          <a role="menuitem" href="{{ url_for('compras') }}">Compras</a>
-        </div>
-      </div>
-
-      <div class="nav-dd">
-        <button class="nav-dd-btn" type="button" aria-expanded="false">
-          Admin <span class="nav-caret" aria-hidden="true">▾</span>
-        </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Admin">
-          <a role="menuitem" href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
-        </div>
-      </div>
-    </div>
-  </nav>
+ <!-- POR ESTE -->
+<nav>
+  <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
+  <div>
+    <a href="www.senorchilaquil.com/menu">Menú</a>
+    <a href="#promo">Promos</a>
+    <a href="https://wa.me/524497419166">Ordenar</a>
+  </div>
+</nav>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
