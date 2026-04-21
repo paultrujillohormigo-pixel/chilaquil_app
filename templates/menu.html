@@ -71,7 +71,7 @@ nav img { height:60px; }
 /* FIX CHECKBOX (REAL) */
 .option {
   display:flex;
-  align-items:center;
+  align-items:center; /* Centra verticalmente el checkbox con el texto */
   gap:10px;
   margin:8px 0;
   font-size:14px;
@@ -81,12 +81,14 @@ nav img { height:60px; }
 .option input {
   flex:0 0 auto;
   margin:0;
+  width: auto; /* 🔥 FIX: Evita que herede el width: 100% de los inputs de abajo */
 }
 
 .option span {
   flex:1;
-  min-width:0; /* 🔥 ESTA ES LA CLAVE */
   text-align:left;
+  word-wrap: break-word; /* 🔥 FIX: Permite que el texto salte de línea si es muy largo */
+  white-space: normal;
 }
 
 /* CART BUTTON */
@@ -103,6 +105,7 @@ nav img { height:60px; }
   width: 90%;
   text-align: center;
   z-index: 200;
+  cursor: pointer;
 }
 
 /* CART PANEL */
@@ -130,6 +133,8 @@ button {
   padding:12px;
   margin-top:10px;
   width:100%;
+  cursor: pointer;
+  border-radius: 8px;
 }
 
 /* BOTON ELIMINAR */
@@ -141,9 +146,10 @@ button {
   font-size:12px;
   border-radius:5px;
   margin-left:8px;
+  width: auto;
 }
 
-/* INPUTS */
+/* INPUTS GLOBALES */
 input, select {
   width:100%;
   padding:12px;
@@ -151,6 +157,12 @@ input, select {
   border-radius:8px;
   border:1px solid #ddd;
   font-size:16px;
+}
+
+/* Fix para los radios del carrito */
+label input[type="radio"] {
+  width: auto;
+  margin-right: 5px;
 }
 </style>
 </head>
@@ -187,35 +199,36 @@ input, select {
 </div>
 </section>
 
-<!-- BOTON -->
 <div id="cart-tab" onclick="toggleCart()">
 🧾 Ver pedido (<span id="cart-count">0</span>) | Total: $<span id="total">0</span>
 </div>
 
-<!-- CART -->
 <div id="cart-panel">
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
   <h3>Tu pedido</h3>
-  <button onclick="toggleCart(true)" style="width:auto;">✕</button>
+  <button onclick="toggleCart(true)" style="width:auto; margin-top:0;">✕</button>
 </div>
 
 <div id="cart-items"></div>
 
-<hr>
+<hr style="margin: 15px 0;">
 
-<label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label>
-<label><input type="radio" name="tipo" value="Recoger"> Recoger</label>
-<label><input type="radio" name="tipo" value="Domicilio" onclick="showDir()"> Domicilio</label>
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+  <label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label>
+  <label><input type="radio" name="tipo" value="Recoger"> Recoger</label>
+  <label><input type="radio" name="tipo" value="Domicilio" onclick="showDir()"> Domicilio</label>
+</div>
 
 <div id="dir" style="display:none;">
-<input id="direccion" placeholder="Dirección">
+<input id="direccion" placeholder="Dirección completa">
 </div>
 
 <input id="nombre" placeholder="Nombre">
-<input id="telefono" placeholder="Teléfono">
+<input id="telefono" type="tel" placeholder="Teléfono">
 
 <select id="pago">
+<option value="" disabled selected>Método de pago</option>
 <option>Efectivo</option>
 <option>Transferencia</option>
 </select>
@@ -238,7 +251,7 @@ modal.id="modal"
 
 modal.innerHTML=`
 <div class="modal-content">
-<h3>${el.dataset.name}</h3>
+<h3 style="margin-bottom:15px;">${el.dataset.name}</h3>
 
 <b>Salsas (máx 2)</b>
 ${salsas.map(s=>`
@@ -246,18 +259,20 @@ ${salsas.map(s=>`
 <input type="checkbox" class="salsa" value="${s}">
 <span>${s}</span>
 </label>`).join("")}
+<br>
 
 <b>Proteína</b>
-<select id="proteina">
+<select id="proteina" style="margin-bottom: 15px;">
 ${proteinas.map(p=>`<option>${p}</option>`).join("")}
 </select>
 
-<b>Extras +20</b>
+<b>Extras +$20</b>
 ${[...extrasBase,...proteinas,...salsas].map(e=>`
 <label class="option">
 <input type="checkbox" class="extra" value="${e}">
 <span>${e}</span>
 </label>`).join("")}
+<br>
 
 <b>Quitar ingredientes</b>
 ${quitar.map(q=>`
@@ -266,8 +281,8 @@ ${quitar.map(q=>`
 <span>${q}</span>
 </label>`).join("")}
 
-<button onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar</button>
-<button onclick="closeModal()">Cerrar</button>
+<button style="margin-top:20px;" onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar al pedido</button>
+<button style="background:#444;" onclick="closeModal()">Cancelar</button>
 </div>`
 
 document.body.appendChild(modal)
@@ -277,11 +292,14 @@ if(e.target.id==="modal") closeModal()
 })
 }
 
-function closeModal(){ document.getElementById("modal").remove() }
+function closeModal(){ 
+  let modal = document.getElementById("modal");
+  if(modal) modal.remove();
+}
 
 function addCustomProduct(name,price){
 let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
-if(s.length>2){alert("Máx 2 salsas");return}
+if(s.length>2){alert("Máximo 2 salsas por favor");return}
 
 let p=document.getElementById("proteina").value
 let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
@@ -324,14 +342,17 @@ total.innerText=calculateTotal()
 
 cart.forEach((i,index)=>{
 let div=document.createElement("div")
+div.style.marginBottom = "10px";
 div.innerHTML=`
 <b>${i.name}</b> - $${i.price}
 <button class="remove-btn" onclick="removeItem(${index})">✕</button><br>
+<small style="color:#555;">
 ${i.s ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
 ${i.p ? "Proteína: "+i.p+"<br>" : ""}
-${i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
+${i.e && i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
 ${i.r && i.r.length ? "Quitar: "+i.r.join(", ")+"<br>" : ""}
-<hr>`
+</small>
+<hr style="margin-top:5px;">`
 c.appendChild(div)
 })
 }
@@ -342,36 +363,40 @@ updateCartUI()
 }
 
 function generarPedido(){
+if(cart.length === 0) return alert("Tu carrito está vacío")
+
 let tipo=document.querySelector('input[name="tipo"]:checked')
-if(!tipo)return alert("Selecciona tipo")
+if(!tipo)return alert("Selecciona el tipo de entrega (En el lugar, Recoger o Domicilio)")
 
 let dir=""
 if(tipo.value==="Domicilio"){
 dir=document.getElementById("direccion").value
-if(!dir)return alert("Pon dirección")
+if(!dir)return alert("Por favor ingresa tu dirección")
 }
 
 let nombre=document.getElementById("nombre").value
 let tel=document.getElementById("telefono").value
 let pago=document.getElementById("pago").value
 
-let msg="Pedido:%0A%0A"
+if(!nombre) return alert("Por favor ingresa tu nombre")
+
+let msg="*Nuevo Pedido:*%0A%0A"
 
 cart.forEach(i=>{
-msg+=`- ${i.name}%0A`
-if(i.s) msg+=`  Salsas: ${i.s.join(", ")}%0A`
-if(i.p) msg+=`  Proteína: ${i.p}%0A`
-if(i.e.length) msg+=`  Extras: ${i.e.join(", ")}%0A`
-if(i.r && i.r.length) msg+=`  Quitar: ${i.r.join(", ")}%0A`
-msg+=`  $${i.price}%0A%0A`
+msg+=`🍽️ *${i.name}*%0A`
+if(i.s) msg+=`   🌶️ Salsas: ${i.s.join(", ")}%0A`
+if(i.p) msg+=`   🍗 Proteína: ${i.p}%0A`
+if(i.e && i.e.length) msg+=`   ➕ Extras: ${i.e.join(", ")}%0A`
+if(i.r && i.r.length) msg+=`   ➖ Quitar: ${i.r.join(", ")}%0A`
+msg+=`   💵 $${i.price}%0A%0A`
 })
 
-msg+=`Total: $${calculateTotal()}%0A`
-msg+=`Tipo: ${tipo.value}%0A`
-if(dir)msg+=`Dir: ${dir}%0A`
-msg+=`Nombre: ${nombre}%0A`
-msg+=`Tel: ${tel}%0A`
-msg+=`Pago: ${pago}`
+msg+=`💰 *Total: $${calculateTotal()}*%0A`
+msg+=`📍 *Tipo:* ${tipo.value}%0A`
+if(dir)msg+=`🏠 *Dir:* ${dir}%0A`
+msg+=`👤 *Nombre:* ${nombre}%0A`
+if(tel)msg+=`📱 *Tel:* ${tel}%0A`
+msg+=`💳 *Pago:* ${pago}`
 
 window.open(`https://wa.me/524491971799?text=${msg}`)
 }
