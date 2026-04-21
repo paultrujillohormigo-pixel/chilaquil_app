@@ -1,558 +1,645 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Menú | Señor Chilaquil</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <title>Señor Chilaquil - Sistema Ventas</title>
 
-<style>
-:root { --rojo:#b32417; }
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Montserrat', sans-serif;}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
 
-body { background:#fff; padding-bottom: 80px; /* Espacio para el botón flotante */ }
+  <style>
+    /* ================= ESTILOS BASE (SISTEMA) ================= */
+    body { margin: 0; font-family: 'Montserrat', sans-serif; background: #f4f6f8; padding-bottom: 80px; }
 
-/* NAV */
-nav {
-  padding:20px;
-  text-align:center;
-  box-shadow:0 4px 20px rgba(0,0,0,0.08);
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 100;
-}
-nav img { height:60px; }
+    .flash { padding: 8px; margin: 8px 12px; border-radius: 4px; }
+    .success { background: #c8e6c9; }
+    .error { background: #ffcdd2; }
 
-/* LAYOUT MENU */
-.section { padding:20px; max-width: 800px; margin: 0 auto; }
+    .navbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 16px;
+      background:#fff;
+      border-bottom:1px solid #e5e7eb;
+      position:sticky;
+      top: 0;
+      z-index:1000;
+      box-shadow:0 4px 10px rgba(0,0,0,0.05);
+    }
+    .brand{ font-weight:800; font-size:18px; color:#b32417; text-decoration:none; }
+    .nav-links{ display:flex; gap:12px; align-items:center; }
 
-.category-title {
-  font-size: 22px;
-  color: var(--rojo);
-  margin: 30px 0 15px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 5px;
-}
+    .nav-dd{ position:relative; }
+    .nav-dd-btn{
+      border:0;
+      background:transparent;
+      padding:10px 12px;
+      border-radius:8px;
+      font-weight:700;
+      color:#111827;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .nav-caret{ margin-left:6px; font-size:12px; display:inline-block; transform: translateY(-1px); }
 
-.cards {
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:15px;
-}
+    .nav-dd-menu{
+      display:none;
+      position:absolute;
+      top:calc(100% + 8px);
+      left:0;
+      min-width:210px;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      box-shadow:0 6px 16px rgba(0,0,0,.12);
+      padding:8px;
+      z-index:9999;
+    }
 
-.card { 
-  cursor:pointer; 
-  text-align:center; 
-  background: #f9f9f9;
-  border-radius: 12px;
-  padding: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  transition: transform 0.2s;
-}
-.card:active { transform: scale(0.96); }
+    .nav-dd.is-open > .nav-dd-menu{ display:block; }
 
-.img-box {
-  height:120px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin-bottom: 10px;
-}
+    .nav-dd-menu a{
+      display:block;
+      padding:10px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:600;
+      color:#111827;
+      font-size: 14px;
+    }
+    .nav-dd-menu a:hover{ background:#f3f4f6; }
 
-.img-box img {
-  max-width:100%;
-  max-height:100%;
-  object-fit: contain;
-}
+    @media (hover: hover) and (pointer: fine) {
+      .nav-dd:hover > .nav-dd-menu { display:block; }
+    }
 
-.price-tag {
-  display: block;
-  font-weight: 600;
-  color: var(--rojo);
-  margin-top: 5px;
-}
+    /* ================= ESTILOS DEL MENÚ INTERACTIVO ================= */
+    :root { --rojo:#b32417; }
 
-/* MODAL PERSONALIZACION */
-#modal {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:500;
-}
+    .menu-wrapper { padding:20px; max-width: 800px; margin: 0 auto; }
 
-.modal-content {
-  background:white;
-  padding:20px;
-  border-radius:10px;
-  width:90%;
-  max-width:400px;
-  max-height:90vh;
-  overflow:auto;
-  overflow-x:hidden;
-}
+    .category-title {
+      font-size: 22px;
+      color: var(--rojo);
+      margin: 30px 0 15px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
 
-/* FIX CHECKBOX (TEXTOS LARGOS) */
-.option {
-  display:flex;
-  align-items:center; 
-  gap:10px;
-  margin:8px 0;
-  font-size:14px;
-  width:100%;
-}
+    .cards {
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:15px;
+    }
 
-.option input {
-  flex:0 0 auto;
-  margin:0;
-  width: auto; 
-}
+    .card { 
+      cursor:pointer; 
+      text-align:center; 
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s;
+    }
+    .card:active { transform: scale(0.96); }
 
-.option span {
-  flex:1;
-  text-align:left;
-  word-wrap: break-word; 
-  white-space: normal;
-}
+    .img-box {
+      height:120px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-bottom: 10px;
+    }
 
-/* CART BUTTON */
-#cart-tab {
-  position: fixed;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #b32417;
-  color: white;
-  padding: 14px;
-  border-radius: 40px;
-  font-weight: 700;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-  z-index: 200;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(179, 36, 23, 0.4);
-}
+    .img-box img {
+      max-width:100%;
+      max-height:100%;
+      object-fit: contain;
+    }
 
-/* CART PANEL */
-#cart-panel {
-  position: fixed;
-  bottom: -100%;
-  left: 0;
-  width: 100%;
-  height: 85%;
-  background: white;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
-  padding: 20px;
-  transition: 0.3s;
-  z-index: 300;
-  overflow-y: auto;
-}
+    .price-tag {
+      display: block;
+      font-weight: 600;
+      color: var(--rojo);
+      margin-top: 5px;
+    }
 
-#cart-panel.open { bottom:0; }
+    /* MODAL PERSONALIZACION */
+    #menu-modal {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(0,0,0,0.6);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:2000;
+    }
 
-button {
-  background:var(--rojo);
-  color:white;
-  border:none;
-  padding:12px;
-  margin-top:10px;
-  width:100%;
-  cursor: pointer;
-  border-radius: 8px;
-  font-weight: 600;
-}
+    .modal-content {
+      background:white;
+      padding:20px;
+      border-radius:10px;
+      width:90%;
+      max-width:400px;
+      max-height:90vh;
+      overflow:auto;
+      overflow-x:hidden;
+    }
 
-/* BOTON ELIMINAR */
-.remove-btn {
-  background:#ddd;
-  color:#000;
-  border:none;
-  padding:3px 6px;
-  font-size:12px;
-  border-radius:5px;
-  margin-left:8px;
-  width: auto;
-}
+    .option {
+      display:flex;
+      align-items:center; 
+      gap:10px;
+      margin:8px 0;
+      font-size:14px;
+      width:100%;
+    }
 
-/* INPUTS GLOBALES */
-input:not([type="checkbox"]):not([type="radio"]), select {
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:1px solid #ddd;
-  font-size:16px;
-}
+    .option input { flex:0 0 auto; margin:0; width: auto; }
+    .option span { flex:1; text-align:left; word-wrap: break-word; white-space: normal; }
 
-/* Fix para los radios del carrito */
-label input[type="radio"] {
-  width: auto;
-  margin-right: 5px;
-}
-</style>
+    /* CART BUTTON */
+    #cart-tab {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #b32417;
+      color: white;
+      padding: 14px;
+      border-radius: 40px;
+      font-weight: 700;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      z-index: 1500;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(179, 36, 23, 0.4);
+    }
+
+    /* CART PANEL */
+    #cart-panel {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      width: 100%;
+      height: 85%;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+      padding: 20px;
+      transition: 0.3s;
+      z-index: 2100;
+      overflow-y: auto;
+    }
+
+    #cart-panel.open { bottom:0; }
+
+    /* BOTONES ESPECÍFICOS DEL MENÚ PARA NO ROMPER LA NAV */
+    .menu-btn {
+      background:var(--rojo);
+      color:white;
+      border:none;
+      padding:12px;
+      margin-top:10px;
+      width:100%;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .remove-btn {
+      background:#ddd;
+      color:#000;
+      border:none;
+      padding:3px 6px;
+      font-size:12px;
+      border-radius:5px;
+      margin-left:8px;
+      width: auto;
+      cursor: pointer;
+    }
+
+    /* INPUTS DEL CARRITO/MODAL */
+    .menu-input {
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      font-size:16px;
+      font-family: 'Montserrat', sans-serif;
+      box-sizing: border-box;
+    }
+
+    #cart-panel label input[type="radio"] { width: auto; margin-right: 5px; }
+
+  </style>
 </head>
 
 <body>
 
-<nav>
-  <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png" alt="Señor Chilaquil">
-</nav>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
+    </div>
 
-<section class="section">
-  
-  <h2 class="category-title">🍽️ Platillos</h2>
-  <div class="cards">
-    <div class="card" onclick="openProduct(this)" data-name="Chilaquiles" data-price="120">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png"></div>
-      <h4>Chilaquiles</h4><span class="price-tag">$120</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Torta de Chilaquiles" data-price="80">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774793308/ChatGPT_Image_29_mar_2026_08_08_06_a.m._qxis4h.png"></div>
-      <h4>Torta de Chilaquiles</h4><span class="price-tag">$80</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Grilled Cheese" data-price="90">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774795630/ChatGPT_Image_29_mar_2026_08_46_25_a.m._du4vpv.png"></div>
-      <h4>Grilled Cheese</h4><span class="price-tag">$90</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Burrito Gringo" data-price="90">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774797345/Burrito_kukeyh.png"></div>
-      <h4>Burrito Gringo</h4><span class="price-tag">$90</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Envuelto de Huevo" data-price="120">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776299931/huevo_envuelto_dkarjn.webp"></div>
-      <h4>Envuelto de Huevo</h4><span class="price-tag">$120</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Huevos Divorciados" data-price="120">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776726812/huevos-divorsiados_of5fb8.png"></div>
-      <h4>Huevos Divorciados</h4><span class="price-tag">$120</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="Enchiladas" data-price="120">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727059/enchiladas_vmvtbz.png"></div>
-      <h4>Enchiladas</h4><span class="price-tag">$120</span>
-    </div>
-    <div class="card" onclick="openProduct(this)" data-name="ChilaCakes!" data-price="90">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727358/cakes_abtero.png"></div>
-      <h4>ChilaCakes!</h4><span class="price-tag">$90</span>
-    </div>
-  </div>
+    <div class="nav-links">
+      <div class="nav-dd" role="navigation">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          POS <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="POS">
+          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
+          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
+        </div>
+      </div>
 
-  <h2 class="category-title">☕ Bebidas</h2>
-  <div class="cards">
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Cafe Americano" data-price="45">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730224/cafe-americano_bubyna.png"></div>
-      <h4>Cafe Americano</h4><span class="price-tag">$45</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Cafe de Olla" data-price="40">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730349/cafe-olla_ae8kpp.png"></div>
-      <h4>Cafe de Olla</h4><span class="price-tag">$40</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino" data-price="50">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div>
-      <h4>Capuccino</h4><span class="price-tag">$50</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino Vainilla" data-price="55">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div>
-      <h4>Capuccino Vainilla</h4><span class="price-tag">$55</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino Moka" data-price="55">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div>
-      <h4>Capuccino Moka</h4><span class="price-tag">$55</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Espresso" data-price="35">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730954/espresso_bk1nnb.png"></div>
-      <h4>Espresso</h4><span class="price-tag">$35</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Shot de cafe" data-price="35">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730954/espresso_bk1nnb.png"></div>
-      <h4>Shot de cafe</h4><span class="price-tag">$35</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Chai" data-price="60">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731307/chai_f8kbyn.png"></div>
-      <h4>Chai</h4><span class="price-tag">$60</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Dirty Chai" data-price="70">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731307/chai_f8kbyn.png"></div>
-      <h4>Dirty Chai</h4><span class="price-tag">$70</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Aguas de sabor natural" data-price="35">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776728294/agua-sabor_gwcvhr.png"></div>
-      <h4>Aguas de sabor natural</h4><span class="price-tag">$35</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Jugo de Naranja" data-price="40">
-      <div class="img-box" style="font-size: 50px;">🍊</div> 
-      <h4>Jugo de Naranja</h4><span class="price-tag">$40</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola Regular (650 ml)" data-price="35">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731790/coca_qpg383.webp"></div>
-      <h4>Coca Cola Regular</h4><span class="price-tag">$35</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola Zero (650 ml)" data-price="35">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776732172/coca-zero_qpfr47.png"></div>
-      <h4>Coca Cola Zero</h4><span class="price-tag">$35</span>
-    </div>
-  </div>
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Catálogos <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Catálogos">
+          <a role="menuitem" href="{{ url_for('productos') }}">Productos</a>
+        </div>
+      </div>
 
-  <h2 class="category-title">🍰 Postres y Porciones Extra</h2>
-  <div class="cards">
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Galleta de chocolate" data-price="30">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727490/cookie_czmohi.jpg"></div>
-      <h4>Galleta de chocolate</h4><span class="price-tag">$30</span>
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Inventario <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Inventario">
+          <a role="menuitem" href="{{ url_for('ver_stock') }}">Stock actual</a>
+          <a role="menuitem" href="{{ url_for('compras') }}">Compras</a>
+        </div>
+      </div>
+
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Admin <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu" aria-label="Admin">
+          <a role="menuitem" href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
+        </div>
+      </div>
     </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Carlota" data-price="50">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727721/carlota_ll6qqm.png"></div>
-      <h4>Carlota</h4><span class="price-tag">$50</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Proteína Extra" data-price="20">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729408/Fondo_de_Gemini_Generated_Image_clr40eclr40eclr4_eliminado_nbotin.png"></div>
-      <h4>Proteina Extra</h4><span class="price-tag">$20</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Nopal" data-price="20">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731557/nopal_pmgijw.avif"></div>
-      <h4>Nopal Extra</h4><span class="price-tag">$20</span>
-    </div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Queso" data-price="20">
-      <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731682/queso_wy5zwu.png"></div>
-      <h4>Queso Extra</h4><span class="price-tag">$20</span>
-    </div>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <div class="flash {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}
+  <section class="menu-wrapper">
     
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Verde" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774727686/Fondo_de_Gemini_Generated_Image_dpavxkdpavxkdpav_eliminado_fbcfgr.png"></div><h4>Salsa Verde</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Habanero" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774727914/Fondo_de_IMG_3984_eliminado_awrwba.png"></div><h4>Salsa de Habanero</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Chipotle" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774728376/Fondo_de_8996fed4-5082-4941-9d56-eb4fdbdf60f9_eliminado_yhsjtv.png"></div><h4>Salsa de Chipotle</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Cacahuate" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774728689/Fondo_de_Gemini_Generated_Image_cerfmdcerfmdcerf_eliminado_xkkysu.png"></div><h4>Salsa de Cacahuate</h4><span class="price-tag">$20</span></div>
-    
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Pollo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729057/pollodes_ii4ihj.png"></div><h4>Porción Pollo</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Huevo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729408/Fondo_de_Gemini_Generated_Image_clr40eclr40eclr4_eliminado_nbotin.png"></div><h4>Porción Huevo</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Chicharron Prensado" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/chicharron_prensado_y5pcxz.webp"></div><h4>Chicharrón Prensado</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Chorizo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/chorizo_nztjxx.png"></div><h4>Porción Chorizo</h4><span class="price-tag">$20</span></div>
-    <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Arrachera" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/arrachera_g09z7t.png"></div><h4>Porción Arrachera</h4><span class="price-tag">$20</span></div>
+    <h2 class="category-title">🍽️ Platillos</h2>
+    <div class="cards">
+      <div class="card" onclick="openProduct(this)" data-name="Chilaquiles" data-price="120">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png"></div>
+        <h4>Chilaquiles</h4><span class="price-tag">$120</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Torta de Chilaquiles" data-price="80">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774793308/ChatGPT_Image_29_mar_2026_08_08_06_a.m._qxis4h.png"></div>
+        <h4>Torta de Chilaquiles</h4><span class="price-tag">$80</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Grilled Cheese" data-price="90">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774795630/ChatGPT_Image_29_mar_2026_08_46_25_a.m._du4vpv.png"></div>
+        <h4>Grilled Cheese</h4><span class="price-tag">$90</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Burrito Gringo" data-price="90">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774797345/Burrito_kukeyh.png"></div>
+        <h4>Burrito Gringo</h4><span class="price-tag">$90</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Envuelto de Huevo" data-price="120">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776299931/huevo_envuelto_dkarjn.webp"></div>
+        <h4>Envuelto de Huevo</h4><span class="price-tag">$120</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Huevos Divorciados" data-price="120">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776726812/huevos-divorsiados_of5fb8.png"></div>
+        <h4>Huevos Divorciados</h4><span class="price-tag">$120</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="Enchiladas" data-price="120">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727059/enchiladas_vmvtbz.png"></div>
+        <h4>Enchiladas</h4><span class="price-tag">$120</span>
+      </div>
+      <div class="card" onclick="openProduct(this)" data-name="ChilaCakes!" data-price="90">
+        <div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727358/cakes_abtero.png"></div>
+        <h4>ChilaCakes!</h4><span class="price-tag">$90</span>
+      </div>
+    </div>
+
+    <h2 class="category-title">☕ Bebidas</h2>
+    <div class="cards">
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Cafe Americano" data-price="45"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730224/cafe-americano_bubyna.png"></div><h4>Cafe Americano</h4><span class="price-tag">$45</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Cafe de Olla" data-price="40"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730349/cafe-olla_ae8kpp.png"></div><h4>Cafe de Olla</h4><span class="price-tag">$40</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino" data-price="50"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div><h4>Capuccino</h4><span class="price-tag">$50</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino Vainilla" data-price="55"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div><h4>Capuccino Vainilla</h4><span class="price-tag">$55</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Capuccino Moka" data-price="55"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730580/capuccinos_hsovsf.png"></div><h4>Capuccino Moka</h4><span class="price-tag">$55</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Espresso" data-price="35"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730954/espresso_bk1nnb.png"></div><h4>Espresso</h4><span class="price-tag">$35</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Shot de cafe" data-price="35"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776730954/espresso_bk1nnb.png"></div><h4>Shot de cafe</h4><span class="price-tag">$35</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Chai" data-price="60"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731307/chai_f8kbyn.png"></div><h4>Chai</h4><span class="price-tag">$60</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Dirty Chai" data-price="70"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731307/chai_f8kbyn.png"></div><h4>Dirty Chai</h4><span class="price-tag">$70</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Aguas de sabor natural" data-price="35"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776728294/agua-sabor_gwcvhr.png"></div><h4>Aguas de sabor natural</h4><span class="price-tag">$35</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Jugo de Naranja" data-price="40"><div class="img-box" style="font-size: 50px;">🍊</div><h4>Jugo de Naranja</h4><span class="price-tag">$40</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola Regular (650 ml)" data-price="35"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731790/coca_qpg383.webp"></div><h4>Coca Cola Regular</h4><span class="price-tag">$35</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Coca Cola Zero (650 ml)" data-price="35"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776732172/coca-zero_qpfr47.png"></div><h4>Coca Cola Zero</h4><span class="price-tag">$35</span></div>
+    </div>
+
+    <h2 class="category-title">🍰 Postres y Porciones Extra</h2>
+    <div class="cards">
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Galleta de chocolate" data-price="30"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727490/cookie_czmohi.jpg"></div><h4>Galleta de chocolate</h4><span class="price-tag">$30</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Carlota" data-price="50"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776727721/carlota_ll6qqm.png"></div><h4>Carlota</h4><span class="price-tag">$50</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Proteína Extra" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729408/Fondo_de_Gemini_Generated_Image_clr40eclr40eclr4_eliminado_nbotin.png"></div><h4>Proteina Extra</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Nopal" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731557/nopal_pmgijw.avif"></div><h4>Nopal Extra</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Porción: Queso" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1776731682/queso_wy5zwu.png"></div><h4>Queso Extra</h4><span class="price-tag">$20</span></div>
+      
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Verde" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774727686/Fondo_de_Gemini_Generated_Image_dpavxkdpavxkdpav_eliminado_fbcfgr.png"></div><h4>Salsa Verde</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Habanero" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774727914/Fondo_de_IMG_3984_eliminado_awrwba.png"></div><h4>Salsa de Habanero</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Chipotle" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774728376/Fondo_de_8996fed4-5082-4941-9d56-eb4fdbdf60f9_eliminado_yhsjtv.png"></div><h4>Salsa de Chipotle</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Salsa Cacahuate" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774728689/Fondo_de_Gemini_Generated_Image_cerfmdcerfmdcerf_eliminado_xkkysu.png"></div><h4>Salsa de Cacahuate</h4><span class="price-tag">$20</span></div>
+      
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Pollo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729057/pollodes_ii4ihj.png"></div><h4>Porción Pollo</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Huevo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774729408/Fondo_de_Gemini_Generated_Image_clr40eclr40eclr4_eliminado_nbotin.png"></div><h4>Porción Huevo</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Chicharron Prensado" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/chicharron_prensado_y5pcxz.webp"></div><h4>Chicharrón Prensado</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Chorizo" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/chorizo_nztjxx.png"></div><h4>Porción Chorizo</h4><span class="price-tag">$20</span></div>
+      <div class="card" onclick="addSimpleProduct(this)" data-name="Extra: Arrachera" data-price="20"><div class="img-box"><img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774792307/arrachera_g09z7t.png"></div><h4>Porción Arrachera</h4><span class="price-tag">$20</span></div>
+    </div>
+  </section>
+
+  <div id="cart-tab" onclick="toggleCart()">
+    🧾 Ver pedido (<span id="cart-count">0</span>) | Total: $<span id="total">0</span>
   </div>
 
-</section>
-
-<div id="cart-tab" onclick="toggleCart()">
-  🧾 Ver pedido (<span id="cart-count">0</span>) | Total: $<span id="total">0</span>
-</div>
-
-<div id="cart-panel">
-
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h3>Tu pedido</h3>
-    <button onclick="toggleCart(true)" style="width:auto; margin-top:0;">✕</button>
-  </div>
-
-  <div id="cart-items"></div>
-
-  <hr style="margin: 15px 0;">
-
-  <div style="display:flex; gap:10px; margin-bottom:10px;">
-    <label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label>
-    <label><input type="radio" name="tipo" value="Recoger"> Recoger</label>
-    <label><input type="radio" name="tipo" value="Domicilio" onclick="showDir()"> Domicilio</label>
-  </div>
-
-  <div id="dir" style="display:none;">
-    <input id="direccion" placeholder="Dirección completa">
-  </div>
-
-  <input id="nombre" placeholder="Nombre">
-  <input id="telefono" type="tel" placeholder="Teléfono">
-
-  <select id="pago">
-    <option value="" disabled selected>Método de pago</option>
-    <option>Efectivo</option>
-    <option>Transferencia</option>
-  </select>
-
-  <button onclick="generarPedido()">PEDIR POR WHATSAPP</button>
-
-</div>
-
-<script>
-let cart=[]
-
-const salsas=["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
-const proteinas=["Pollo","Huevo","Chicharrón","Arrachera","Chorizo"]
-const extrasBase=["Aguacate","Queso","Nopal"]
-const quitar=["Sin cebolla","Sin crema","Sin queso","Sin aguacate"]
-
-function openProduct(el){
-  let modal=document.createElement("div")
-  modal.id="modal"
-
-  modal.innerHTML=`
-  <div class="modal-content">
-  <h3 style="margin-bottom:15px; color:var(--rojo);">${el.dataset.name}</h3>
-
-  <b>Salsas (máx 2)</b>
-  ${salsas.map(s=>`
-  <label class="option">
-  <input type="checkbox" class="salsa" value="${s}">
-  <span>${s}</span>
-  </label>`).join("")}
-  <br>
-
-  <b>Proteína principal</b>
-  <select id="proteina" style="margin-bottom: 15px;">
-  <option value="Sin proteína">Sin proteína</option>
-  ${proteinas.map(p=>`<option value="${p}">${p}</option>`).join("")}
-  </select>
-
-  <b>Extras +$20 c/u</b>
-  ${[...extrasBase,...proteinas,...salsas].map(e=>`
-  <label class="option">
-  <input type="checkbox" class="extra" value="${e}">
-  <span>${e}</span>
-  </label>`).join("")}
-  <br>
-
-  <b>Quitar ingredientes</b>
-  ${quitar.map(q=>`
-  <label class="option">
-  <input type="checkbox" class="remove" value="${q}">
-  <span>${q}</span>
-  </label>`).join("")}
-
-  <button style="margin-top:20px;" onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar al pedido - $${el.dataset.price}</button>
-  <button style="background:#444;" onclick="closeModal()">Cancelar</button>
-  </div>`
-
-  document.body.appendChild(modal)
-
-  modal.addEventListener("click",(e)=>{
-    if(e.target.id==="modal") closeModal()
-  })
-}
-
-function closeModal(){ 
-  let modal = document.getElementById("modal");
-  if(modal) modal.remove();
-}
-
-function addCustomProduct(name,price){
-  let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
-  if(s.length>2){alert("Máximo 2 salsas por favor");return}
-
-  let p=document.getElementById("proteina").value
-  if (p === "Sin proteína") p = null; // Evitar imprimir "Sin proteína" en el ticket
-  
-  let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
-  let r=[...document.querySelectorAll(".remove:checked")].map(x=>x.value)
-
-  cart.push({name,s,p,e,r,price:price+e.length*20})
-  closeModal()
-  updateCartUI()
-  toggleCart()
-}
-
-function addSimpleProduct(el){
-  cart.push({name:el.dataset.name,price:parseInt(el.dataset.price)})
-  updateCartUI()
-  toggleCart()
-}
-
-function toggleCart(forceClose=false){
-  let panel=document.getElementById("cart-panel")
-  if(forceClose){ panel.classList.remove("open") }
-  else{ panel.classList.toggle("open") }
-}
-
-function showDir(){
-  document.getElementById("dir").style.display="block"
-}
-
-// Ocultar dirección si cambian a "En el lugar" o "Recoger"
-document.querySelectorAll('input[name="tipo"]').forEach(radio => {
-  radio.addEventListener('change', function() {
-    if(this.value !== "Domicilio") {
-      document.getElementById("dir").style.display="none";
-    }
-  });
-});
-
-function calculateTotal(){
-  return cart.reduce((sum,i)=>sum+i.price,0)
-}
-
-function updateCartUI(){
-  let c=document.getElementById("cart-items")
-  let count=document.getElementById("cart-count")
-  let total=document.getElementById("total")
-
-  c.innerHTML=""
-  count.innerText=cart.length
-  total.innerText=calculateTotal()
-
-  cart.forEach((i,index)=>{
-    let div=document.createElement("div")
-    div.style.marginBottom = "10px";
-    div.innerHTML=`
+  <div id="cart-panel">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <b>${i.name}</b>
-      <span>$${i.price} <button class="remove-btn" onclick="removeItem(${index})">✕</button></span>
+      <h3>Tu pedido actual</h3>
+      <button onclick="toggleCart(true)" class="menu-btn" style="width:auto; margin-top:0; padding:8px 12px; background:#444;">✕</button>
     </div>
-    <small style="color:#555; display:block; margin-top:4px;">
-    ${i.s && i.s.length ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
-    ${i.p ? "Proteína: "+i.p+"<br>" : ""}
-    ${i.e && i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
-    ${i.r && i.r.length ? "Quitar: "+i.r.join(", ")+"<br>" : ""}
-    </small>
-    <hr style="margin-top:8px;">`
-    c.appendChild(div)
-  })
-}
 
-function removeItem(i){
-  cart.splice(i,1)
-  updateCartUI()
-}
+    <div id="cart-items" style="margin-top: 15px;"></div>
 
-function generarPedido(){
-  if(cart.length === 0) return alert("Tu carrito está vacío")
+    <hr style="margin: 15px 0;">
 
-  let tipo=document.querySelector('input[name="tipo"]:checked')
-  if(!tipo)return alert("Selecciona el tipo de entrega (En el lugar, Recoger o Domicilio)")
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+      <label><input type="radio" name="tipo" value="En el lugar"> En el lugar</label>
+      <label><input type="radio" name="tipo" value="Recoger"> Recoger</label>
+      <label><input type="radio" name="tipo" value="Domicilio" onclick="showDir()"> Domicilio</label>
+    </div>
 
-  let dir=""
-  if(tipo.value==="Domicilio"){
-    dir=document.getElementById("direccion").value
-    if(!dir)return alert("Por favor ingresa tu dirección")
+    <div id="dir" style="display:none;">
+      <input id="direccion" class="menu-input" placeholder="Dirección completa">
+    </div>
+
+    <input id="nombre" class="menu-input" placeholder="Nombre del cliente">
+    <input id="telefono" class="menu-input" type="tel" placeholder="Teléfono">
+
+    <select id="pago" class="menu-input">
+      <option value="" disabled selected>Método de pago</option>
+      <option>Efectivo</option>
+      <option>Transferencia</option>
+    </select>
+
+    <button onclick="generarPedido()" class="menu-btn" style="margin-bottom: 30px;">ENVIAR PEDIDO POR WHATSAPP</button>
+  </div>
+  {% endblock %}
+  <script>
+  // SCRIPT BASE DE LA NAVBAR (Dropdowns)
+  document.addEventListener("DOMContentLoaded", () => {
+    const dds = document.querySelectorAll(".nav-dd");
+    const buttons = document.querySelectorAll(".nav-dd-btn");
+
+    function closeAll(except = null) {
+      dds.forEach(dd => {
+        if (dd !== except) {
+          dd.classList.remove("is-open");
+          const b = dd.querySelector(".nav-dd-btn");
+          if (b) b.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+
+    function toggle(dd) {
+      const isOpen = dd.classList.contains("is-open");
+      closeAll(dd);
+      dd.classList.toggle("is-open", !isOpen);
+
+      const b = dd.querySelector(".nav-dd-btn");
+      if (b) b.setAttribute("aria-expanded", String(!isOpen));
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const dd = btn.closest(".nav-dd");
+        if (!dd) return;
+        toggle(dd);
+      }, { passive: false });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (e.target.closest && e.target.closest(".nav-dd")) return;
+      closeAll();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAll();
+    });
+  });
+
+  // SCRIPT DEL MENÚ / CARRITO
+  let cart=[]
+
+  const salsas=["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
+  const proteinas=["Pollo","Huevo","Chicharrón","Arrachera","Chorizo"]
+  const extrasBase=["Aguacate","Queso","Nopal"]
+  const quitar=["Sin cebolla","Sin crema","Sin queso","Sin aguacate"]
+
+  function openProduct(el){
+    let modal=document.createElement("div")
+    modal.id="menu-modal"
+
+    modal.innerHTML=`
+    <div class="modal-content">
+    <h3 style="margin-bottom:15px; color:var(--rojo);">${el.dataset.name}</h3>
+
+    <b>Salsas (máx 2)</b>
+    ${salsas.map(s=>`
+    <label class="option">
+    <input type="checkbox" class="salsa" value="${s}">
+    <span>${s}</span>
+    </label>`).join("")}
+    <br>
+
+    <b>Proteína principal</b>
+    <select id="proteina" class="menu-input" style="margin-bottom: 15px;">
+    <option value="Sin proteína">Sin proteína</option>
+    ${proteinas.map(p=>`<option value="${p}">${p}</option>`).join("")}
+    </select>
+
+    <b>Extras +$20 c/u</b>
+    ${[...extrasBase,...proteinas,...salsas].map(e=>`
+    <label class="option">
+    <input type="checkbox" class="extra" value="${e}">
+    <span>${e}</span>
+    </label>`).join("")}
+    <br>
+
+    <b>Quitar ingredientes</b>
+    ${quitar.map(q=>`
+    <label class="option">
+    <input type="checkbox" class="remove" value="${q}">
+    <span>${q}</span>
+    </label>`).join("")}
+
+    <button class="menu-btn" style="margin-top:20px;" onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar al pedido - $${el.dataset.price}</button>
+    <button class="menu-btn" style="background:#444;" onclick="closeModal()">Cancelar</button>
+    </div>`
+
+    document.body.appendChild(modal)
+
+    modal.addEventListener("click",(e)=>{
+      if(e.target.id==="menu-modal") closeModal()
+    })
   }
 
-  let nombre=document.getElementById("nombre").value
-  let tel=document.getElementById("telefono").value
-  let pago=document.getElementById("pago").value
+  function closeModal(){ 
+    let modal = document.getElementById("menu-modal");
+    if(modal) modal.remove();
+  }
 
-  if(!nombre) return alert("Por favor ingresa tu nombre")
+  function addCustomProduct(name,price){
+    let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
+    if(s.length>2){alert("Máximo 2 salsas por favor");return}
 
-  let msg="*Nuevo Pedido:*%0A%0A"
+    let p=document.getElementById("proteina").value
+    if (p === "Sin proteína") p = null; 
+    
+    let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
+    let r=[...document.querySelectorAll(".remove:checked")].map(x=>x.value)
 
-  cart.forEach(i=>{
-    msg+=`🍽️ *${i.name}*%0A`
-    if(i.s && i.s.length) msg+=`   🌶️ Salsas: ${i.s.join(", ")}%0A`
-    if(i.p) msg+=`   🍗 Proteína: ${i.p}%0A`
-    if(i.e && i.e.length) msg+=`   ➕ Extras: ${i.e.join(", ")}%0A`
-    if(i.r && i.r.length) msg+=`   ➖ Quitar: ${i.r.join(", ")}%0A`
-    msg+=`   💵 $${i.price}%0A%0A`
-  })
+    cart.push({name,s,p,e,r,price:price+e.length*20})
+    closeModal()
+    updateCartUI()
+    toggleCart()
+  }
 
-  msg+=`💰 *Total: $${calculateTotal()}*%0A`
-  msg+=`📍 *Tipo:* ${tipo.value}%0A`
-  if(dir)msg+=`🏠 *Dir:* ${dir}%0A`
-  msg+=`👤 *Nombre:* ${nombre}%0A`
-  if(tel)msg+=`📱 *Tel:* ${tel}%0A`
-  if(pago)msg+=`💳 *Pago:* ${pago}%0A`
+  function addSimpleProduct(el){
+    cart.push({name:el.dataset.name,price:parseInt(el.dataset.price)})
+    updateCartUI()
+    toggleCart()
+  }
 
-  window.open(`https://wa.me/524491971799?text=${msg}`)
-}
-</script>
+  function toggleCart(forceClose=false){
+    let panel=document.getElementById("cart-panel")
+    if(forceClose){ panel.classList.remove("open") }
+    else{ panel.classList.toggle("open") }
+  }
+
+  function showDir(){
+    document.getElementById("dir").style.display="block"
+  }
+
+  document.querySelectorAll('input[name="tipo"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      if(this.value !== "Domicilio") {
+        document.getElementById("dir").style.display="none";
+      }
+    });
+  });
+
+  function calculateTotal(){
+    return cart.reduce((sum,i)=>sum+i.price,0)
+  }
+
+  function updateCartUI(){
+    let c=document.getElementById("cart-items")
+    let count=document.getElementById("cart-count")
+    let total=document.getElementById("total")
+
+    c.innerHTML=""
+    count.innerText=cart.length
+    total.innerText=calculateTotal()
+
+    cart.forEach((i,index)=>{
+      let div=document.createElement("div")
+      div.style.marginBottom = "10px";
+      div.innerHTML=`
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <b>${i.name}</b>
+        <span>$${i.price} <button class="remove-btn" onclick="removeItem(${index})">✕</button></span>
+      </div>
+      <small style="color:#555; display:block; margin-top:4px;">
+      ${i.s && i.s.length ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
+      ${i.p ? "Proteína: "+i.p+"<br>" : ""}
+      ${i.e && i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
+      ${i.r && i.r.length ? "Quitar: "+i.r.join(", ")+"<br>" : ""}
+      </small>
+      <hr style="margin-top:8px; border-color:#eee;">`
+      c.appendChild(div)
+    })
+  }
+
+  function removeItem(i){
+    cart.splice(i,1)
+    updateCartUI()
+  }
+
+  function generarPedido(){
+    if(cart.length === 0) return alert("El carrito está vacío")
+
+    let tipo=document.querySelector('input[name="tipo"]:checked')
+    if(!tipo)return alert("Selecciona el tipo de entrega")
+
+    let dir=""
+    if(tipo.value==="Domicilio"){
+      dir=document.getElementById("direccion").value
+      if(!dir)return alert("Por favor ingresa la dirección")
+    }
+
+    let nombre=document.getElementById("nombre").value
+    let tel=document.getElementById("telefono").value
+    let pago=document.getElementById("pago").value
+
+    if(!nombre) return alert("Falta el nombre del cliente")
+
+    let msg="*Nuevo Pedido (POS):*%0A%0A"
+
+    cart.forEach(i=>{
+      msg+=`🍽️ *${i.name}*%0A`
+      if(i.s && i.s.length) msg+=`   🌶️ Salsas: ${i.s.join(", ")}%0A`
+      if(i.p) msg+=`   🍗 Proteína: ${i.p}%0A`
+      if(i.e && i.e.length) msg+=`   ➕ Extras: ${i.e.join(", ")}%0A`
+      if(i.r && i.r.length) msg+=`   ➖ Quitar: ${i.r.join(", ")}%0A`
+      msg+=`   💵 $${i.price}%0A%0A`
+    })
+
+    msg+=`💰 *Total: $${calculateTotal()}*%0A`
+    msg+=`📍 *Tipo:* ${tipo.value}%0A`
+    if(dir)msg+=`🏠 *Dir:* ${dir}%0A`
+    msg+=`👤 *Cliente:* ${nombre}%0A`
+    if(tel)msg+=`📱 *Tel:* ${tel}%0A`
+    if(pago)msg+=`💳 *Pago:* ${pago}%0A`
+
+    window.open(`https://wa.me/524491971799?text=${msg}`)
+  }
+  </script>
 
 </body>
 </html>
