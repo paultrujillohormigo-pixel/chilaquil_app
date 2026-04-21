@@ -244,7 +244,217 @@
     }
 
     #cart-panel label input[type="radio"] { width: auto; margin-right: 5px; }
+:root {
+  --rojo: #b32417;
+  --negro: #010101;
+  --rojo-oscuro: #6f150c;
+  --blanco: #ffffff;
+  --gris-suave: #f5f5f5;
+}
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif;
+}
+
+body {
+  background: var(--blanco);
+  color: var(--negro);
+}
+
+/* NAV */
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 40px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+nav img {
+  height: 55px;
+  object-fit: contain;
+}
+
+nav div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+nav a {
+  color: var(--negro);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+  transition: 0.3s;
+}
+
+/* Hover pro (línea animada) */
+nav a::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  background: var(--rojo);
+  bottom: -5px;
+  left: 0;
+  transition: 0.3s;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+nav a:hover {
+  color: var(--rojo);
+}
+
+/* HERO */
+.hero {
+  height: 90vh;
+  background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 60px;
+  text-align: center;
+  color: white;
+}
+
+.hero-content {
+  max-width: 800px;
+  background: rgba(0,0,0,0.4);
+  padding: 25px 30px;
+  border-radius: 12px;
+}
+
+.hero h2 {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 25px;
+}
+
+/* BOTÓN */
+.btn {
+  background: var(--rojo);
+  padding: 15px 30px;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: 0.3s;
+  display: inline-block;
+}
+
+.btn:hover {
+  background: var(--rojo-oscuro);
+  transform: translateY(-2px);
+}
+
+/* SECCION PRODUCTOS */
+.section {
+  padding: 80px 40px;
+  text-align: center;
+  background: var(--blanco);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.card {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
+
+.card img {
+  width: 100%;
+  height: 250px;
+  object-fit: contain;
+}
+
+.card h4 {
+  margin-top: 10px;
+  font-weight: 700;
+  color: var(--negro);
+}
+
+/* PROMO */
+.promo {
+  background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background-color: white;
+}
+
+/* FOOTER */
+footer {
+  background: var(--negro);
+  color: white;
+  text-align: center;
+  padding: 30px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  nav {
+    padding: 15px 20px;
+  }
+
+  nav img {
+    height: 45px;
+  }
+
+  nav div {
+    gap: 12px;
+  }
+
+  nav a {
+    font-size: 14px;
+  }
+
+  .hero {
+    height: 75vh;
+    padding-bottom: 40px;
+  }
+
+  .hero h2 {
+    font-size: 2rem;
+  }
+
+  .hero-content {
+    padding: 15px 20px;
+  }
+
+  .section {
+    padding: 50px 20px;
+  }
+}
   </style>
 </head>
 
