@@ -83,7 +83,22 @@
     }
 
     /* ================= ESTILOS DEL MENÚ INTERACTIVO ================= */
-    :root { --rojo:#b32417; }
+    :root { --rojo:#b32417; --negro: #010101; --rojo-oscuro: #6f150c; --blanco: #ffffff; --gris-suave: #f5f5f5; }
+
+    /* BANNER PROMO MIÉRCOLES */
+    #promo-banner {
+      display: none;
+      background: var(--rojo);
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 90px;
+      z-index: 999;
+    }
 
     .menu-wrapper { padding:20px; max-width: 800px; margin: 0 auto; }
 
@@ -156,7 +171,6 @@
       overflow-x:hidden;
     }
 
-    /* TÍTULOS DE SECCIÓN DEL MODAL AÑADIDOS */
     .modal-section-title { 
       background: var(--gris-suave); 
       padding: 8px 12px; 
@@ -220,7 +234,6 @@
 
     #cart-panel.open { bottom:0; }
 
-    /* BOTONES ESPECÍFICOS DEL MENÚ PARA NO ROMPER LA NAV */
     .menu-btn {
       background:var(--rojo);
       color:white;
@@ -246,7 +259,6 @@
       cursor: pointer;
     }
 
-    /* INPUTS DEL CARRITO/MODAL */
     .menu-input {
       width:100%;
       padding:12px;
@@ -259,192 +271,82 @@
     }
 
     #cart-panel label input[type="radio"] { width: auto; margin-right: 5px; }
-:root {
-  --rojo: #b32417;
-  --negro: #010101;
-  --rojo-oscuro: #6f150c;
-  --blanco: #ffffff;
-  --gris-suave: #f5f5f5;
-}
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Montserrat', sans-serif;
-}
+    /* NAV ORIGINAL */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
 
-body {
-  background: var(--blanco);
-  color: var(--negro);
-}
+    nav img {
+      height: 55px;
+      object-fit: contain;
+    }
 
-/* NAV */
-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 40px;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
+    nav div {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
 
-nav img {
-  height: 55px;
-  object-fit: contain;
-}
+    nav a {
+      color: var(--negro);
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+      transition: 0.3s;
+    }
 
-nav div {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
+    nav a::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 2px;
+      background: var(--rojo);
+      bottom: -5px;
+      left: 0;
+      transition: 0.3s;
+    }
 
-nav a {
-  color: var(--negro);
-  text-decoration: none;
-  font-weight: 600;
-  position: relative;
-  transition: 0.3s;
-}
+    nav a:hover::after {
+      width: 100%;
+    }
 
-/* Hover pro (línea animada) */
-nav a::after {
-  content: "";
-  position: absolute;
-  width: 0;
-  height: 2px;
-  background: var(--rojo);
-  bottom: -5px;
-  left: 0;
-  transition: 0.3s;
-}
+    nav a:hover {
+      color: var(--rojo);
+    }
 
-nav a:hover::after {
-  width: 100%;
-}
-
-nav a:hover {
-  color: var(--rojo);
-}
-
-/* HERO */
-.hero {
-  height: 90vh;
-  background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 60px;
-  text-align: center;
-  color: white;
-}
-
-.hero-content {
-  max-width: 800px;
-  background: rgba(0,0,0,0.4);
-  padding: 25px 30px;
-  border-radius: 12px;
-}
-
-.hero h2 {
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 15px;
-}
-
-.hero p {
-  font-size: 1.2rem;
-  margin-bottom: 25px;
-}
-
-/* BOTÓN */
-.btn {
-  background: var(--rojo);
-  padding: 15px 30px;
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  border-radius: 8px;
-  transition: 0.3s;
-  display: inline-block;
-}
-
-.btn:hover {
-  background: var(--rojo-oscuro);
-  transform: translateY(-2px);
-}
-
-
-/* PROMO */
-.promo {
-  background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  background-color: white;
-}
-
-/* FOOTER */
-footer {
-  background: var(--negro);
-  color: white;
-  text-align: center;
-  padding: 30px;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  nav {
-    padding: 15px 20px;
-  }
-
-  nav img {
-    height: 45px;
-  }
-
-  nav div {
-    gap: 12px;
-  }
-
-  nav a {
-    font-size: 14px;
-  }
-
-  .hero {
-    height: 75vh;
-    padding-bottom: 40px;
-  }
-
-  .hero h2 {
-    font-size: 2rem;
-  }
-
-  .hero-content {
-    padding: 15px 20px;
-  }
-
-  .section {
-    padding: 50px 20px;
-  }
-}
+    @media (max-width: 768px) {
+      nav { padding: 15px 20px; }
+      nav img { height: 45px; }
+      nav div { gap: 12px; }
+      nav a { font-size: 14px; }
+      #promo-banner { top: 75px; }
+    }
   </style>
 </head>
 
 <body>
 
- <nav>
+<nav>
   <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
   <div>
     <a href="www.senorchilaquil.com/menu">Menú / Ordenar</a>
     <a href="www.senorchilaquil.com">Promos</a>
   </div>
 </nav>
+
+<div id="promo-banner">
+  🎉 ¡HOY ES MIÉRCOLES DE 2x1 EN PLATILLOS! <br>
+  <small style="font-weight:400;">(El descuento aplica en el platillo de menor precio. Los extras se cobran normal).</small>
+</div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -562,60 +464,38 @@ footer {
       <option value="" disabled selected>Método de pago</option>
       <option>Efectivo</option>
       <option>Transferencia</option>
-
     </select>
 
     <button onclick="generarPedido()" class="menu-btn" style="margin-bottom: 30px;">ENVIAR PEDIDO POR WHATSAPP</button>
   </div>
   {% endblock %}
+
   <script>
-  // SCRIPT BASE DE LA NAVBAR (Dropdowns)
+  // DETECCIÓN DEL DÍA
   document.addEventListener("DOMContentLoaded", () => {
+    if(new Date().getDay() === 3) { // 3 es Miércoles
+      document.getElementById("promo-banner").style.display = "block";
+    }
+
+    // Lógica original de dropdowns
     const dds = document.querySelectorAll(".nav-dd");
     const buttons = document.querySelectorAll(".nav-dd-btn");
-
     function closeAll(except = null) {
-      dds.forEach(dd => {
-        if (dd !== except) {
-          dd.classList.remove("is-open");
-          const b = dd.querySelector(".nav-dd-btn");
-          if (b) b.setAttribute("aria-expanded", "false");
-        }
-      });
+      dds.forEach(dd => { if (dd !== except) dd.classList.remove("is-open"); });
     }
-
-    function toggle(dd) {
-      const isOpen = dd.classList.contains("is-open");
-      closeAll(dd);
-      dd.classList.toggle("is-open", !isOpen);
-
-      const b = dd.querySelector(".nav-dd-btn");
-      if (b) b.setAttribute("aria-expanded", String(!isOpen));
-    }
-
     buttons.forEach(btn => {
       btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         const dd = btn.closest(".nav-dd");
-        if (!dd) return;
-        toggle(dd);
-      }, { passive: false });
+        const isOpen = dd.classList.contains("is-open");
+        closeAll(dd);
+        dd.classList.toggle("is-open", !isOpen);
+      });
     });
-
-    document.addEventListener("click", (e) => {
-      if (e.target.closest && e.target.closest(".nav-dd")) return;
-      closeAll();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeAll();
-    });
+    document.addEventListener("click", () => closeAll());
   });
 
-  // SCRIPT DEL MENÚ / CARRITO
   let cart=[]
-
   const salsas=["Verde","Habanero","Habanero Miel","Chipotle","Cacahuate"]
   const proteinas=["Pollo","Huevo","Chicharrón","Arrachera","Chorizo"]
   const extrasBase=["Aguacate","Queso","Nopal"]
@@ -625,163 +505,113 @@ footer {
     let modal=document.createElement("div")
     modal.id="menu-modal"
 
-    // Generador de secciones visuales para el modal
     const createSection = (title, icon, items, className) => `
         <div class="modal-section-title">${icon} ${title}</div>
-        ${items.map(item => `
-            <label class="option">
-                <input type="checkbox" class="${className}" value="${item}">
-                <span>${item}</span>
-            </label>
-        `).join("")}
+        ${items.map(item => `<label class="option"><input type="checkbox" class="${className}" value="${item}"><span>${item}</span></label>`).join("")}
     `;
 
     modal.innerHTML=`
     <div class="modal-content">
     <h3 style="margin-bottom:15px; color:var(--rojo);">${el.dataset.name}</h3>
-
     ${createSection("Salsas (máx 2)", "🌶️", salsas, "salsa")}
     ${createSection("Proteína (+$15 c/u)", "🍗", proteinas, "proteina-check")}
     ${createSection("Extras (+$20 c/u)", "➕", extrasBase, "extra")}
     ${createSection("Quitar ingredientes", "❌", quitar, "remove")}
-
     <button class="menu-btn" style="margin-top:20px;" onclick="addCustomProduct('${el.dataset.name}', ${el.dataset.price})">Agregar al pedido - $${el.dataset.price}</button>
     <button class="menu-btn" style="background:#444;" onclick="closeModal()">Cancelar</button>
     </div>`
-
     document.body.appendChild(modal)
-
-    modal.addEventListener("click",(e)=>{
-      if(e.target.id==="menu-modal") closeModal()
-    })
+    modal.addEventListener("click",(e)=>{ if(e.target.id==="menu-modal") closeModal() })
   }
 
-  function closeModal(){ 
-    let modal = document.getElementById("menu-modal");
-    if(modal) modal.remove();
-  }
+  function closeModal(){ let m = document.getElementById("menu-modal"); if(m) m.remove(); }
 
   function addCustomProduct(name,price){
     let s=[...document.querySelectorAll(".salsa:checked")].map(e=>e.value)
     if(s.length>2){alert("Máximo 2 salsas por favor");return}
-
-    // Obtenemos las proteínas como checkboxes
     let p=[...document.querySelectorAll(".proteina-check:checked")].map(e=>e.value)
     let e=[...document.querySelectorAll(".extra:checked")].map(x=>x.value)
     let r=[...document.querySelectorAll(".remove:checked")].map(x=>x.value)
-
-    // Calculamos el precio base + (proteinas * 15) + (extras * 20)
-    let finalPrice = parseInt(price) + (p.length * 15) + (e.length * 20);
-
-    cart.push({name, s, p, e, r, price: finalPrice})
-    closeModal()
-    updateCartUI()
-    toggleCart()
+    
+    let base = parseInt(price);
+    let extras = (p.length * 15) + (e.length * 20);
+    
+    cart.push({ type:'platillo', name, s, p, e, r, basePrice: base, price: base + extras, discount: 0 })
+    closeModal(); updateCartUI(); toggleCart();
   }
 
   function addSimpleProduct(el){
-    cart.push({name:el.dataset.name,price:parseInt(el.dataset.price)})
-    updateCartUI()
-    toggleCart()
+    cart.push({ type:'otro', name:el.dataset.name, basePrice: parseInt(el.dataset.price), price: parseInt(el.dataset.price), discount: 0 })
+    updateCartUI(); toggleCart();
   }
 
   function toggleCart(forceClose=false){
-    let panel=document.getElementById("cart-panel")
-    if(forceClose){ panel.classList.remove("open") }
-    else{ panel.classList.toggle("open") }
+    let panel=document.getElementById("cart-panel");
+    if(forceClose) panel.classList.remove("open"); else panel.classList.toggle("open");
   }
 
-  function showDir(){
-    document.getElementById("dir").style.display="block"
-  }
+  function showDir(){ document.getElementById("dir").style.display="block"; }
 
-  document.querySelectorAll('input[name="tipo"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-      if(this.value !== "Domicilio") {
-        document.getElementById("dir").style.display="none";
-      }
+  function applyPromos() {
+    let isWed = new Date().getDay() === 3;
+    let platillos = [];
+    cart.forEach((item, index) => {
+      item.discount = 0;
+      if(item.type === 'platillo') platillos.push({ ...item, idx: index });
     });
-  });
-
-  function calculateTotal(){
-    return cart.reduce((sum,i)=>sum+i.price,0)
+    if (isWed) {
+      platillos.sort((a, b) => b.basePrice - a.basePrice);
+      for (let i = 1; i < platillos.length; i += 2) {
+        cart[platillos[i].idx].discount = cart[platillos[i].idx].basePrice;
+      }
+    }
+    return cart.reduce((sum, i) => sum + (i.price - i.discount), 0);
   }
 
   function updateCartUI(){
-    let c=document.getElementById("cart-items")
-    let count=document.getElementById("cart-count")
-    let total=document.getElementById("total")
+    let totalReal = applyPromos();
+    document.getElementById("cart-count").innerText = cart.length;
+    document.getElementById("total").innerText = totalReal;
+    let container = document.getElementById("cart-items");
+    container.innerHTML = "";
 
-    c.innerHTML=""
-    count.innerText=cart.length
-    total.innerText=calculateTotal()
-
-    cart.forEach((i,index)=>{
-      let div=document.createElement("div")
-      div.style.marginBottom = "10px";
+    cart.forEach((i, idx) => {
+      let promo = i.discount > 0 ? '<span style="color:red; font-size:11px;"> (2x1)</span>' : '';
+      let priceHtml = i.discount > 0 ? `<del style="color:#999;">$${i.price}</del> $${i.price - i.discount}` : `$${i.price}`;
       
-      // Adaptamos para que lea el arreglo de proteínas si existen
-      div.innerHTML=`
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <b>${i.name}</b>
-        <span>$${i.price} <button class="remove-btn" onclick="removeItem(${index})">✕</button></span>
-      </div>
-      <small style="color:#555; display:block; margin-top:4px;">
-      ${i.s && i.s.length ? "Salsas: "+i.s.join(", ")+"<br>" : ""}
-      ${i.p && i.p.length ? "Proteína: "+i.p.join(", ")+"<br>" : ""}
-      ${i.e && i.e.length ? "Extras: "+i.e.join(", ")+"<br>" : ""}
-      ${i.r && i.r.length ? "Quitar: "+i.r.join(", ")+"<br>" : ""}
-      </small>
-      <hr style="margin-top:8px; border-color:#eee;">`
-      c.appendChild(div)
-    })
+      let div = document.createElement("div");
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <b>${i.name}${promo}</b>
+          <span>${priceHtml} <button class="remove-btn" onclick="removeItem(${idx})">✕</button></span>
+        </div>
+        <small style="color:#666;">
+          ${i.s ? "Salsas: "+i.s.join(", ")+"<br>" : ""}${i.p ? "Proteína: "+i.p.join(", ")+"<br>" : ""}
+          ${i.e ? "Extras: "+i.e.join(", ")+"<br>" : ""}${i.r ? "Quitar: "+i.r.join(", ")+"<br>" : ""}
+        </small><hr style="border:0; border-top:1px solid #eee; margin:8px 0;">`;
+      container.appendChild(div);
+    });
   }
 
-  function removeItem(i){
-    cart.splice(i,1)
-    updateCartUI()
-  }
+  function removeItem(i){ cart.splice(i,1); updateCartUI(); }
 
   function generarPedido(){
-    if(cart.length === 0) return alert("El carrito está vacío")
+    if(!cart.length) return alert("Carrito vacío");
+    let tipo=document.querySelector('input[name="tipo"]:checked');
+    if(!tipo) return alert("Selecciona tipo de entrega");
+    let nombre=document.getElementById("nombre").value;
+    if(!nombre) return alert("Nombre falta");
 
-    let tipo=document.querySelector('input[name="tipo"]:checked')
-    if(!tipo)return alert("Selecciona el tipo de entrega")
-
-    let dir=""
-    if(tipo.value==="Domicilio"){
-      dir=document.getElementById("direccion").value
-      if(!dir)return alert("Por favor ingresa la dirección")
-    }
-
-    let nombre=document.getElementById("nombre").value
-    let tel=document.getElementById("telefono").value
-    let pago=document.getElementById("pago").value
-
-    if(!nombre) return alert("Falta el nombre del cliente")
-
-    let msg="*Nuevo Pedido (POS):*%0A%0A"
-
+    let total = applyPromos();
+    let msg="*Nuevo Pedido (POS):*%0A%0A";
     cart.forEach(i=>{
-      msg+=`🍽️ *${i.name}*%0A`
-      if(i.s && i.s.length) msg+=`   🌶️ Salsas: ${i.s.join(", ")}%0A`
-      // Adaptamos también para WhatsApp
-      if(i.p && i.p.length) msg+=`   🍗 Proteína: ${i.p.join(", ")}%0A`
-      if(i.e && i.e.length) msg+=`   ➕ Extras: ${i.e.join(", ")}%0A`
-      if(i.r && i.r.length) msg+=`   ➖ Quitar: ${i.r.join(", ")}%0A`
-      msg+=`   💵 $${i.price}%0A%0A`
-    })
-
-    msg+=`💰 *Total: $${calculateTotal()}*%0A`
-    msg+=`📍 *Tipo:* ${tipo.value}%0A`
-    if(dir)msg+=`🏠 *Dir:* ${dir}%0A`
-    msg+=`👤 *Cliente:* ${nombre}%0A`
-    if(tel)msg+=`📱 *Tel:* ${tel}%0A`
-    if(pago)msg+=`💳 *Pago:* ${pago}%0A`
-
-    window.open(`https://wa.me/524491971799?text=${msg}`)
+      msg+=`🍽️ *${i.name}*%0A`;
+      if(i.discount > 0) msg+=`   🏷️ *2x1 Aplicado* (-$${i.discount})%0A`;
+      msg+=`   💵 $${i.price - i.discount}%0A%0A`;
+    });
+    msg+=`💰 *Total: $${total}*%0A📍 *Tipo:* ${tipo.value}%0A👤 *Cliente:* ${nombre}`;
+    window.open(`https://wa.me/524491971799?text=${msg}`);
   }
   </script>
-
 </body>
 </html>
