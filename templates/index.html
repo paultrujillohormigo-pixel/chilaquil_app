@@ -26,6 +26,7 @@
     body {
       background: var(--blanco);
       color: var(--negro);
+      overflow-x: hidden; /* Evita scroll horizontal accidental */
     }
 
     /* NAV */
@@ -33,7 +34,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 40px;
+      padding: 15px 20px;
       background: white;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       position: sticky;
@@ -41,11 +42,21 @@
       z-index: 100;
     }
 
+    nav img {
+      height: 50px; /* Un poco más pequeño para móviles */
+      object-fit: contain;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+
     nav a {
       color: var(--negro);
       text-decoration: none;
-      margin-left: 20px;
       font-weight: 600;
+      font-size: 0.9rem;
       transition: 0.2s;
     }
 
@@ -53,88 +64,88 @@
       color: var(--rojo);
     }
 
-    nav img {
-      height: 60px;
-      object-fit: contain;
-    }
-
     /* HERO */
     .hero {
-      height: 90vh;
-      background: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
+      height: 80vh; /* Ajustado para mejor visibilidad en móviles */
+      background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.5)), 
+                  url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
-      padding-bottom: 60px;
+      padding: 20px;
       text-align: center;
       color: white;
     }
 
     .hero-content {
+      width: 100%;
       max-width: 800px;
-      background: rgba(0,0,0,0.35);
-      padding: 20px 30px;
-      border-radius: 10px;
+      background: rgba(0,0,0,0.4);
+      padding: 30px 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(3px); /* Efecto moderno */
     }
 
     .hero h2 {
-      font-size: 3.2rem;
+      font-size: clamp(1.8rem, 8vw, 3.2rem); /* Tamaño fluido */
       font-weight: 800;
       margin-bottom: 15px;
+      line-height: 1.1;
     }
 
     .hero p {
-      font-size: 1.2rem;
+      font-size: clamp(1rem, 4vw, 1.2rem);
       margin-bottom: 25px;
     }
 
     .btn {
+      display: inline-block;
       background: var(--rojo);
-      padding: 15px 30px;
+      padding: 15px 35px;
       color: white;
       text-decoration: none;
       font-weight: bold;
       border-radius: 8px;
       transition: 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .btn:hover {
       background: var(--rojo-oscuro);
+      transform: translateY(-2px);
     }
 
     /* SECCION PRODUCTOS */
     .section {
-      padding: 80px 40px;
+      padding: 60px 20px;
       text-align: center;
       background: var(--blanco);
     }
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 30px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 40px;
+      margin-top: 30px;
     }
 
     .card {
-      background: transparent;
-      border-radius: 0;
-      box-shadow: none;
-      text-align: center;
       transition: 0.3s;
-    }
-
-    .card:hover {
-      transform: scale(1.05);
+      padding: 15px;
     }
 
     .card img {
       width: 100%;
-      height: 250px;
+      height: auto;
+      max-height: 250px;
       object-fit: contain;
+      border-radius: 10px;
     }
 
     .card h4 {
-      margin-top: 10px;
+      margin-top: 15px;
+      font-size: 1.3rem;
       font-weight: 700;
       color: var(--negro);
     }
@@ -145,9 +156,10 @@
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
-      aspect-ratio: 16 / 9;
       width: 100%;
+      height: 400px; /* Altura fija para móviles */
       background-color: white;
+      margin: 20px 0;
     }
 
     /* FOOTER */
@@ -155,20 +167,40 @@
       background: var(--negro);
       color: white;
       text-align: center;
-      padding: 30px;
+      padding: 40px 20px;
     }
 
+    footer p {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    /* MEDIA QUERIES PARA AJUSTES EXTRA EN MÓVILES MUY PEQUEÑOS */
+    @media (max-width: 480px) {
+      nav {
+        padding: 10px 15px;
+      }
+      .nav-links {
+        gap: 10px;
+      }
+      nav a {
+        font-size: 0.8rem;
+      }
+      .promo {
+        height: 250px; /* Reducir altura en pantallas pequeñas */
+      }
+    }
   </style>
 </head>
 
 <body>
 
   <nav>
-    <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
-    <div>
+    <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png" alt="Logo">
+    <div class="nav-links">
       <a href="/menu">Menú</a>
       <a href="#promo">Promos</a>
-      <a href="/menu">Ordenar</a>
+      <a href="https://wa.me/524497419166">Ordenar</a>
     </div>
   </nav>
 
@@ -181,23 +213,22 @@
   </section>
 
   <section id="menu" class="section">
+    <h2 style="margin-bottom: 20px; font-weight: 800;">NUESTROS SERVICIOS</h2>
     <div class="cards">
-
       <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718423/senor_chilaquil_imagen_qp2xk4.png">
+        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718423/senor_chilaquil_imagen_qp2xk4.png" alt="Delivery">
         <h4>Delivery (Pa` llevar)</h4>
       </div>
 
       <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png">
+        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png" alt="Chilaquiles">
         <h4>Chilaquiles</h4>
       </div>
 
       <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774724809/ChatGPT_Image_28_mar_2026_01_06_23_p.m._bmdow4.png">
+        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774724809/ChatGPT_Image_28_mar_2026_01_06_23_p.m._bmdow4.png" alt="Promos">
         <h4>Paquetes / Promos</h4>
       </div>
-
     </div>
   </section>
 
