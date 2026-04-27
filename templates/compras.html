@@ -14,16 +14,13 @@
 
 <div class="layout">
 
-  <!-- FORM -->
   <form method="post" id="compraForm" class="form">
 
-    <!-- MODO -->
     <div class="section toggles">
       <label><input type="checkbox" id="esInsumo" name="es_insumo"> Sumar stock</label>
       <label><input type="checkbox" id="esOtro" name="es_otro"> Otro</label>
     </div>
 
-    <!-- DATOS -->
     <div class="section grid">
       <input type="date" name="fecha" required>
       <input type="text" name="lugar" placeholder="Lugar" required>
@@ -37,7 +34,6 @@
       <input type="number" name="costo" step="0.01" required placeholder="Costo">
     </div>
 
-    <!-- TARJETAS -->
     <div class="section">
       <div class="cards" id="insumoCards">
 
@@ -62,18 +58,15 @@
       <input type="hidden" name="concepto" id="concepto">
     </div>
 
-    <!-- OTRO -->
     <div class="section" id="otroWrap" style="display:none;">
       <input type="text" id="otroTexto" placeholder="Escribe el concepto...">
     </div>
 
-    <!-- TEXTO -->
     <div class="section" id="textoFields">
       <input type="number" name="cantidad" id="cantidadTxt" placeholder="Cantidad">
       <input type="text" name="unidad" id="unidadTxt" placeholder="Unidad">
     </div>
 
-    <!-- STOCK -->
     <div class="section" id="stockPanel" style="display:none;">
       <input type="number" name="cantidad_base" id="cantidadBase" placeholder="Cantidad base">
       <input type="text" name="unidad_base" id="unidadBase" readonly>
@@ -84,7 +77,6 @@
 
   </form>
 
-  <!-- ÚLTIMAS COMPRAS -->
   <div class="section card">
     <h3>Últimas compras</h3>
 
@@ -171,13 +163,36 @@ input,select{
   border-radius:10px;border:1px solid #ddd;
 }
 
-.cta{
-  position:fixed;bottom:0;left:0;width:100%;
-  padding:16px;background:#000;color:#fff;
-  font-size:18px;border:none;
+/* BOTÓN CORREGIDO */
+.cta {
+  position: static;
+  width: 100%;
+  padding: 16px;
+  background: #b32417; /* Tu color de marca */
+  color: #fff;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-weight: bold;
 }
 
-.form{padding-bottom:90px;}
+@media(max-width:767px){
+  .cta {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    border-radius: 0;
+    z-index: 100;
+  }
+  .form { padding-bottom: 90px; }
+}
+
+@media(min-width:768px){
+  .form { padding-bottom: 20px; }
+  .cta:hover { background: #8e1c12; } /* Efecto al pasar el mouse en PC */
+}
 
 .section{margin-bottom:12px;}
 
