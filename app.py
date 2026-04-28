@@ -1141,10 +1141,6 @@ def compras():
         insumos=insumos,
         form_data={}
     )
-# =========================================================
-# ================== DASHBOARD =============================
-# =========================================================
-
 @app.route("/dashboard")
 def dashboard():
     mes = request.args.get("mes")
@@ -1159,6 +1155,7 @@ def dashboard():
                 filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
+            # 1. Ingresos
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
@@ -1169,6 +1166,7 @@ def dashboard():
             """, params)
             ingresos = cursor.fetchall()
 
+            # 2. Costos
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
@@ -1179,6 +1177,7 @@ def dashboard():
             """, params)
             costos = cursor.fetchall()
 
+            # 3. Costos por tipo
             cursor.execute(f"""
                 SELECT tipo_costo,
                        SUM(costo) AS total
@@ -1193,6 +1192,7 @@ def dashboard():
             utilidad = total_ingresos - total_costos
             margen = (utilidad / total_ingresos * 100) if total_ingresos else Decimal("0")
 
+            # 4. Ventas por día (Corregido: día_semana ahora es parte del GROUP BY)
             cursor.execute(f"""
                 SELECT
                     DATE(fecha) AS dia,
@@ -1214,6 +1214,7 @@ def dashboard():
             """)
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
+            # 5. TOP PRODUCTOS (Corregido: p.nombre ahora es parte del GROUP BY)
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
@@ -1222,12 +1223,13 @@ def dashboard():
                 JOIN pedidos pe ON pe.id = pi.pedido_id
                 JOIN productos p ON p.id = pi.producto_id
                 {filtro}
-                GROUP BY p.id
+                GROUP BY p.id, p.nombre
                 ORDER BY ingreso DESC
                 LIMIT 10
             """, params)
             top_productos = cursor.fetchall()
 
+            # 6. TOP GASTOS (Corregido: lógica de parámetros para evitar errores de tipo)
             cursor.execute("""
                 SELECT concepto,
                        tipo_costo,
@@ -1241,6 +1243,7 @@ def dashboard():
             """, (mes, mes))
             top_gastos = cursor.fetchall()
 
+            # 7. PROMEDIOS
             cursor.execute("""
                 SELECT
                     AVG(pedidos) AS avg_pedidos,
@@ -1258,12 +1261,12 @@ def dashboard():
             """, (mes, mes))
             promedios_dia = cursor.fetchone()
 
+            # 8. VENTAS POR DÍA SEMANA (Corregido: nombre incluido en GROUP BY)
             cursor.execute("""
-            
                 SELECT
                     dia_num,
                     nombre,
-                    promedio
+                    ROUND(AVG(total), 2) AS promedio
                 FROM (
                     SELECT
                         DAYOFWEEK(fecha) AS dia_num,
@@ -1276,17 +1279,15 @@ def dashboard():
                             WHEN DAYOFWEEK(fecha) = 6 THEN 'Viernes'
                             WHEN DAYOFWEEK(fecha) = 7 THEN 'Sábado'
                         END AS nombre,
-                        ROUND(AVG(total), 2) AS promedio
+                        total
                     FROM pedidos
                     WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                    GROUP BY DAYOFWEEK(fecha)
                 ) t
+                GROUP BY dia_num, nombre
                 ORDER BY dia_num
             """, (mes, mes))
-            
             ventas_por_dia_semana = cursor.fetchall()
 
-    
     finally:
         conn.close()
 
@@ -1307,8 +1308,6 @@ def dashboard():
         top_gastos=top_gastos,
         ventas_por_dia_semana=ventas_por_dia_semana
     )
-
-
 # =========================================================
 # ============ ELIMINAR ITEM / ELIMINAR PEDIDO =============
 # =========================================================
