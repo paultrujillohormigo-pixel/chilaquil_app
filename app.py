@@ -1262,12 +1262,14 @@ def dashboard():
             promedios_dia = cursor.fetchone()
 
             # 8. VENTAS POR DÍA SEMANA (Corregido: nombre incluido en GROUP BY)
+            # 8. VENTAS POR DÍA SEMANA (CORREGIDO PARA MOSTRAR PROMEDIO DIARIO REAL)
             cursor.execute("""
                 SELECT
                     dia_num,
                     nombre,
-                    ROUND(AVG(total), 2) AS promedio
+                    ROUND(AVG(total_del_dia), 2) AS promedio
                 FROM (
+                    -- Primero sumamos el total de cada día calendario
                     SELECT
                         DAYOFWEEK(fecha) AS dia_num,
                         CASE
@@ -1279,13 +1281,16 @@ def dashboard():
                             WHEN DAYOFWEEK(fecha) = 6 THEN 'Viernes'
                             WHEN DAYOFWEEK(fecha) = 7 THEN 'Sábado'
                         END AS nombre,
-                        total
+                        DATE(fecha) AS fecha_dia,
+                        SUM(total) AS total_del_dia
                     FROM pedidos
                     WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                ) t
+                    GROUP BY DATE(fecha), dia_num, nombre
+                ) t_diaria
                 GROUP BY dia_num, nombre
                 ORDER BY dia_num
             """, (mes, mes))
+            
             ventas_por_dia_semana = cursor.fetchall()
 
     finally:
