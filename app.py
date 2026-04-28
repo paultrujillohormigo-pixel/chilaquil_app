@@ -1259,23 +1259,31 @@ def dashboard():
             promedios_dia = cursor.fetchone()
 
             cursor.execute("""
+            
                 SELECT
-                    CASE DAYOFWEEK(fecha)
-                        WHEN 1 THEN 'Domingo'
-                        WHEN 2 THEN 'Lunes'
-                        WHEN 3 THEN 'Martes'
-                        WHEN 4 THEN 'Miércoles'
-                        WHEN 5 THEN 'Jueves'
-                        WHEN 6 THEN 'Viernes'
-                        WHEN 7 THEN 'Sábado'
-                    END AS nombre,
-                    ROUND(AVG(total), 2) AS promedio
-                FROM pedidos
-                WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                GROUP BY DAYOFWEEK(fecha)
-                ORDER BY DAYOFWEEK(fecha)
+                    dia_num,
+                    nombre,
+                    promedio
+                FROM (
+                    SELECT
+                        DAYOFWEEK(fecha) AS dia_num,
+                        CASE
+                            WHEN DAYOFWEEK(fecha) = 1 THEN 'Domingo'
+                            WHEN DAYOFWEEK(fecha) = 2 THEN 'Lunes'
+                            WHEN DAYOFWEEK(fecha) = 3 THEN 'Martes'
+                            WHEN DAYOFWEEK(fecha) = 4 THEN 'Miércoles'
+                            WHEN DAYOFWEEK(fecha) = 5 THEN 'Jueves'
+                            WHEN DAYOFWEEK(fecha) = 6 THEN 'Viernes'
+                            WHEN DAYOFWEEK(fecha) = 7 THEN 'Sábado'
+                        END AS nombre,
+                        ROUND(AVG(total), 2) AS promedio
+                    FROM pedidos
+                    WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
+                    GROUP BY DAYOFWEEK(fecha)
+                ) t
+                ORDER BY dia_num
             """, (mes, mes))
-
+            
             ventas_por_dia_semana = cursor.fetchall()
 
     
