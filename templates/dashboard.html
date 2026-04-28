@@ -5,7 +5,6 @@
 
 <div class="dashboard-container">
 
-    <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar">
         <h3>📊 Dashboard</h3>
 
@@ -27,10 +26,8 @@
         <a href="/dashboard" class="mes-btn limpiar">Todos</a>
     </aside>
 
-    <!-- ============ MAIN ============ -->
     <main class="main">
 
-        <!-- ===== KPI CARDS ===== -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <span>Total Ingresos</span>
@@ -50,11 +47,9 @@
             </div>
         </div>
 
-       <!-- ===== SECCIÓN PRINCIPAL ===== -->
-<div class="bottom-grid">
+       <div class="bottom-grid">
 
-    <!-- IZQUIERDA: TOP PRODUCTOS -->
-    <div class="card card card-tabla">
+    <div class="card card-tabla">
         <h4>Top Productos</h4>
         <table>
             <tr>
@@ -72,7 +67,6 @@
         </table>
     </div>
 
-    <!-- DERECHA: GRAFICAS -->
     <div class="charts-vertical">
         <div class="card card-grafica">
             <h4>Ingresos vs Costos</h4>
@@ -80,44 +74,44 @@
         </div>
 
         <div class="card card-grafica">
-            <h4>Costos por Tipo</h4>
-            <canvas id="costosChart" class="chart-canvas"></canvas>
+            <h4>Promedio Ventas por Día de Semana</h4>
+            <canvas id="semanaChart" class="chart-canvas"></canvas>
         </div>
     </div>
 
 </div>
 
 
-    <!-- 10 COSTOS MAS IMPACTADOS -->
-        
+    <div class="bottom-grid">
+    <div class="card card-tabla">
+        <h4>Top 10 Gastos que Más Impactaron</h4>
+        <table>
+            <tr>
+                <th>Concepto</th>
+                <th>Tipo</th>
+                <th>Veces</th>
+                <th>Total</th>
+            </tr>
+            {% for g in top_gastos %}
+            <tr>
+                <td>{{ g.concepto }}</td>
+                <td>{{ g.tipo_costo|capitalize }}</td>
+                <td>{{ g.veces }}</td>
+                <td>{{ g.total_gastado | money }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
-<div class="card card-tabla">
-    <h4>Top 10 Gastos que Más Impactaron</h4>
-    <table>
-        <tr>
-            <th>Concepto</th>
-            <th>Tipo</th>
-            <th>Veces</th>
-            <th>Total</th>
-        </tr>
-        {% for g in top_gastos %}
-        <tr>
-            <td>{{ g.concepto }}</td>
-            <td>{{ g.tipo_costo|capitalize }}</td>
-            <td>{{ g.veces }}</td>
-            <td>{{ g.total_gastado | money }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <div class="card card-grafica">
+        <h4>Costos por Tipo</h4>
+        <canvas id="costosChart" class="chart-canvas"></canvas>
+    </div>
 </div>
 
 
-        <!-- ===== TABLA VENTAS POR DÍA ===== -->
-
-
-        
-        <div class="card card card-tabla">
-            <h4>Ventas por Día</h4>
+        <div class="card card-tabla">
+            <h4>Ventas por Día Detallado</h4>
             <table>
                 <tr>
                     <th>Fecha</th>
@@ -129,8 +123,7 @@
                 {% for v in ventas_dia %}
                 <tr>
                     <td>{{ v.dia }}</td>
-                    <td>{{ v.dia_semana }}</td>
-                    <td>{{ v.pedidos }}</td>
+                    <td><strong>{{ v.dia_semana }}</strong></td> <td>{{ v.pedidos }}</td>
                     <td>{{ v.total | money }}</td>
                     <td>{{ v.neto | money }}</td>
                 </tr>
@@ -138,28 +131,25 @@
                 {% endfor %}
 
                 <tr style="background:#f3f4f6;font-weight:bold;">
-    <td>Promedio</td>
-    <td></td>               
-    <td>{{ promedios_dia.avg_pedidos | round(1) }}</td>
-    <td>{{ promedios_dia.avg_total | money }}</td>
-    <td>{{ promedios_dia.avg_neto | money }}</td>
-</tr>
+                    <td>Promedio</td>
+                    <td></td>                
+                    <td>{{ promedios_dia.avg_pedidos | round(1) }}</td>
+                    <td>{{ promedios_dia.avg_total | money }}</td>
+                    <td>{{ promedios_dia.avg_neto | money }}</td>
+                </tr>
             </table>
         </div>
-
-
-
 
     </main>
 </div>
 
-<!-- ================== CHARTS ================== -->
 <script>
+// Datos existentes
 const labelsMes = {{ ingresos | map(attribute="mes") | list | tojson }};
 const dataIngresos = {{ ingresos | map(attribute="total") | list | tojson }};
 const dataCostos = {{ costos | map(attribute="costo") | list | tojson }};
 
-// Barras
+// --- GRÁFICA 1: INGRESOS VS COSTOS ---
 new Chart(document.getElementById('ingresosChart'), {
     type: 'bar',
     data: {
@@ -183,20 +173,15 @@ new Chart(document.getElementById('ingresosChart'), {
     }
 });
 
-// Dona
+// --- GRÁFICA 2: COSTOS POR TIPO ---
 new Chart(document.getElementById('costosChart'), {
     type: 'bar',
     data: {
         labels: {{ costos_tipo | map(attribute="tipo_costo") | list | tojson }},
         datasets: [{
+            label: 'Total por Tipo',
             data: {{ costos_tipo | map(attribute="total") | list | tojson }},
-            backgroundColor: [
-                '#f97316',
-                '#fb923c',
-                '#fdba74',
-                '#fbbf24',
-                '#f59e0b'
-            ]
+            backgroundColor: ['#f97316', '#fb923c', '#fdba74', '#fbbf24', '#f59e0b']
         }]
     },
     options: {
@@ -204,11 +189,34 @@ new Chart(document.getElementById('costosChart'), {
         maintainAspectRatio: false
     }
 });
+
+// --- GRÁFICA 3: PROMEDIO POR DÍA DE LA SEMANA (NUEVA) ---
+new Chart(document.getElementById('semanaChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ ventas_por_dia_semana | map(attribute="nombre") | list | tojson }},
+        datasets: [{
+            label: 'Promedio Ventas ($)',
+            data: {{ ventas_por_dia_semana | map(attribute="promedio") | list | tojson }},
+            backgroundColor: '#3b82f6',
+            borderRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
 </script>
 
-<!-- ================== STYLES ================== -->
 <style>
-body { background:#f4f6f9; }
+body { background:#f4f6f9; font-family: sans-serif;}
 
 .dashboard-container {
     display:grid;
@@ -282,13 +290,6 @@ body { background:#f4f6f9; }
 }
 
 /* GRAFICAS */
-.charts-grid {
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-    margin-bottom:20px;
-}
-
 .card {
     background:white;
     border-radius:8px;
@@ -296,11 +297,10 @@ body { background:#f4f6f9; }
     box-shadow:0 6px 12px rgba(0,0,0,.08);
     display:flex;
     flex-direction:column;
+    margin-bottom: 20px;
 }
 .card-grafica {
-    display:flex;
-    flex-direction:column;
-    height:300px;
+    height:310px;
 }
 
 .chart-canvas {
@@ -312,12 +312,14 @@ body { background:#f4f6f9; }
 table {
     width:100%;
     border-collapse:collapse;
+    margin-top: 10px;
 }
 
 th {
     background:#111827;
     color:white;
     padding:8px;
+    text-align: left;
 }
 
 td {
@@ -325,7 +327,7 @@ td {
     border-bottom:1px solid #e5e7eb;
 }
 
-    /* ===== SECCIÓN 50 / 50 ===== */
+/* ===== SECCIÓN 50 / 50 ===== */
 .bottom-grid {
     display:grid;
     grid-template-columns: 1fr 1fr;
@@ -335,23 +337,15 @@ td {
 
 /* Columna derecha: gráficas en vertical */
 .charts-vertical {
-    display:grid;
-    grid-template-rows: 1fr 1fr;
+    display:flex;
+    flex-direction: column;
     gap:20px;
 }
 
-/* Ajustes visuales */
-.tabla-top {
-    height:640px;
-    overflow:auto;
-}
-
-.charts-vertical .card {
-    height:310px;
-}
 .card-tabla {
-    display:block;      /* ✅ clave */
-    height:auto;        /* ✅ se adapta */
+    display:block;
+    height:auto;
+    overflow-x: auto;
 }
 </style>
 
