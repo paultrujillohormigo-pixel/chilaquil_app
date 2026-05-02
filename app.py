@@ -29,56 +29,6 @@ def menu():
 # ================== PORTAL DE CLIENTES ===================
 # =========================================================
 
-@app.route("/mi-perfil", methods=["GET", "POST"])
-def mi_perfil():
-    cliente = None
-    historial = []
-    faltan_bebida = 0
-    faltan_platillo = 0
-
-    if request.method == "POST":
-        telefono_raw = request.form.get("telefono", "").strip()
-        telefono = normalize_phone_mx(telefono_raw)
-
-        if not telefono:
-            flash("Por favor ingresa un número de teléfono válido a 10 dígitos.", "error")
-        else:
-            conn = get_connection()
-            try:
-                with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                    # Buscamos al cliente por su teléfono ya normalizado
-                    cursor.execute("""
-                        SELECT c.id, c.nombre, c.phone_e164, a.totopos_balance, a.totopos_lifetime
-                        FROM loyalty_customers c
-                        LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
-                        WHERE c.phone_e164 = %s
-                    """, (telefono,))
-                    cliente = cursor.fetchone()
-
-                    if cliente:
-                        # Usamos tu lógica existente para ver cuántos le faltan
-                        balance = cliente["totopos_balance"] or 0
-                        faltan_bebida = faltan_para(balance, 5)
-                        faltan_platillo = faltan_para(balance, 10)
-
-                              # Traemos sus últimos 5 movimientos
-                                cursor.execute("""
-                                    SELECT tx.delta, tx.reason
-                                    FROM loyalty_tx tx
-                                    WHERE tx.customer_id = %s
-                                    ORDER BY tx.id DESC LIMIT 5
-                                """, (cliente["id"],))
-                                historial = cursor.fetchall()
-                    else:
-                        flash("No encontramos una cuenta con ese número. ¡Asegúrate de estar registrado en el restaurante!", "warning")
-            finally:
-                conn.close()
-
-    return render_template("mi_perfil.html", 
-                           cliente=cliente, 
-                           historial=historial, 
-                           f5=faltan_bebida, 
-                           f10=faltan_platillo)
 
 
 
