@@ -2,58 +2,90 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Clientes</title>
-    <!-- Usando Bootstrap 5 para estilos rápidos -->
+    <title>Detalle de Cliente</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --rojo: #b32417; --crema: #f4e8c7; }
+        .card-header-rojo { background-color: var(--rojo); color: white; font-weight: bold; }
+        .text-rojo { color: var(--rojo); }
+    </style>
 </head>
 <body class="bg-light">
-    
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>👥 Mis Clientes (Lealtad)</h2>
-        <a href="/" class="btn btn-secondary">Volver al Inicio</a>
-    </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Teléfono</th>
-                        <th>Totopos Actuales</th>
-                        <th>Totopos Históricos</th>
-                        <th>Última Compra</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in clientes %}
-                    <tr>
-                        <td>{{ c.id }}</td>
-                        <td>{{ c.nombre or 'Sin Nombre' }}</td>
-                        <td>{{ c.phone_e164 }}</td>
-                        <td><span class="badge bg-warning text-dark fs-6">{{ c.totopos_balance }}</span></td>
-                        <td>{{ c.totopos_lifetime }}</td>
-                        <td>
-                            {% if c.ultima_compra %}
-                                {{ c.ultima_compra.strftime('%d/%m/%Y') }}
-                            {% else %}
-                                <em>Sin compras</em>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('detalle_cliente', customer_id=c.id) }}" class="btn btn-sm btn-primary">Ver Detalles</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center py-4">No hay clientes registrados aún.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="container mt-5">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('lista_clientes') }}">Clientes</a></li>
+        <li class="breadcrumb-item active">{{ cliente.nombre }}</li>
+      </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Columna Edición -->
+        <div class="col-md-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header card-header-rojo">Información del Cliente</div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" name="nombre" value="{{ cliente.nombre }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="telefono" value="{{ cliente.phone_e164 }}">
+                        </div>
+                        <hr>
+                        <h6 class="fw-bold">Ajuste de Totopos</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number" class="form-control" name="ajuste_puntos" value="0">
+                            </div>
+                            <div class="col-8">
+                                <input type="text" class="form-control" name="motivo" placeholder="Motivo del ajuste">
+                            </div>
+                        </div>
+                        <p class="small text-muted mt-1">Usa -1 para restar o 1 para sumar puntos.</p>
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Guardar Cambios</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-warning text-center p-4">
+                <h1 class="display-3 mb-0">{{ cliente.totopos_balance }}</h1>
+                <p class="text-muted text-uppercase fw-bold">Totopos Actuales 🟡</p>
+            </div>
+        </div>
+
+        <!-- Columna Historial -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold">Historial de Movimientos</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Motivo</th>
+                                <th class="text-end">Variación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in historial %}
+                            <tr>
+                                <td>{{ h.fecha.strftime('%d/%m/%Y %H:%M') if h.fecha else 'S/F' }}</td>
+                                <td>
+                                    {% if h.pedido_id %} Compra Pedido #{{ h.pedido_id }} {% else %} {{ h.reason }} {% endif %}
+                                </td>
+                                <td class="text-end fw-bold {{ 'text-success' if h.delta > 0 else 'text-danger' }}">
+                                    {{ '+' if h.delta > 0 }}{{ h.delta }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
