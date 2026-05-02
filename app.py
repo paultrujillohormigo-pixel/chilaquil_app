@@ -61,15 +61,14 @@ def mi_perfil():
                         faltan_bebida = faltan_para(balance, 5)
                         faltan_platillo = faltan_para(balance, 10)
 
-                        # Traemos sus últimos 5 movimientos para que vea su historial
-                        cursor.execute("""
-                            SELECT tx.delta, tx.reason, tx.fecha_creacion -- Ajusta 'fecha_creacion' si tu columna se llama distinto
-                            FROM loyalty_tx tx
-                            WHERE tx.customer_id = %s
-                            ORDER BY tx.id DESC LIMIT 5
-                        """, (cliente["id"],))
-                        # Si 'loyalty_tx' no tiene un campo de timestamp, simplemente quita 'tx.fecha_creacion' del SELECT
-                        historial = cursor.fetchall()
+                              # Traemos sus últimos 5 movimientos
+                                cursor.execute("""
+                                    SELECT tx.delta, tx.reason
+                                    FROM loyalty_tx tx
+                                    WHERE tx.customer_id = %s
+                                    ORDER BY tx.id DESC LIMIT 5
+                                """, (cliente["id"],))
+                                historial = cursor.fetchall()
                     else:
                         flash("No encontramos una cuenta con ese número. ¡Asegúrate de estar registrado en el restaurante!", "warning")
             finally:
