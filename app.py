@@ -569,6 +569,104 @@ def nuevo_pedido():
         conn.close()
 
     return render_template("nuevo_pedido.html", productos=productos, salsas=salsas, proteinas=proteinas)
+
+
+
+
+# =========================================================
+# ================== GESTIÓN DE CLIENTES ==================
+# =========================================================
+
+@app.route("/clientes")
+def lista_clientes():
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Traemos los clientes, su balance y la fecha de su última transacción
+            cursor.execute("""
+                SELECT 
+                    c.id, c.nombre, c.phone_e164, 
+                    a.totopos_balance, a.totopos_lifetime,
+                    (SELECT MAX(fecha) FROM pedidos p JOIN loyalty_tx tx ON p.id = tx.pedido_id WHERE tx.customer_id = c.id) as ultima_compra
+                FROM loyalty_customers c
+                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                ORDER BY a.totopos_balance DESC
+            """)
+            clientes = cursor.fetchall()
+    finally:
+        conn.close()
+
+    return render_template("clientes.html", clientes=clientes)
+
+@app.route("/cliente/<int:customer_id>", methods=["GET", "POST"])
+def detalle_cliente(customer_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Procesar el formulario de edición
+            if request.method == "POST":
+                nuevo_nombre = request.form.get("nombre")
+                nuevo_telefono = request.form.get("telefono")
+                ajuste_puntos = int(request.form.get("ajuste_puntos", 0) or 0)
+                motivo_ajuste = request.form.get("motivo", "Ajuste manual")
+
+                # Actualizar datos básicos
+                cursor.execute("""
+                    UPDATE loyalty_customers 
+                    SET nombre = %s, phone_e164 = %s 
+                    WHERE id = %s
+                """, (nuevo_nombre, nuevo_telefono, customer_id))
+
+                # Si hay ajuste manual de puntos
+                if ajuste_puntos != 0:
+                    cursor.execute("""
+                        UPDATE loyalty_accounts 
+                        SET totopos_balance = totopos_balance + %s,
+                            totopos_lifetime = totopos_lifetime + GREATEST(%s, 0)
+                        WHERE customer_id = %s
+                    """, (ajuste_puntos, ajuste_puntos, customer_id))
+
+                    cursor.execute("""
+                        INSERT INTO loyalty_tx (customer_id, delta, reason) 
+                        VALUES (%s, %s, %s)
+                    """, (customer_id, ajuste_puntos, motivo_ajuste))
+                
+                conn.commit()
+                flash("Cliente actualizado correctamente", "success")
+                return redirect(url_for("detalle_cliente", customer_id=customer_id))
+
+            # Obtener datos del cliente para la vista
+            cursor.execute("""
+                SELECT c.*, a.totopos_balance, a.totopos_lifetime 
+                FROM loyalty_customers c
+                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                WHERE c.id = %s
+            """, (customer_id,))
+            cliente = cursor.fetchone()
+
+            # Obtener historial de puntos
+            cursor.execute("""
+                SELECT tx.*, p.fecha 
+                FROM loyalty_tx tx
+                LEFT JOIN pedidos p ON tx.pedido_id = p.id
+                WHERE tx.customer_id = %s
+                ORDER BY tx.id DESC LIMIT 20
+            """, (customer_id,))
+            historial = cursor.fetchall()
+
+    finally:
+        conn.close()
+
+    if not cliente:
+        flash("Cliente no encontrado", "error")
+        return redirect(url_for("lista_clientes"))
+
+    return render_template("cliente_detalle.html", cliente=cliente, historial=historial)
+    
+
+
+
+
 # =========================================================
 # ================== VER / EDITAR PEDIDO ==================
 # =========================================================
