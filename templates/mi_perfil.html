@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Señor Chilaquil</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #333; text-align: center; }
+        .btn { display: block; width: 100%; padding: 10px; background: #e67e22; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; text-align: center; margin-top: 10px;}
+        .input-group { margin-bottom: 15px; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;}
+        .totopos-box { background: #fff3e0; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px solid #ffcc80;}
+        .totopos-box span { font-size: 32px; font-weight: bold; color: #d35400; }
+        .rewards { margin-top: 20px; font-size: 14px;}
+        .flash-messages { color: red; text-align: center; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌮 Mis Totopos</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if not cliente %}
+        <p style="text-align: center;">Ingresa tu número de WhatsApp para consultar tus puntos y recompensas disponibles.</p>
+        <form method="POST" action="{{ url_for('mi_perfil') }}">
+            <div class="input-group">
+                <input type="tel" name="telefono" placeholder="Ej. 449 123 4567" required>
+            </div>
+            <button type="submit" class="btn">Consultar mis Totopos</button>
+        </form>
+    {% else %}
+        <h2>¡Hola, {{ cliente.nombre }}!</h2>
+        
+        <div class="totopos-box">
+            <p>Totopos Acumulados</p>
+            <span>{{ cliente.totopos_balance }}</span>
+        </div>
+
+        <div class="rewards">
+            <h3>🎁 Tus Recompensas</h3>
+            <ul>
+                {% if f5 == 0 %}
+                    <li>✅ <strong>¡Tienes una bebida gratis disponible!</strong> (excepto chai)</li>
+                {% else %}
+                    <li>🥤 Te faltan <strong>{{ f5 }} totopos</strong> para una bebida gratis.</li>
+                {% endif %}
+
+                {% if f10 == 0 %}
+                    <li>✅ <strong>¡Tienes un plato fuerte gratis disponible!</strong></li>
+                {% else %}
+                    <li>🍛 Te faltan <strong>{{ f10 }} totopos</strong> para un plato fuerte gratis.</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <a href="{{ url_for('mi_perfil') }}" class="btn" style="background: #95a5a6; text-decoration: none;">Salir / Buscar otro número</a>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
