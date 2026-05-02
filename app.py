@@ -887,52 +887,59 @@ def cerrar_pedido_whatsapp(pedido_id):
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 1. Traer datos del pedido
             cursor.execute("""
-                SELECT id, total, telefono_whatsapp, estado
-                FROM pedidos
+                SELECT id, total, telefono_whatsapp, estado 
+                FROM pedidos 
                 WHERE id=%s
             """, (pedido_id,))
             pedido = cursor.fetchone()
 
-            if not pedido:
-                flash("Pedido no encontrado", "error")
-                return redirect(url_for("pedidos_abiertos"))
-
-            if pedido["estado"] != "abierto":
-                flash("Este pedido ya está cerrado", "error")
+            if not pedido or pedido["estado"] != "abierto":
+                flash("Pedido no disponible o ya cerrado", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
             phone = pedido.get("telefono_whatsapp")
 
-            # cerrar
+            # 2. Cerrar el pedido formalmente
             cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
 
-            # totopos si hay teléfono
+            # 3. GESTIÓN DE LEALTAD (TOTOPOS)
             earned = 0
             balance = 0
             if phone:
-                earned = 1
+                # Esta función buscará si el cliente ya existe por su teléfono. 
+                # Si lo creaste manualmente en la lista de clientes, lo encontrará aquí.
                 customer_id = loyalty_get_or_create_customer(cursor, phone)
+                
+                # Definimos cuántos totopos gana (por ejemplo, 1 por visita)
+                earned = 1 
+                
+                # Sumamos los puntos a su cuenta (esto actualiza loyalty_accounts y loyalty_tx)
                 balance = loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, earned)
 
-            # inventario
+            # 4. Inventario
             descontar_stock_por_pedido_cursor(cursor, pedido_id)
 
-            # whatsapp
+            # 5. Generar mensajes para WhatsApp
             if phone:
+                # Generamos el ticket tradicional
                 ticket_text = generar_ticket_texto(pedido_id, cursor)
+                
+                # Generamos el mensaje de lealtad (el que tiene las barritas de progreso #######---)
                 msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(str(pedido["total"])))
+                
                 full_message = ticket_text + "\n\n" + msg_loyalty
 
                 conn.commit()
+                # Redirigir a WhatsApp con el mensaje completo
                 return redirect(wa_me_link(phone, full_message))
 
             conn.commit()
-            flash("Pedido cerrado. (Sin WhatsApp porque no hay teléfono)", "success")
+            flash("Pedido cerrado. No se envió WhatsApp porque no hay teléfono.", "success")
             return redirect(url_for("pedidos_abiertos"))
     finally:
         conn.close()
-
 
 # =========================================================
 # ================== PRODUCTOS =============================
