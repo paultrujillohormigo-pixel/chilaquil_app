@@ -221,6 +221,33 @@ def money_format(value):
         return value
 
 
+
+
+@app.route("/api/buscar_cliente")
+def buscar_cliente():
+    query = request.args.get("q", "").strip()
+    if len(query) < 3:  # Solo buscar si hay al menos 3 caracteres
+        return jsonify([])
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Buscamos coincidencias por nombre o por teléfono
+            search_val = f"%{query}%"
+            cursor.execute("""
+                SELECT id, nombre, phone_e164 
+                FROM loyalty_customers 
+                WHERE nombre LIKE %s OR phone_e164 LIKE %s
+                LIMIT 5
+            """, (search_val, search_val))
+            resultados = cursor.fetchall()
+    finally:
+        conn.close()
+    
+    return jsonify(resultados)
+
+
+
 # =========================================================
 # =============== INVENTARIO: DESCONTAR ===================
 # =========================================================
