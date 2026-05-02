@@ -35,10 +35,18 @@
           <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-        <div>
-          <label>WhatsApp (opcional)</label>
-          <input type="tel" name="telefono_whatsapp" placeholder="4497419166" inputmode="numeric">
-          <small>Si lo agregas, al cerrar se mandará ticket + totopos.</small>
+       <!-- Buscador de Clientes y WhatsApp -->
+        <div style="position: relative;">
+          <label>Buscar Cliente / WhatsApp</label>
+          <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o teléfono..." inputmode="numeric" autocomplete="off">
+          
+          <!-- Lista de resultados (se verá sobre los otros campos) -->
+          <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;">
+              <!-- Aquí se inyectan los resultados -->
+            </div>
+          </div>
+          <small>Escribe para buscar o ingresa el número directo.</small>
         </div>
 
         <div>
@@ -362,9 +370,34 @@ body{ overflow-x:hidden; }
 #carritoTable td.td-left,#carritoTable td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
 
 .qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+
+/* Estilos para el buscador dinámico */
+#lista_clientes div {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+#lista_clientes div:hover {
+  background-color: #f8f8f8;
+  color: #b32417; /* Tu rojo de marca */
+}
+#lista_clientes strong {
+  display: block;
+}
+
+
+
+
 </style>
 
 <script>
+
+
+
+
+
+  
 /* Fix vh real en iPad/iPhone (Safari) */
 function setVH(){
   const vh = window.innerHeight * 0.01;
@@ -447,8 +480,83 @@ document.addEventListener("DOMContentLoaded", () => {
       const categoria = btn.getAttribute("data-categoria") || "";
 
       agregarProducto(id, nombre, precio, categoria);
+
+      
+
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. Funciones iniciales
+  toggleUberBox();
+  document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
+
+  // 2. LÓGICA DE PRODUCTOS (Solo para agregar al carrito)
+  const grid = document.getElementById("productosGrid");
+  if (grid) {
+    grid.addEventListener("click", (e) => {
+      const btn = e.target.closest(".js-add");
+      if (!btn) return;
+
+      const id = btn.getAttribute("data-id");
+      const nombre = btn.getAttribute("data-nombre");
+      const precio = btn.getAttribute("data-precio");
+      const categoria = btn.getAttribute("data-categoria") || "";
+
+      agregarProducto(id, nombre, precio, categoria);
     });
   }
+
+  // 3. LÓGICA DEL BUSCADOR DE CLIENTES (Separada, para que funcione siempre)
+  const inputBuscar = document.getElementById('buscador_cliente');
+  const divResultados = document.getElementById('resultados_busqueda');
+  const listaClientes = document.getElementById('lista_clientes');
+
+  if (inputBuscar) {
+    inputBuscar.addEventListener('keyup', function() {
+      let query = inputBuscar.value;
+
+      if (query.length >= 3) {
+        fetch(`/api/buscar_cliente?q=${query}`)
+          .then(response => response.json())
+          .then(data => {
+            listaClientes.innerHTML = '';
+            if (data.length > 0) {
+              divResultados.style.display = 'block';
+              data.forEach(cliente => {
+                const item = document.createElement('div');
+                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164}</small>`;
+                
+                item.onclick = function() {
+                  inputBuscar.value = cliente.phone_e164; // Llenamos el campo con el cel
+                  divResultados.style.display = 'none';
+                };
+                listaClientes.appendChild(item);
+              });
+            } else {
+              divResultados.style.display = 'none';
+            }
+          });
+      } else {
+        divResultados.style.display = 'none';
+      }
+    });
+  }
+
+  // 4. CERRAR RESULTADOS AL CLICKEAR FUERA
+  document.addEventListener('click', (e) => {
+    if (inputBuscar && e.target !== inputBuscar) {
+      divResultados.style.display = 'none';
+    }
+  });
+
+  // 5. Lógica de descuentos (que ya tenías)
+  const descInput = document.getElementById("descuentoInput");
+  if (descInput) {
+    descInput.addEventListener("input", () => {
+      descuentoTotal = clampMin0(descInput.value);
+      renderCarrito();
+    });
+  }
+
+}); // Fin de DOMContentLoaded
 
   /* ✅ NUEVO: listener descuento */
   const descInput = document.getElementById("descuentoInput");
