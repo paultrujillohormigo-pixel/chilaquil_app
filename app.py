@@ -577,47 +577,87 @@ def nuevo_pedido():
 # ================== GESTIÓN DE CLIENTES ==================
 # =========================================================
 
+# =========================================================
+# GESTIÓN DE CLIENTES Y LEALTAD (TOTOPOS)
+# =========================================================
+
+@app.route("/clientes", methods=["GET", "POST"])
+def lista_clientes():
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # --- CREAR NUEVO CLIENTE (POST) ---
+            if request.method == "POST":
+                nombre = request.form.get("nombre", "").strip()
+                telefono_raw = request.form.get("telefono", "").strip()
+                telefono = normalize_phone_mx(telefono_raw) # Limpia el número
+
+                if not telefono:
+                    flash("Número de teléfono inválido.", "error")
+                else:
+                    # Evitar duplicados
+                    cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164 = %s", (telefono,))
+                    if cursor.fetchone():
+                        flash("Este cliente (teléfono) ya existe.", "warning")
+                    else:
+                        # Insertar en clientes y crear su cuenta de puntos
+                        cursor.execute("INSERT INTO loyalty_customers (nombre, phone_e164) VALUES (%s, %s)", (nombre, telefono))
+                        new_id = cursor.lastrowid
+                        cursor.execute("INSERT INTO loyalty_accounts (customer_id, totopos_balance, totopos_lifetime) VALUES (%s, 0, 0)", (new_id,))
+                        conn.commit()
+                        flash(f"Cliente {nombre} registrado con éxito.", "success")
+                return redirect(url_for("lista_clientes"))
+
+            # --- LISTAR CLIENTES (GET) ---
+            cursor.execute("""
+                SELECT 
+                    c.id, c.nombre, c.phone_e164, 
+                    a.totopos_balance, a.totopos_lifetime,
+                    (SELECT MAX(p.fecha) 
+                     FROM pedidos p 
+                     JOIN loyalty_tx tx ON p.id = tx.pedido_id 
+                     WHERE tx.customer_id = c.id) as ultima_compra
+                FROM loyalty_customers c
+                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                ORDER BY a.totopos_balance DESC
+            """)
+            clientes = cursor.fetchall()
+    finally:
+        conn.close()
+    return render_template("clientes.html", clientes=clientes)
+
+
 @app.route("/cliente/<int:customer_id>", methods=["GET", "POST"])
 def detalle_cliente(customer_id):
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # --- ACTUALIZAR DATOS O PUNTOS (POST) ---
             if request.method == "POST":
-                nuevo_nombre = request.form.get("nombre")
-                nuevo_telefono_raw = request.form.get("telefono")
-                nuevo_telefono = normalize_phone_mx(nuevo_telefono_raw)
-                
-                ajuste_puntos = int(request.form.get("ajuste_puntos", 0) or 0)
-                motivo_ajuste = request.form.get("motivo", "Ajuste manual")
+                nombre = request.form.get("nombre")
+                telefono = normalize_phone_mx(request.form.get("telefono"))
+                ajuste = int(request.form.get("ajuste_puntos", 0) or 0)
+                motivo = request.form.get("motivo", "Ajuste manual")
 
-                # Actualizar datos básicos (Nombre y Teléfono)
-                cursor.execute("""
-                    UPDATE loyalty_customers 
-                    SET nombre = %s, phone_e164 = %s 
-                    WHERE id = %s
-                """, (nuevo_nombre, nuevo_telefono, customer_id))
+                # Actualizar perfil
+                cursor.execute("UPDATE loyalty_customers SET nombre=%s, phone_e164=%s WHERE id=%s", (nombre, telefono, customer_id))
 
-                # Si el usuario escribió algo en el campo de ajuste
-                if ajuste_puntos != 0:
-                    # Actualizamos el balance actual y el histórico (solo si suma)
+                # Si hay ajuste manual de puntos (sumar o restar)
+                if ajuste != 0:
                     cursor.execute("""
                         UPDATE loyalty_accounts 
                         SET totopos_balance = totopos_balance + %s,
                             totopos_lifetime = totopos_lifetime + %s
                         WHERE customer_id = %s
-                    """, (ajuste_puntos, max(ajuste_puntos, 0), customer_id))
-
-                    # Registramos el movimiento en el historial
-                    cursor.execute("""
-                        INSERT INTO loyalty_tx (customer_id, delta, reason) 
-                        VALUES (%s, %s, %s)
-                    """, (customer_id, ajuste_puntos, motivo_ajuste))
+                    """, (ajuste, max(ajuste, 0), customer_id))
+                    
+                    cursor.execute("INSERT INTO loyalty_tx (customer_id, delta, reason) VALUES (%s, %s, %s)", (customer_id, ajuste, motivo))
                 
                 conn.commit()
-                flash("Información actualizada.", "success")
+                flash("Información actualizada correctamente.", "success")
                 return redirect(url_for("detalle_cliente", customer_id=customer_id))
 
-            # --- OBTENER DATOS PARA MOSTRAR ---
+            # --- OBTENER DATOS PARA VISTA (GET) ---
             cursor.execute("""
                 SELECT c.*, a.totopos_balance, a.totopos_lifetime 
                 FROM loyalty_customers c
@@ -638,10 +678,10 @@ def detalle_cliente(customer_id):
         conn.close()
 
     if not cliente:
+        flash("Cliente no encontrado", "error")
         return redirect(url_for("lista_clientes"))
 
     return render_template("cliente_detalle.html", cliente=cliente, historial=historial)
-
 
 
 # =========================================================
