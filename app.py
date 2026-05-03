@@ -1,4 +1,3 @@
-
 import urllib.parse
 import re
 import pymysql
@@ -77,7 +76,7 @@ def table_has_column(cursor, table_name: str, col_name: str) -> bool:
 def wa_me_link(phone_e164: str, message_text: str) -> str:
     """
     wa.me NO quiere el '+'. Además: encode/quote correcto en UTF-8 bytes
-    para evitar caracteres � en WhatsApp.
+    para evitar caracteres  en WhatsApp.
     """
     phone = (phone_e164 or "").replace("+", "")
     msg_bytes = message_text.encode("utf-8", "strict")
@@ -169,6 +168,14 @@ def loyalty_get_or_create_customer(cursor, phone_e164: str) -> int:
 
 def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, earned: int) -> int:
     if earned <= 0:
+        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
+        row = cursor.fetchone()
+        return row["totopos_balance"] if row else 0
+
+    # ✅ NUEVO (CANDADO): Verificamos que no se le hayan dado puntos ya por este mismo pedido
+    cursor.execute("SELECT id FROM loyalty_tx WHERE customer_id=%s AND pedido_id=%s AND reason='purchase'", (customer_id, pedido_id))
+    if cursor.fetchone():
+        # Si ya se le asignó el totopo de esta compra, no hacemos nada y devolvemos su balance actual
         cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
         row = cursor.fetchone()
         return row["totopos_balance"] if row else 0
@@ -441,7 +448,6 @@ def nuevo_pedido():
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
 
-                # ✅ NUEVO: descuento (monto fijo)
                 try:
                     descuento = Decimal(request.form.get("descuento", "0") or "0")
                 except Exception:
@@ -451,6 +457,9 @@ def nuevo_pedido():
 
                 tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
                 telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
+                
+                # ✅ NUEVO: Leemos los totopos ganados desde el formulario
+                totopos_ganados = request.form.get("totopos_ganados")
 
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
@@ -468,10 +477,6 @@ def nuevo_pedido():
                     return lst[i] if i < len(lst) else default
 
                 def safe_int_or_none(val):
-                    """
-                    Convierte '' / None / 'null' / '0' -> None
-                    Convierte números válidos -> int
-                    """
                     v = (val or "").strip()
                     if not v or v.lower() == "null" or v == "0":
                         return None
@@ -492,7 +497,6 @@ def nuevo_pedido():
                     if cant <= 0:
                         continue
 
-                    # precio con uber si aplica (si existe precio_uber)
                     if table_has_column(cursor, "productos", "precio_uber"):
                         cursor.execute("""
                             SELECT
@@ -519,7 +523,6 @@ def nuevo_pedido():
                     subtotal = precio_unit * cant
                     total_bruto += subtotal
 
-                    # ✅ IDs reales (NULL si "Sin proteína" o si no aplica)
                     prot_id = safe_int_or_none(safe_get(proteinas_id_sel, i, ""))
                     salsa_id = safe_int_or_none(safe_get(salsas_id_sel, i, ""))
 
@@ -528,13 +531,9 @@ def nuevo_pedido():
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
                         "subtotal": subtotal,
-
-                        # legacy para cocina/UI (no afecta inventario)
                         "proteina": safe_get(proteinas_sel, i, ""),
                         "sin": safe_get(sin_sel, i, ""),
                         "nota": safe_get(notas_sel, i, ""),
-
-                        # para inventario (estos son los que importan)
                         "proteina_id": prot_id,
                         "salsa_id": salsa_id,
                     })
@@ -543,21 +542,19 @@ def nuevo_pedido():
                     flash("No hay productos en el carrito.", "error")
                     return redirect(url_for("nuevo_pedido"))
 
-                # ✅ clamp descuento: no puede ser mayor al bruto
                 if descuento > total_bruto:
                     descuento = total_bruto
 
                 total_final = total_bruto - descuento
                 neto = total_final + monto_uber
 
-                # ✅ Insert dinámico (descuento opcional en DB)
                 has_desc = table_has_column(cursor, "pedidos", "descuento")
 
                 cols = ["fecha", "origen", "mesero", "telefono_whatsapp", "metodo_pago", "total", "monto_uber", "neto", "estado"]
                 vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, "abierto"]
 
                 if has_desc:
-                    cols.insert(6, "descuento")         # después de total (aprox)
+                    cols.insert(6, "descuento")
                     vals.insert(6, descuento)
 
                 placeholders = ",".join(["%s"] * len(cols))
@@ -570,7 +567,6 @@ def nuevo_pedido():
 
                 pedido_id = cursor.lastrowid
 
-                # columnas opcionales en pedido_items
                 has_prot_id = table_has_column(cursor, "pedido_items", "proteina_id")
                 has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
 
@@ -593,6 +589,13 @@ def nuevo_pedido():
                         INSERT INTO pedido_items ({colsql_it})
                         VALUES ({placeholders_it})
                     """, tuple(vals_it))
+                
+                # ✅ NUEVO: LECTURA Y ASIGNACIÓN DE TOTOPOS AQUÍ MISMO
+                if totopos_ganados and str(totopos_ganados).isdigit() and telefono_e164:
+                    totopos_int = int(totopos_ganados)
+                    if totopos_int > 0:
+                        customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
+                        loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, totopos_int)
 
                 conn.commit()
                 flash(f"Pedido #{pedido_id} creado y abierto", "success")
@@ -958,8 +961,6 @@ def cerrar_pedido_whatsapp(pedido_id):
             earned = 0
             balance = 0
             if phone:
-                # Esta función buscará si el cliente ya existe por su teléfono. 
-                # Si lo creaste manualmente en la lista de clientes, lo encontrará aquí.
                 customer_id = loyalty_get_or_create_customer(cursor, phone)
                 
                 # Definimos cuántos totopos gana (por ejemplo, 1 por visita)
