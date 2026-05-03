@@ -982,7 +982,7 @@ def cerrar_pedido_whatsapp(pedido_id):
                 ticket_text = generar_ticket_texto(pedido_id, cursor)
                 
                 # Generamos el mensaje de lealtad (el que tiene las barritas de progreso #######---)
-                msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(str(pedido["total"])))
+                msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(str(pedido["total"])), phone)
                 
                 full_message = ticket_text + "\n\n" + msg_loyalty
 
