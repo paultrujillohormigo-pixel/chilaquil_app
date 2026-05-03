@@ -389,7 +389,6 @@ body{ overflow-x:hidden; }
 </style>
 
 <script>
-
 /* ================== FIX VH (iOS) ================== */
 function setVH(){
   const vh = window.innerHeight * 0.01;
@@ -459,7 +458,6 @@ function nombreSalsaPorId(id){
 
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
-
   toggleUberBox();
   document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
@@ -487,28 +485,22 @@ document.addEventListener("DOMContentLoaded", () => {
   if (inputBuscar) {
     inputBuscar.addEventListener('keyup', function() {
       let query = inputBuscar.value;
-
       if (query.length >= 3) {
         fetch(`/api/buscar_cliente?q=${query}`)
           .then(r => r.json())
           .then(data => {
             listaClientes.innerHTML = '';
-
             if (data.length > 0) {
               divResultados.style.display = 'block';
-
               data.forEach(cliente => {
                 const item = document.createElement('div');
                 item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164}</small>`;
-
                 item.onclick = function() {
                   inputBuscar.value = cliente.phone_e164;
                   divResultados.style.display = 'none';
                 };
-
                 listaClientes.appendChild(item);
               });
-
             } else {
               divResultados.style.display = 'none';
             }
@@ -539,12 +531,10 @@ document.addEventListener("DOMContentLoaded", () => {
       renderCarrito();
     });
   }
-
 });
 
-/* ================== CORE ================== */
+/* ================== CORE & CARRITO ================== */
 function agregarProducto(id, nombre, precio, categoria) {
-
   const uid = uidLinea(id);
 
   carrito[uid] = {
@@ -553,32 +543,41 @@ function agregarProducto(id, nombre, precio, categoria) {
     precio: Number(precio),
     cantidad: 1,
     custom: {
-      proteina_id: "",
-      salsa_id: "",
-      proteina: "",
-      salsa: "",
-      sin: [],
-      nota: ""
+      proteina_id: "", salsa_id: "", proteina: "", salsa: "", sin: [], nota: ""
     }
   };
-
-  renderCarrito();
 
   if (productoTieneModificadores(nombre, categoria)){
     editandoUid = uid;
     modalState = { producto_id: id, nombre, precio: Number(precio), uid };
-    abrirCustomModal();
+    abrirCustomModal(); 
+  } else {
+    renderCarrito();
   }
 }
 
-/* ================== CARRITO ================== */
+function cambiarCantidad(uid, delta) {
+  if (carrito[uid]) {
+    carrito[uid].cantidad += delta;
+    if (carrito[uid].cantidad <= 0) {
+      eliminarProducto(uid);
+    } else {
+      renderCarrito();
+    }
+  }
+}
+
+function eliminarProducto(uid){
+  delete carrito[uid];
+  renderCarrito();
+}
+
 function renderCarrito(){
   const tbody = document.querySelector("#carritoTable tbody");
   const hidden = document.getElementById("inputsHidden");
 
   tbody.innerHTML = "";
   hidden.innerHTML = "";
-
   let subtotalGeneral = 0;
 
   Object.keys(carrito).forEach(uid => {
@@ -586,21 +585,40 @@ function renderCarrito(){
     const subtotal = item.precio * item.cantidad;
     subtotalGeneral += subtotal;
 
+    // Generar badges de modificadores visuales
+    let modsHtml = "";
+    if (item.custom.proteina) modsHtml += `<div class="tag">🥩 ${escapeHtml(item.custom.proteina)}</div>`;
+    if (item.custom.salsa) modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
+    if (item.custom.sin.length > 0) modsHtml += `<div class="tag tag-warn">🚫 Sin ${escapeHtml(item.custom.sin.join(', '))}</div>`;
+    if (item.custom.nota) modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
+
     tbody.innerHTML += `
       <tr>
-        <td>${escapeHtml(item.nombre)}</td>
-        <td>${item.cantidad}</td>
+        <td class="td-left">
+          <strong>${escapeHtml(item.nombre)}</strong>
+          ${modsHtml ? `<div class="cocina-meta">${modsHtml}</div>` : ''}
+        </td>
+        <td class="qty-controls" style="display:flex; align-items:center; gap:4px;">
+          <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', -1)">-</button>
+          <span>${item.cantidad}</span>
+          <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', 1)">+</button>
+        </td>
         <td>$${item.precio.toFixed(2)}</td>
         <td><strong>$${subtotal.toFixed(2)}</strong></td>
         <td>
-          <button type="button" onclick="eliminarProducto('${uid}')">✕</button>
+          <button type="button" style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarProducto('${uid}')">🗑️</button>
         </td>
       </tr>
     `;
 
+    // Generar inputs ocultos completos para el backend
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+      <input type="hidden" name="proteina_id[]" value="${item.custom.proteina_id}">
+      <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
+      <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
+      <input type="hidden" name="notas[]" value="${escapeHtml(item.custom.nota)}">
     `;
   });
 
@@ -613,9 +631,103 @@ function renderCarrito(){
   document.getElementById("descuentoHidden").value = descuentoAplicado.toFixed(2);
 }
 
-function eliminarProducto(uid){
-  delete carrito[uid];
+
+/* ================== MODAL PERSONALIZACIÓN ================== */
+function abrirCustomModal() {
+  document.getElementById('customProductoNombre').innerText = modalState.nombre;
+  
+  // Rellenar Proteínas
+  let htmlProt = `<label class="custom-pill"><input type="radio" name="modal_prot" value="" checked><span>Sin proteína</span></label>`;
+  PROTEINAS_DB.forEach(p => {
+    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${p.id}"><span>${p.nombre}</span></label>`;
+  });
+  document.getElementById('proteinaRadios').innerHTML = htmlProt;
+
+  // Rellenar Salsas
+  let htmlSal = `<label class="custom-pill"><input type="radio" name="modal_sal" value="" checked><span>Ninguna</span></label>`;
+  SALSAS_DB.forEach(s => {
+    htmlSal += `<label class="custom-pill"><input type="radio" name="modal_sal" value="${s.id}"><span>${s.nombre}</span></label>`;
+  });
+  document.getElementById('salsaRadios').innerHTML = htmlSal;
+
+  // Rellenar Sin Opciones (Checkboxes)
+  let htmlSin = "";
+  SIN_OPCIONES.forEach(opc => {
+    htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}"><span>Sin ${opc}</span></label>`;
+  });
+  document.getElementById('sinChecks').innerHTML = htmlSin;
+
+  // Limpiar notas
+  document.getElementById('notaInput').value = "";
+  
+  // Mostrar modal
+  document.getElementById('customModal').classList.add('is-open');
+}
+
+function cerrarCustomModal() {
+  document.getElementById('customModal').classList.remove('is-open');
+  // Si cancelamos y era un producto recién agregado, lo borramos del carrito
+  if(editandoUid && carrito[editandoUid] && !carrito[editandoUid].custom.proteina_id && !carrito[editandoUid].custom.nota) {
+     eliminarProducto(editandoUid);
+  }
+  editandoUid = null;
   renderCarrito();
+}
+
+function confirmarCustom() {
+  if (!editandoUid || !carrito[editandoUid]) {
+    cerrarCustomModal();
+    return;
+  }
+  
+  const protId = document.querySelector('input[name="modal_prot"]:checked').value;
+  const salId = document.querySelector('input[name="modal_sal"]:checked').value;
+  
+  const sinNodos = document.querySelectorAll('.check-sin:checked');
+  const sinArr = Array.from(sinNodos).map(n => n.value);
+  
+  const nota = document.getElementById('notaInput').value.trim();
+
+  carrito[editandoUid].custom = {
+    proteina_id: protId,
+    salsa_id: salId,
+    proteina: nombreProteinaPorId(protId),
+    salsa: nombreSalsaPorId(salId),
+    sin: sinArr,
+    nota: nota
+  };
+
+  editandoUid = null;
+  document.getElementById('customModal').classList.remove('is-open');
+  renderCarrito();
+}
+
+/* ================== VISTA COCINA ================== */
+function abrirVistaCocina() {
+  let html = "";
+  const keys = Object.keys(carrito);
+  
+  if(keys.length === 0){
+    html = "<p style='text-align:center;'>El carrito está vacío</p>";
+  } else {
+    keys.forEach(uid => {
+      const item = carrito[uid];
+      html += `<div style="margin-bottom: 12px;">
+                 <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
+      if(item.custom.proteina) html += `<span class="tag">🥩 ${item.custom.proteina}</span> `;
+      if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
+      if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
+      if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
+      html += `</div><hr style="border: 0.5px dashed #ccc;">`;
+    });
+  }
+
+  document.getElementById('cocinaBody').innerHTML = html;
+  document.getElementById('cocinaModal').classList.add('is-open');
+}
+
+function cerrarVistaCocina() {
+  document.getElementById('cocinaModal').classList.remove('is-open');
 }
 
 /* ================== UI ================== */
@@ -623,5 +735,4 @@ function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
-
 </script>
