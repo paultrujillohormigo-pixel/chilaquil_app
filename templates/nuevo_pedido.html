@@ -39,7 +39,7 @@
         <div style="position: relative; grid-column: 1 / -1;">
           <label>Buscar Cliente / WhatsApp</label>
           
-          <!-- ✅ NUEVO: Botón explícito junto al input -->
+          <!-- Botón explícito junto al input -->
           <div style="display: flex; gap: 8px;">
             <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o teléfono..." inputmode="numeric" autocomplete="off" style="flex: 1;">
             <button type="button" class="btn-primary" onclick="buscarClienteManual()" style="padding: 0 16px; border-radius: 8px;">
@@ -180,10 +180,19 @@
         <div id="inputsHidden"></div>
         <input type="hidden" name="descuento" id="descuentoHidden" value="0">
 
+        <!-- Botones de Guardar y Enviar WhatsApp -->
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+          <!-- Botón que abre WhatsApp y luego guarda -->
+          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+            💬 Guardar y Enviar WhatsApp
+          </button>
+          
+          <!-- Botón de guardar normal (solo guarda) -->
+          <button type="submit" class="btn-guardar" style="padding: 12px;">
+            💾 Solo Guardar
+          </button>
+        </div>
 
-        <button type="submit" class="btn-guardar">
-          💾 Guardar pedido
-        </button>
       </div>
 
     </div>
@@ -395,7 +404,7 @@ body{ overflow-x:hidden; }
 }
 #lista_clientes div:hover {
   background-color: #f8f8f8;
-  color: #b32417; /* Tu rojo de marca */
+  color: #b32417;
 }
 #lista_clientes strong {
   display: block;
@@ -492,14 +501,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* 🔍 BUSCADOR CLIENTES EN VIVO (MANTENIDO COMO EXTRA UTILIDAD) */
+  /* 🔍 BUSCADOR CLIENTES EN VIVO */
   const inputBuscar = document.getElementById('buscador_cliente');
   const divResultados = document.getElementById('resultados_busqueda');
   const listaClientes = document.getElementById('lista_clientes');
 
   if (inputBuscar) {
     inputBuscar.addEventListener('keyup', function(e) {
-      // Ignorar tecla enter si van a dar clic al botón buscar
       if (e.key === 'Enter') return; 
 
       let query = inputBuscar.value;
@@ -555,8 +563,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ================== DETALLES CLIENTE ================== */
-
-// ✅ NUEVO: Lógica conectada al botón explícito de Buscar
 function buscarClienteManual() {
   const query = document.getElementById('buscador_cliente').value.trim();
   const divResultados = document.getElementById('resultados_busqueda');
@@ -566,18 +572,16 @@ function buscarClienteManual() {
     return;
   }
 
-  // Ocultamos la lista en vivo si estaba abierta
   divResultados.style.display = 'none';
 
   fetch(`/api/buscar_cliente?q=${query}`)
     .then(r => r.json())
     .then(data => {
       if (data && data.length > 0) {
-        // Seleccionamos la mejor coincidencia (la primera devuelta por tu API)
         mostrarDetallesCliente(data[0]);
       } else {
         alert("No se encontró ningún cliente registrado con esos datos.");
-        limpiarCliente(false); // Limpiamos la tarjeta pero dejamos lo escrito
+        limpiarCliente(false); 
       }
     })
     .catch(err => {
@@ -604,7 +608,6 @@ function limpiarCliente(limpiarInput = true) {
   }
   document.getElementById('cliente_seleccionado_card').style.display = 'none';
 }
-
 
 /* ================== CORE & CARRITO ================== */
 function agregarProducto(id, nombre, precio, categoria) {
@@ -705,7 +708,6 @@ function renderCarrito(){
   document.getElementById("totalPedido").innerText = "$" + totalFinal.toFixed(2);
   document.getElementById("descuentoHidden").value = descuentoAplicado.toFixed(2);
 }
-
 
 /* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
@@ -821,10 +823,70 @@ function cerrarVistaCocina() {
   document.getElementById('cocinaModal').classList.remove('is-open');
 }
 
-/* ================== UI ================== */
+/* ================== UI & WHATSAPP ================== */
 function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
+}
+
+function guardarYEnviarWhatsApp() {
+  // 1. Obtener y limpiar el número de teléfono
+  let telefono = document.getElementById('buscador_cliente').value.trim();
+  
+  // Extraer solo los números (por si escribieron espacios o guiones)
+  let numeros = telefono.replace(/\D/g, '');
+
+  if (numeros.length < 10) {
+    alert("⚠️ Por favor, ingresa un número de teléfono válido (al menos 10 dígitos) en el buscador para enviar el WhatsApp.");
+    return;
+  }
+
+  // Si el número no tiene código de país (asumiendo México +52, ajusta si es de otro país)
+  if (numeros.length === 10) {
+    numeros = "52" + numeros; 
+  }
+
+  // 2. Construir el mensaje con los artículos del carrito
+  let mensaje = "¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n\n";
+  
+  const keys = Object.keys(carrito);
+  if (keys.length === 0) {
+    alert("⚠️ El carrito está vacío, no se puede enviar un pedido sin productos.");
+    return;
+  }
+
+  keys.forEach(uid => {
+    const item = carrito[uid];
+    mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})\n`;
+    
+    // Agregar modificadores al texto si existen
+    if(item.custom.proteina) mensaje += `   🥩 ${item.custom.proteina}\n`;
+    if(item.custom.salsa) mensaje += `   🌶️ ${item.custom.salsa}\n`;
+    if(item.custom.sin.length > 0) mensaje += `   🚫 Sin ${item.custom.sin.join(', ')}\n`;
+    if(item.custom.nota) mensaje += `   📝 Nota: ${item.custom.nota}\n`;
+  });
+
+  const subtotal = document.getElementById("subtotalPedido").innerText;
+  const descuento = document.getElementById("descuentoMostrado").innerText;
+  const total = document.getElementById("totalPedido").innerText;
+
+  mensaje += `\n*Subtotal:* ${subtotal}`;
+  if (descuentoTotal > 0) {
+    mensaje += `\n*Descuento:* ${descuento}`;
+  }
+  mensaje += `\n*Total a pagar: ${total}*\n`;
+  mensaje += "\n¡Gracias por tu preferencia! 🍔🍕";
+
+  // 3. Crear el enlace de WhatsApp
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeros}&text=${encodeURIComponent(mensaje)}`;
+
+  // 4. Abrir WhatsApp en una nueva pestaña
+  window.open(whatsappUrl, '_blank');
+
+  // 5. Enviar el formulario para guardarlo en la base de datos
+  setTimeout(() => {
+    document.getElementById('pedidoForm').submit();
+  }, 500);
 }
 </script>
 
