@@ -679,31 +679,58 @@ def lista_clientes():
 # MI PERFIL
 # =========================================================
 
-@app.route("/mi-perfil/<phone>")
-def mi_perfil_cliente(phone):
-    # Aquí nos aseguramos de que el teléfono tenga el '+' para buscarlo en tu base de datos
-    phone_with_plus = f"+{phone}" if not phone.startswith("+") else phone
+# =========================================================
+# MI PERFIL (PORTAL DE CLIENTES)
+# =========================================================
 
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Buscamos al cliente y sus puntos
-            cursor.execute("""
-                SELECT c.nombre, c.phone_e164, a.totopos_balance 
-                FROM loyalty_customers c
-                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
-                WHERE c.phone_e164 = %s
-            """, (phone_with_plus,))
-            cliente = cursor.fetchone()
+@app.route("/mi-perfil", methods=["GET", "POST"])
+@app.route("/mi-perfil/<phone>", methods=["GET"])
+def mi_perfil(phone=None):
+    # 1. Si el cliente escribe su número en la cajita y le da a "Consultar"
+    if request.method == "POST":
+        telefono_raw = request.form.get("telefono")
+        telefono_limpio = normalize_phone_mx(telefono_raw)
+        
+        if not telefono_limpio:
+            flash("Por favor ingresa un número de teléfono válido (10 dígitos).", "error")
+            return redirect(url_for("mi_perfil"))
+        
+        # Le quitamos el '+' para que la URL se vea limpia y redirigimos
+        phone_url = telefono_limpio.replace("+", "")
+        return redirect(url_for("mi_perfil", phone=phone_url))
+
+    # 2. Si entran con el enlace de WhatsApp o acaban de ser redirigidos del formulario
+    if phone:
+        # Le regresamos el '+' para buscarlo en la base de datos
+        phone_with_plus = f"+{phone}" if not phone.startswith("+") else phone
+        
+        conn = get_connection()
+        try:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("""
+                    SELECT c.nombre, c.phone_e164, a.totopos_balance 
+                    FROM loyalty_customers c
+                    LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                    WHERE c.phone_e164 = %s
+                """, (phone_with_plus,))
+                cliente = cursor.fetchone()
+        finally:
+            conn.close()
+
+        # Si el número no está registrado, lo regresamos a la pantalla de buscar
+        if not cliente:
+            flash("No encontramos ninguna cuenta con ese número. ¡Asegúrate de escribirlo bien!", "error")
+            return redirect(url_for("mi_perfil"))
             
-    finally:
-        conn.close()
+        # Si sí existe, calculamos sus recompensas
+        balance = int(cliente.get("totopos_balance") or 0)
+        f5 = faltan_para(balance, 5)
+        f10 = faltan_para(balance, 10)
+        
+        return render_template("perfil_cliente.html", cliente=cliente, f5=f5, f10=f10)
 
-    if not cliente:
-        return "Cliente no encontrado. Asegúrate de estar usando el número correcto.", 404
-
-    # Aquí mandas a renderizar un archivo HTML (ej. 'perfil_cliente.html') donde le muestras sus puntos
-    return render_template("perfil_cliente.html", cliente=cliente)
+    # 3. Si entran a senorchilaquil.com/mi-perfil sin número, les mostramos el formulario (cliente=None)
+    return render_template("perfil_cliente.html", cliente=None)
 
 
 
