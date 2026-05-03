@@ -4,7 +4,6 @@ import pymysql
 
 from flask import Flask, request, redirect, url_for, flash, render_template, jsonify
 from decimal import Decimal, InvalidOperation
-x
 from db import get_connection
 from costeo import costeo_bp
 
