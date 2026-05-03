@@ -36,26 +36,31 @@
         </div>
 
        <!-- Buscador de Clientes y WhatsApp -->
-        <div style="position: relative;">
+        <div style="position: relative; grid-column: 1 / -1;">
           <label>Buscar Cliente / WhatsApp</label>
-          <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o teléfono..." inputmode="numeric" autocomplete="off">
           
-          <!-- Lista de resultados -->
-          <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-            <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;">
-              <!-- Aquí se inyectan los resultados -->
-            </div>
+          <!-- ✅ NUEVO: Botón explícito junto al input -->
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o teléfono..." inputmode="numeric" autocomplete="off" style="flex: 1;">
+            <button type="button" class="btn-primary" onclick="buscarClienteManual()" style="padding: 0 16px; border-radius: 8px;">
+              🔍 Buscar
+            </button>
           </div>
-          <small>Escribe para buscar o ingresa el número directo.</small>
+          
+          <!-- Lista de resultados flotante (búsqueda en vivo) -->
+          <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
+          </div>
+          <small>Escribe y selecciona de la lista, o ingresa el número y presiona Buscar.</small>
 
-          <!-- ✅ NUEVO: Tarjeta de detalles del cliente seleccionado -->
-          <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff;">
+          <!-- Tarjeta de detalles del cliente seleccionado -->
+          <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong id="detalle_nombre" style="color:#0056b3;"></strong>
+              <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;"></strong>
               <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;">✕ Limpiar</button>
             </div>
-            <div id="detalle_tel" style="font-size:0.85rem; color:#555; margin-top:4px;"></div>
-            <div id="detalle_extra" style="font-size:0.85rem; color:#555;"></div>
+            <div id="detalle_tel" style="font-size:0.9rem; color:#555; margin-top:4px;"></div>
+            <div id="detalle_extra" style="font-size:0.9rem; color:#555; margin-top:4px;"></div>
           </div>
 
         </div>
@@ -487,13 +492,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* 🔍 BUSCADOR CLIENTES */
+  /* 🔍 BUSCADOR CLIENTES EN VIVO (MANTENIDO COMO EXTRA UTILIDAD) */
   const inputBuscar = document.getElementById('buscador_cliente');
   const divResultados = document.getElementById('resultados_busqueda');
   const listaClientes = document.getElementById('lista_clientes');
 
   if (inputBuscar) {
-    inputBuscar.addEventListener('keyup', function() {
+    inputBuscar.addEventListener('keyup', function(e) {
+      // Ignorar tecla enter si van a dar clic al botón buscar
+      if (e.key === 'Enter') return; 
+
       let query = inputBuscar.value;
       if (query.length >= 3) {
         fetch(`/api/buscar_cliente?q=${query}`)
@@ -506,7 +514,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const item = document.createElement('div');
                 item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164 || cliente.telefono || ''}</small>`;
                 
-                // ✅ NUEVO: Al hacer clic, mostramos la tarjeta de detalles
                 item.onclick = function() {
                   inputBuscar.value = cliente.phone_e164 || cliente.telefono || query;
                   divResultados.style.display = 'none';
@@ -547,7 +554,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-/* ================== DETALLES CLIENTE (NUEVO) ================== */
+/* ================== DETALLES CLIENTE ================== */
+
+// ✅ NUEVO: Lógica conectada al botón explícito de Buscar
+function buscarClienteManual() {
+  const query = document.getElementById('buscador_cliente').value.trim();
+  const divResultados = document.getElementById('resultados_busqueda');
+  
+  if (query.length < 3) {
+    alert("Por favor ingresa al menos 3 caracteres del nombre o el número.");
+    return;
+  }
+
+  // Ocultamos la lista en vivo si estaba abierta
+  divResultados.style.display = 'none';
+
+  fetch(`/api/buscar_cliente?q=${query}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.length > 0) {
+        // Seleccionamos la mejor coincidencia (la primera devuelta por tu API)
+        mostrarDetallesCliente(data[0]);
+      } else {
+        alert("No se encontró ningún cliente registrado con esos datos.");
+        limpiarCliente(false); // Limpiamos la tarjeta pero dejamos lo escrito
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Ocurrió un error al buscar el cliente.");
+    });
+}
+
 function mostrarDetallesCliente(cliente) {
   document.getElementById('detalle_nombre').innerText = cliente.nombre || 'Cliente sin nombre';
   document.getElementById('detalle_tel').innerText = "📞 " + (cliente.phone_e164 || cliente.telefono || 'Sin teléfono');
@@ -560,8 +598,10 @@ function mostrarDetallesCliente(cliente) {
   document.getElementById('cliente_seleccionado_card').style.display = 'block';
 }
 
-function limpiarCliente() {
-  document.getElementById('buscador_cliente').value = '';
+function limpiarCliente(limpiarInput = true) {
+  if(limpiarInput) {
+    document.getElementById('buscador_cliente').value = '';
+  }
   document.getElementById('cliente_seleccionado_card').style.display = 'none';
 }
 
@@ -575,7 +615,7 @@ function agregarProducto(id, nombre, precio, categoria) {
     nombre: nombre,
     precio: Number(precio),
     cantidad: 1,
-    isNew: true, // ✅ NUEVO: Bandera para saber si se acaba de agregar
+    isNew: true, 
     custom: {
       proteina_id: "", salsa_id: "", proteina: "", salsa: "", sin: [], nota: ""
     }
@@ -639,7 +679,7 @@ function renderCarrito(){
         </td>
         <td>$${item.precio.toFixed(2)}</td>
         <td><strong>$${subtotal.toFixed(2)}</strong></td>
-        <!-- ✅ NUEVO: Agregado botón para Editar en el carrito -->
+        <!-- Botón para Editar en el carrito -->
         <td style="text-align:right; min-width:60px;">
           <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:5px;" onclick="abrirCustomModal('${uid}')">✏️</button>
           <button type="button" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem;" onclick="eliminarProducto('${uid}')">🗑️</button>
@@ -667,8 +707,7 @@ function renderCarrito(){
 }
 
 
-/* ================== MODAL PERSONALIZACIÓN (ACTUALIZADO) ================== */
-// ✅ NUEVO: Ahora recibe un 'uid' opcional para saber si está editando un item existente
+/* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
   let customData = { proteina_id: "", salsa_id: "", sin: [], nota: "" };
   
@@ -716,7 +755,7 @@ function abrirCustomModal(uid = null) {
 function cerrarCustomModal() {
   document.getElementById('customModal').classList.remove('is-open');
   
-  // ✅ NUEVO: Si cancelamos y era un producto "Nuevo", lo borramos. Si era una edición, lo conservamos.
+  // Si cancelamos y era un producto "Nuevo", lo borramos. Si era una edición, lo conservamos.
   if(editandoUid && carrito[editandoUid] && carrito[editandoUid].isNew) {
      eliminarProducto(editandoUid);
   }
@@ -747,7 +786,7 @@ function confirmarCustom() {
     nota: nota
   };
 
-  delete carrito[editandoUid].isNew; // Ya fue guardado, deja de ser "Nuevo"
+  delete carrito[editandoUid].isNew; 
   
   editandoUid = null;
   document.getElementById('customModal').classList.remove('is-open');
