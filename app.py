@@ -680,54 +680,64 @@ def lista_clientes():
 # =========================================================
 
 
+# =========================================================
+# MI PERFIL (PORTAL DE CLIENTES)
+# =========================================================
+
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
     # 1. Si el cliente escribe su número en la cajita y le da a "Consultar"
     if request.method == "POST":
-        telefono_raw = request.form.get("telefono")
-        telefono_limpio = normalize_phone_mx(telefono_raw)
+        telefono_raw = request.form.get("telefono", "")
+        # Extraemos absolutamente TODOS los números (quitamos espacios y signos)
+        solo_numeros = re.sub(r"\D", "", telefono_raw)
         
-        if not telefono_limpio:
-            flash("Por favor ingresa un número de teléfono válido (10 dígitos).", "error")
-            return redirect(url_for("mi_perfil"))
+        if len(solo_numeros) < 10:
+            flash("Por favor ingresa un número de al menos 10 dígitos.", "error")
+            return render_template("mi_perfil.html", cliente=None)
         
-        # Le quitamos el '+' para que la URL se vea limpia y redirigimos
-        phone_url = telefono_limpio.replace("+", "")
-        return redirect(url_for("mi_perfil", phone=phone_url))
+        # Tomamos solo los últimos 10 dígitos
+        ultimos_10 = solo_numeros[-10:]
+        return redirect(url_for("mi_perfil", phone=ultimos_10))
 
-    # 2. Si entran con el enlace de WhatsApp o acaban de ser redirigidos del formulario
+    # 2. Si entran con el enlace de WhatsApp o acaban de ser redirigidos
     if phone:
-        # Extraemos solo los últimos 10 dígitos para hacer una búsqueda infalible
-        ultimos_10 = phone[-10:] if len(phone) >= 10 else phone
+        solo_numeros = re.sub(r"\D", "", phone)
+        ultimos_10 = solo_numeros[-10:] if len(solo_numeros) >= 10 else solo_numeros
+        
+        # Armamos el número con +52 por si está guardado exactamente así
+        telefono_mexico = f"+52{ultimos_10}"
         
         conn = get_connection()
         try:
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                # Buscamos con LIKE para que encuentre el número tenga o no el +52
+                # BÚSQUEDA SÚPER AGRESIVA: Busca todas las variantes posibles
                 cursor.execute("""
                     SELECT c.nombre, c.phone_e164, a.totopos_balance 
                     FROM loyalty_customers c
                     LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
-                    WHERE c.phone_e164 LIKE %s
-                """, (f"%{ultimos_10}",))
+                    WHERE c.phone_e164 = %s 
+                       OR c.phone_e164 = %s 
+                       OR REPLACE(c.phone_e164, ' ', '') LIKE %s
+                """, (telefono_mexico, ultimos_10, f"%{ultimos_10}%"))
                 cliente = cursor.fetchone()
         finally:
             conn.close()
 
-        # Si el número no está registrado, lo regresamos a la pantalla de buscar
+        # Si no lo encuentra, mostramos el error directamente (sin redirección) para que lo veas sí o sí
         if not cliente:
-            flash(f"No encontramos ninguna cuenta vinculada al número {ultimos_10}. ¡Asegúrate de escribirlo bien!", "error")
-            return redirect(url_for("mi_perfil"))
+            flash(f"No encontramos la cuenta con el número terminado en {ultimos_10}. Revisa que sea el mismo con el que haces tus pedidos.", "error")
+            return render_template("mi_perfil.html", cliente=None)
             
-        # Si sí existe, calculamos sus recompensas
+        # Si sí existe, calculamos sus recompensas y mostramos el perfil
         balance = int(cliente.get("totopos_balance") or 0)
         f5 = faltan_para(balance, 5)
         f10 = faltan_para(balance, 10)
         
         return render_template("mi_perfil.html", cliente=cliente, f5=f5, f10=f10)
 
-    # 3. Si entran a senorchilaquil.com/mi-perfil sin número
+    # 3. Pantalla principal con el input (sin número en la URL)
     return render_template("mi_perfil.html", cliente=None)
 
 
