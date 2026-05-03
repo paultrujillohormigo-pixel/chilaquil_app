@@ -197,7 +197,7 @@ def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, e
     return row["totopos_balance"] if row else 0
 
 
-def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -> str:
+def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, phone: str) -> str:
     bar5 = make_bar(balance, 5)
     bar10 = make_bar(balance, 10)
     f5 = faltan_para(balance, 5)
@@ -209,6 +209,10 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -
     if f10 == 0:
         canje.append(f"{E['check']} Ya puedes canjear un plato fuerte.")
     canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos :)"
+
+    # Limpiamos el signo '+' del teléfono para que la URL sea limpia (ej: 524491234567)
+    phone_clean = phone.replace("+", "") if phone else ""
+    link_perfil = f"\nConsulta tus puntos y recompensas aquí:\n👉 https://senorchilaquil.com/mi-perfil/{phone_clean}\n"
 
     return (
         f"{E['title']} SENOR CHILAQUIL - TOTOPOS {E['title']}\n\n"
@@ -222,8 +226,8 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal) -
         f"{E['arrow']} {f5} para una bebida gratis\n"
         f"{E['arrow']} {f10} para un platofuerte \n\n"
         f"{canje_txt}\n"
+        f"{link_perfil}"
     )
-
 
 # ================== FILTRO DE MONEDA ==================
 @app.template_filter("money")
