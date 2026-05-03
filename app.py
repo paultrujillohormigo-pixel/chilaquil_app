@@ -683,6 +683,10 @@ def lista_clientes():
 # MI PERFIL (PORTAL DE CLIENTES)
 # =========================================================
 
+# =========================================================
+# MI PERFIL (PORTAL DE CLIENTES)
+# =========================================================
+
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
@@ -727,10 +731,12 @@ def mi_perfil(phone=None):
         f5 = faltan_para(balance, 5)
         f10 = faltan_para(balance, 10)
         
-        return render_template("perfil_cliente.html", cliente=cliente, f5=f5, f10=f10)
+        # ✅ AQUÍ YA ESTÁ CORREGIDO A mi_perfil.html
+        return render_template("mi_perfil.html", cliente=cliente, f5=f5, f10=f10)
 
-    # 3. Si entran a senorchilaquil.com/mi-perfil sin número, les mostramos el formulario (cliente=None)
-    return render_template("perfil_cliente.html", cliente=None)
+    # 3. Si entran a senorchilaquil.com/mi-perfil sin número
+    # ✅ AQUÍ TAMBIÉN ESTÁ CORREGIDO A mi_perfil.html
+    return render_template("mi_perfil.html", cliente=None)
 
 
 
