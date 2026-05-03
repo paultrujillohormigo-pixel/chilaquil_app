@@ -667,6 +667,38 @@ def lista_clientes():
     return render_template("clientes.html", clientes=clientes)
 
 
+# =========================================================
+# MI PERFIL
+# =========================================================
+
+@app.route("/mi-perfil/<phone>")
+def mi_perfil_cliente(phone):
+    # Aquí nos aseguramos de que el teléfono tenga el '+' para buscarlo en tu base de datos
+    phone_with_plus = f"+{phone}" if not phone.startswith("+") else phone
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Buscamos al cliente y sus puntos
+            cursor.execute("""
+                SELECT c.nombre, c.phone_e164, a.totopos_balance 
+                FROM loyalty_customers c
+                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                WHERE c.phone_e164 = %s
+            """, (phone_with_plus,))
+            cliente = cursor.fetchone()
+            
+    finally:
+        conn.close()
+
+    if not cliente:
+        return "Cliente no encontrado. Asegúrate de estar usando el número correcto.", 404
+
+    # Aquí mandas a renderizar un archivo HTML (ej. 'perfil_cliente.html') donde le muestras sus puntos
+    return render_template("perfil_cliente.html", cliente=cliente)
+
+
+
 @app.route("/cliente/<int:customer_id>", methods=["GET", "POST"])
 def detalle_cliente(customer_id):
     conn = get_connection()
