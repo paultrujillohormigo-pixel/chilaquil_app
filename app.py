@@ -679,13 +679,6 @@ def lista_clientes():
 # MI PERFIL
 # =========================================================
 
-# =========================================================
-# MI PERFIL (PORTAL DE CLIENTES)
-# =========================================================
-
-# =========================================================
-# MI PERFIL (PORTAL DE CLIENTES)
-# =========================================================
 
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
@@ -705,25 +698,26 @@ def mi_perfil(phone=None):
 
     # 2. Si entran con el enlace de WhatsApp o acaban de ser redirigidos del formulario
     if phone:
-        # Le regresamos el '+' para buscarlo en la base de datos
-        phone_with_plus = f"+{phone}" if not phone.startswith("+") else phone
+        # Extraemos solo los últimos 10 dígitos para hacer una búsqueda infalible
+        ultimos_10 = phone[-10:] if len(phone) >= 10 else phone
         
         conn = get_connection()
         try:
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                # Buscamos con LIKE para que encuentre el número tenga o no el +52
                 cursor.execute("""
                     SELECT c.nombre, c.phone_e164, a.totopos_balance 
                     FROM loyalty_customers c
                     LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
-                    WHERE c.phone_e164 = %s
-                """, (phone_with_plus,))
+                    WHERE c.phone_e164 LIKE %s
+                """, (f"%{ultimos_10}",))
                 cliente = cursor.fetchone()
         finally:
             conn.close()
 
         # Si el número no está registrado, lo regresamos a la pantalla de buscar
         if not cliente:
-            flash("No encontramos ninguna cuenta con ese número. ¡Asegúrate de escribirlo bien!", "error")
+            flash(f"No encontramos ninguna cuenta vinculada al número {ultimos_10}. ¡Asegúrate de escribirlo bien!", "error")
             return redirect(url_for("mi_perfil"))
             
         # Si sí existe, calculamos sus recompensas
@@ -731,11 +725,9 @@ def mi_perfil(phone=None):
         f5 = faltan_para(balance, 5)
         f10 = faltan_para(balance, 10)
         
-        # ✅ AQUÍ YA ESTÁ CORREGIDO A mi_perfil.html
         return render_template("mi_perfil.html", cliente=cliente, f5=f5, f10=f10)
 
     # 3. Si entran a senorchilaquil.com/mi-perfil sin número
-    # ✅ AQUÍ TAMBIÉN ESTÁ CORREGIDO A mi_perfil.html
     return render_template("mi_perfil.html", cliente=None)
 
 
