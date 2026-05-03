@@ -50,7 +50,7 @@
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
-          <small>Si agregas el número, al guardar se mandará el ticket y los <strong>totopos</strong> ganados.</small>
+          <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
 
           <!-- Tarjeta de detalles del cliente seleccionado -->
           <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
@@ -178,6 +178,9 @@
 
         <div id="inputsHidden"></div>
         <input type="hidden" name="descuento" id="descuentoHidden" value="0">
+        
+        <!-- ✅ NUEVO: Mandamos 1 totopo al backend por este pedido -->
+        <input type="hidden" name="totopos_ganados" value="1">
 
         <!-- Botones de Guardar y Enviar WhatsApp -->
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
@@ -853,10 +856,8 @@ function guardarYEnviarWhatsApp() {
   const descuento = document.getElementById("descuentoMostrado").innerText;
   const total = document.getElementById("totalPedido").innerText;
 
-  // Extraemos el valor numérico del total para calcular los totopos (Ej: $150.50 -> 150)
-  const totalNumerico = parseFloat(total.replace('$', '')) || 0;
-  // ASIGNACIÓN DE TOTOPOS: Aquí estoy calculando 1 totopo por cada 1 peso gastado. Cambia la lógica si es necesario.
-  const totoposGanados = Math.floor(totalNumerico); 
+  // ASIGNACIÓN DE TOTOPOS: 1 pedido = 1 totopo
+  const totoposGanados = 1; 
 
   mensaje += `\n*Subtotal:* ${subtotal}`;
   if (descuentoTotal > 0) {
@@ -864,9 +865,9 @@ function guardarYEnviarWhatsApp() {
   }
   mensaje += `\n*Total a pagar: ${total}*\n`;
   
-  // ✅ NUEVO: Integración del mensaje de lealtad (Totopos)
+  // Integración del mensaje de lealtad (Totopo único)
   if (totoposGanados > 0) {
-    mensaje += `\n🎁 *¡Con esta compra sumas ${totoposGanados} totopos a tu cuenta!* 🌮✨\n`;
+    mensaje += `\n🎁 *¡Con esta compra sumas ${totoposGanados} totopo a tu cuenta!* 🌮✨\n`;
   }
 
   mensaje += "\n¡Gracias por tu preferencia! 🍔🍕";
