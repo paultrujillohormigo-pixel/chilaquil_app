@@ -386,9 +386,6 @@ body{ overflow-x:hidden; }
   display: block;
 }
 
-
-
-
 </style>
 
 <script>
@@ -402,9 +399,10 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
-/* ================== DATA ================== */
-const PROTEINAS_DB = {{ proteinas|tojson }};
-const SALSAS_DB    = {{ salsas|tojson }};
+/* ================== DATA (FIX JINJA) ================== */
+const PROTEINAS_DB = {{ proteinas|tojson|safe }};
+const SALSAS_DB    = {{ salsas|tojson|safe }};
+
 const PROTEINA_NONE = { id: "", nombre: "Sin proteína" };
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
@@ -421,6 +419,7 @@ function clampMin0(n){
   n = Number(n);
   return (isNaN(n) || n < 0) ? 0 : n;
 }
+
 function escapeHtml(str){
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -429,10 +428,14 @@ function escapeHtml(str){
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
 function uidLinea(producto_id){
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
 }
-function normaliza(str){ return (str || "").toString().trim().toLowerCase(); }
+
+function normaliza(str){
+  return (str || "").toString().trim().toLowerCase();
+}
 
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
@@ -447,6 +450,7 @@ function nombreProteinaPorId(id){
   const x = PROTEINAS_DB.find(p => String(p.id) === String(id));
   return x ? x.nombre : "";
 }
+
 function nombreSalsaPorId(id){
   if (!id) return "";
   const x = SALSAS_DB.find(s => String(s.id) === String(id));
@@ -459,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
   toggleUberBox();
   document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
-  /* 🔥 CLICK EN PRODUCTOS (FIX PRINCIPAL) */
+  /* 🔥 CLICK EN PRODUCTOS */
   const grid = document.getElementById("productosGrid");
   if (grid){
     grid.addEventListener("click", (e) => {
@@ -475,7 +479,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* 🔍 BUSCADOR */
+  /* 🔍 BUSCADOR CLIENTES */
   const inputBuscar = document.getElementById('buscador_cliente');
   const divResultados = document.getElementById('resultados_busqueda');
   const listaClientes = document.getElementById('lista_clientes');
@@ -515,7 +519,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ❌ cerrar resultados */
   document.addEventListener('click', (e) => {
     if (inputBuscar && e.target !== inputBuscar) {
       divResultados.style.display = 'none';
