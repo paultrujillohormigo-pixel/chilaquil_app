@@ -684,28 +684,21 @@ def lista_clientes():
 # MI PERFIL (PORTAL DE CLIENTES)
 # =========================================================
 
-# =========================================================
-# MI PERFIL (PORTAL DE CLIENTES)
-# =========================================================
-
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
-    # ✅ LÍNEA MÁGICA: Si Flask lo manda con "?phone=", lo atrapamos aquí
     if not phone:
         phone = request.args.get("phone")
 
     # 1. Si el cliente escribe su número en la cajita y le da a "Consultar"
     if request.method == "POST":
         telefono_raw = request.form.get("telefono", "")
-        # Extraemos absolutamente TODOS los números (quitamos espacios y signos)
         solo_numeros = re.sub(r"\D", "", telefono_raw)
         
         if len(solo_numeros) < 10:
             flash("Por favor ingresa un número de al menos 10 dígitos.", "error")
             return render_template("mi_perfil.html", cliente=None)
         
-        # Tomamos solo los últimos 10 dígitos
         ultimos_10 = solo_numeros[-10:]
         return redirect(url_for("mi_perfil", phone=ultimos_10))
 
@@ -713,14 +706,11 @@ def mi_perfil(phone=None):
     if phone:
         solo_numeros = re.sub(r"\D", "", phone)
         ultimos_10 = solo_numeros[-10:] if len(solo_numeros) >= 10 else solo_numeros
-        
-        # Armamos el número con +52 por si está guardado exactamente así
         telefono_mexico = f"+52{ultimos_10}"
         
         conn = get_connection()
         try:
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                # BÚSQUEDA SÚPER AGRESIVA: Busca todas las variantes posibles
                 cursor.execute("""
                     SELECT c.nombre, c.phone_e164, a.totopos_balance 
                     FROM loyalty_customers c
@@ -733,12 +723,10 @@ def mi_perfil(phone=None):
         finally:
             conn.close()
 
-        # Si no lo encuentra, mostramos el error directamente (sin redirección) para que lo veas sí o sí
         if not cliente:
             flash(f"No encontramos la cuenta con el número terminado en {ultimos_10}. Revisa que sea el mismo con el que haces tus pedidos.", "error")
             return render_template("mi_perfil.html", cliente=None)
             
-        # Si sí existe, calculamos sus recompensas y mostramos el perfil
         balance = int(cliente.get("totopos_balance") or 0)
         f5 = faltan_para(balance, 5)
         f10 = faltan_para(balance, 10)
