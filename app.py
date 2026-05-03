@@ -210,9 +210,17 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
         canje.append(f"{E['check']} Ya puedes canjear un plato fuerte.")
     canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos :)"
 
-    # Limpiamos el signo '+' del teléfono para que la URL sea limpia (ej: 524491234567)
+    # Limpiamos el signo '+' del teléfono para la URL
     phone_clean = phone.replace("+", "") if phone else ""
-    link_perfil = f"\nConsulta tus puntos y recompensas aquí:\n👉 https://senorchilaquil.com/mi-perfil/{phone_clean}\n"
+    
+    # ✅ Generamos la URL dinámicamente apuntando a tu dominio
+    # Si quieres forzar que siempre sea senorchilaquil.com, puedes descomentar la siguiente línea:
+    # url_perfil = f"https://senorchilaquil.com/mi-perfil/{phone_clean}"
+    
+    # Esta opción usa tu servidor actual (muy útil para hacer pruebas locales)
+    url_perfil = url_for('mi_perfil_cliente', phone=phone_clean, _external=True)
+
+    link_perfil = f"\nConsulta tus puntos y recompensas aquí:\n👉 {url_perfil}\n"
 
     return (
         f"{E['title']} SENOR CHILAQUIL - TOTOPOS {E['title']}\n\n"
