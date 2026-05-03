@@ -865,12 +865,13 @@ function guardarYEnviarWhatsApp() {
   }
   mensaje += `\n*Total a pagar: ${total}*\n`;
   
-// Integración del mensaje de lealtad (Totopo único)
+  // Integración del mensaje de lealtad (Totopo único)
   if (totoposGanados > 0) {
     mensaje += `\n🎁 *¡Con esta compra sumas ${totoposGanados} totopo a tu cuenta!* 🌮✨\n`;
   }
 
   // ✅ NUEVO: Enlace personalizado al perfil del cliente
+  // Asumimos el dominio principal
   mensaje += `\nConsulta tus puntos y recompensas aquí:\n`;
   mensaje += `👉 https://senorchilaquil.com/mi-perfil/${numeros}\n`;
 
