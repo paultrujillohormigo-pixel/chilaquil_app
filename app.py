@@ -218,7 +218,7 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     # url_perfil = f"https://senorchilaquil.com/mi-perfil/{phone_clean}"
     
     # Esta opción usa tu servidor actual (muy útil para hacer pruebas locales)
-    url_perfil = url_for('mi_perfil_cliente', phone=phone_clean, _external=True)
+    url_perfil = url_for('mi_perfil', phone=phone_clean, _external=True)
 
     link_perfil = f"\nConsulta tus puntos y recompensas aquí:\n👉 {url_perfil}\n"
 
