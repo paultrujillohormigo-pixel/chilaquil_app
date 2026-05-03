@@ -1,1488 +1,792 @@
-necesito arreglar este codigo, mete por favor una opcion cuando selecciono un extra  para editar que extra es, ademas agrega un boton para cuando vusque a un cliente ya registrado me aparezcan sus detalles:
-
-
-
 {% extends "base.html" %}
-
 {% block content %}
-
-
 
 <h2 class="pos-title">🧾 Nuevo pedido</h2>
 
-
-
 <form method="post" id="pedidoForm" class="pos-layout">
-
-
 
   <section class="pos-left">
 
-
-
     <div class="card">
-
       <div class="card-head">
-
         <h3>Datos del pedido</h3>
-
       </div>
-
-
 
       <div class="form-grid">
 
-
-
         <div>
-
           <label>Fecha</label>
-
           <input type="datetime-local" name="fecha">
-
           <small>Vacío = ahora</small>
-
         </div>
 
-
-
         <div>
-
           <label>Origen</label>
-
           <select name="origen" id="origenSelect">
-
             <option value="mostrador">Mostrador</option>
-
             <option value="uber">Uber</option>
-
             <option value="didi">Didi</option>
-
             <option value="otro">Otro</option>
-
           </select>
-
         </div>
-
-
 
         <div>
-
           <label>Mesero</label>
-
           <input type="text" name="mesero" placeholder="Nombre">
-
         </div>
-
-
 
        <!-- Buscador de Clientes y WhatsApp -->
-
         <div style="position: relative;">
-
           <label>Buscar Cliente / WhatsApp</label>
-
           <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o teléfono..." inputmode="numeric" autocomplete="off">
-
           
-
-          <!-- Lista de resultados (se verá sobre los otros campos) -->
-
+          <!-- Lista de resultados -->
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;">
-
               <!-- Aquí se inyectan los resultados -->
-
             </div>
-
           </div>
-
           <small>Escribe para buscar o ingresa el número directo.</small>
 
+          <!-- ✅ NUEVO: Tarjeta de detalles del cliente seleccionado -->
+          <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong id="detalle_nombre" style="color:#0056b3;"></strong>
+              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;">✕ Limpiar</button>
+            </div>
+            <div id="detalle_tel" style="font-size:0.85rem; color:#555; margin-top:4px;"></div>
+            <div id="detalle_extra" style="font-size:0.85rem; color:#555;"></div>
+          </div>
+
         </div>
-
-
 
         <div>
-
           <label>Método de pago</label>
-
           <select name="metodo_pago">
-
             <option value="efectivo">Efectivo</option>
-
             <option value="tarjeta">Tarjeta</option>
-
             <option value="transfer">Transferencia</option>
-
             <option value="otro">Otro</option>
-
           </select>
-
         </div>
-
-
 
         <div class="uber-box" id="uberBox">
-
           <label>Monto Uber</label>
-
           <input type="number" name="monto_uber" step="0.01" value="0">
-
           <small>Negativo = comisión</small>
-
         </div>
 
-
-
       </div>
-
     </div>
-
-
 
     <div class="card">
-
       <div class="card-head">
-
         <h3>Productos</h3>
-
         <div class="hint">Toca para agregar (+1)</div>
-
       </div>
-
-
 
       <div class="productos-grid" id="productosGrid">
-
         {% for p in productos %}
-
           <button
-
             type="button"
-
             class="producto-card js-add"
-
             data-id="{{ p.id }}"
-
             data-nombre="{{ p.nombre }}"
-
             data-precio="{{ p.precio }}"
-
             data-categoria="{{ p.categoria or '' }}"
-
           >
-
             <div class="producto-nombre">{{ p.nombre }}</div>
-
             <div class="producto-meta">
-
               <span class="categoria">{{ p.categoria }}</span>
-
               <span class="precio">{{ p.precio | money }}</span>
-
             </div>
-
           </button>
-
         {% endfor %}
-
       </div>
 
-
-
     </div>
-
-
 
   </section>
 
-
-
   <aside class="pos-right">
-
-
 
     <div class="card card-sticky">
 
-
-
       <div class="card-head carrito-head">
-
         <div>
-
           <h3 class="carrito-title">Carrito</h3>
-
           <div class="hint">+ / – para ajustar</div>
-
         </div>
-
-
 
         <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-
       </div>
 
-
-
       <div class="carrito-wrap">
-
         <table id="carritoTable">
-
           <thead>
-
             <tr>
-
               <th>Producto</th>
-
               <th>Cant.</th>
-
               <th>Precio</th>
-
               <th>Subtotal</th>
-
               <th></th>
-
             </tr>
-
           </thead>
-
           <tbody></tbody>
-
         </table>
 
-
-
-        <!-- ✅ NUEVO: Subtotal + Descuento + Total -->
-
+        <!-- Subtotal + Descuento + Total -->
         <div class="total-box" style="display:flex; flex-direction:column; gap:10px;">
 
-
-
           <div style="display:flex; justify-content:space-between; gap:10px;">
-
             <div>Subtotal</div>
-
             <div class="total-amount" id="subtotalPedido">$0.00</div>
-
           </div>
-
-
 
           <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-end;">
-
             <div>
-
               <label style="font-weight:800;">Descuento ($)</label>
-
               <input
-
                 type="number"
-
                 id="descuentoInput"
-
                 step="0.01"
-
                 min="0"
-
                 value="0"
-
                 inputmode="decimal"
-
                 style="width:140px; margin-top:6px; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:16px;"
-
                 placeholder="0.00"
-
               >
-
               <div class="hint" style="margin-top:4px;">Se aplica al total</div>
-
             </div>
-
-
 
             <div style="text-align:right;">
-
               <div class="hint">Descuento</div>
-
               <div style="font-weight:900;" id="descuentoMostrado">$0.00</div>
-
             </div>
-
           </div>
-
-
 
           <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px dashed #ddd; padding-top:10px;">
-
             <div style="font-size:1.05rem; font-weight:900;">Total</div>
-
             <div class="total-amount" id="totalPedido">$0.00</div>
-
           </div>
-
-
 
         </div>
 
-
-
         <div id="inputsHidden"></div>
-
-        <!-- ✅ NUEVO: hidden para backend -->
-
         <input type="hidden" name="descuento" id="descuentoHidden" value="0">
 
 
-
-
-
         <button type="submit" class="btn-guardar">
-
           💾 Guardar pedido
-
         </button>
-
       </div>
 
-
-
     </div>
-
-
 
   </aside>
 
-
-
 </form>
 
-
-
 <!-- ================== MODAL PERSONALIZACIÓN ================== -->
-
 <div id="customModal" class="modal">
-
   <div class="modal-box">
-
-
 
     <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
 
-
-
-    <h3 style="margin-top:0;">Personalizar</h3>
-
-    <p class="hint" id="customProductoNombre" style="margin-top:-8px;"></p>
-
-
+    <h3 style="margin-top:0;" id="customModalTitle">Personalizar</h3>
+    <p class="hint" id="customProductoNombre" style="margin-top:-8px; font-weight:bold;"></p>
 
     <div class="custom-section">
-
       <label><strong>Proteína</strong></label>
-
       <div id="proteinaRadios" class="custom-grid"></div>
-
     </div>
 
-
-
     <div class="custom-section">
-
       <label><strong>Salsa</strong></label>
-
       <div id="salsaRadios" class="custom-grid"></div>
-
       <p class="hint" style="margin:6px 0 0;">Opcional (si no aplica, déjalo vacío).</p>
-
     </div>
 
-
-
     <div class="custom-section">
-
-      <label><strong>Quitar</strong></label>
-
+      <label><strong>Quitar / Extra</strong></label>
       <div id="sinChecks" class="custom-grid"></div>
-
       <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
-
     </div>
-
-
 
     <div class="custom-section">
-
-      <label><strong>Notas</strong></label>
-
-      <textarea id="notaInput" rows="3" style="width:100%;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
-
+      <label><strong>Notas Adicionales</strong></label>
+      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. extra queso, salsa aparte, bien dorados, etc."></textarea>
     </div>
-
-
 
     <div class="modal-actions">
-
       <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-
       <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
-
     </div>
-
   </div>
-
 </div>
 
-
-
 <!-- ================== VISTA COCINA ================== -->
-
 <div id="cocinaModal" class="modal">
-
   <div class="modal-box">
-
-
 
     <button class="modal-close" type="button" onclick="cerrarVistaCocina()">✕</button>
 
-
-
     <h3 style="margin-top:0;">Comanda (Vista cocina)</h3>
-
     <p class="hint">Se imprime/visualiza con los modificadores seleccionados.</p>
-
-
 
     <div id="cocinaBody"></div>
 
-
-
     <div class="modal-actions">
-
       <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
-
       <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
-
     </div>
-
   </div>
-
 </div>
 
-
-
-<!-- ================== ESTILOS (tablet/móvil + modal iPad) ================== -->
-
+<!-- ================== ESTILOS ================== -->
 <style>
-
 html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-
 *, *::before, *::after{ box-sizing: border-box; }
 
-
-
 @media (max-width: 1100px){
-
   .pos-layout{ display:flex; flex-direction:column; gap:12px; }
-
   .pos-left,.pos-right{ width:100%; }
-
   .card-sticky{ position:static !important; top:auto !important; }
-
   #carritoTable th, #carritoTable td{ font-size:.95rem; }
-
 }
-
 .carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
-
 .carrito-title{ margin:0; }
 
-
-
 .modal{
-
   position:fixed; left:0; top:0;
-
   width:100vw; height:100vh; height:100dvh;
-
   display:none; justify-content:center; align-items:center;
-
   background:rgba(0,0,0,.45);
-
   z-index:2147483647;
-
   padding:14px;
-
   -webkit-overflow-scrolling:auto;
-
   overscroll-behavior:contain;
-
 }
-
 .modal.is-open{ display:flex; }
 
-
-
 .modal-box{
-
   background:#fff;
-
   border-radius:14px;
-
   padding:16px;
-
   width:min(640px, 94vw);
-
   box-shadow:0 10px 30px rgba(0,0,0,.25);
-
   max-height:calc(var(--vh, 1vh) * 88);
-
   overflow:auto;
-
   -webkit-overflow-scrolling:touch;
-
   transform:translateZ(0);
-
 }
-
 .modal-close{
-
   position:sticky;
-
   top:0;
-
   float:right;
-
   margin-left:auto;
-
   border:0;
-
   background:rgba(255,255,255,.88);
-
   backdrop-filter:blur(6px);
-
   font-size:18px;
-
   cursor:pointer;
-
   padding:6px 10px;
-
   border-radius:10px;
-
 }
-
 .modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
 
-
-
 @media (max-width: 1100px){
-
   .modal{ align-items:flex-end; padding:10px; }
-
   .modal-box{
-
     width:100%;
-
     border-radius:18px 18px 14px 14px;
-
     max-height:calc(var(--vh, 1vh) * 92);
-
   }
-
 }
-
 .custom-section{ margin-top:12px; }
 
-
-
 .custom-grid{
-
   display:grid;
-
   grid-template-columns:1fr 1fr;
-
   gap:10px;
-
   margin-top:8px;
-
   align-items:stretch;
-
 }
-
 @media (max-width: 1100px){ .custom-grid{ grid-template-columns:1fr; } }
 
-
-
 .custom-pill{
-
   border:1px solid #ddd;
-
   border-radius:12px;
-
   padding:12px;
-
   display:flex;
-
   gap:10px;
-
   align-items:center;
-
   width:100%;
-
   min-height:48px;
-
   justify-content:flex-start;
-
   line-height:1.2;
-
   background:#fff;
-
   cursor:pointer;
-
   overflow:hidden;
-
 }
-
 .custom-pill input[type="radio"],
-
 .custom-pill input[type="checkbox"]{
-
   margin:0;
-
   flex:0 0 20px;
-
   width:20px;
-
   height:20px;
-
 }
-
 .custom-pill span{
-
   flex:1;
-
   overflow-wrap:anywhere;
-
   word-break:break-word;
-
   white-space:normal;
-
 }
-
 .custom-pill:active{ transform:scale(.99); background:#f6f6f6; }
 
-
-
 .cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
-
 .tag{
-
   display:inline-block;
-
   padding:4px 8px;
-
   border-radius:8px;
-
   background:#f3f3f3;
-
   border:1px solid #ddd;
-
   font-weight:700;
-
   font-size:.85rem;
-
 }
-
 .tag-warn{ background:#fff3cd; border-color:#f0c36d; }
-
 .nota{
-
   padding:6px 8px;
-
   border-radius:8px;
-
   border:1px dashed #bbb;
-
   background:#fff;
-
   font-size:.85rem;
-
 }
-
 .modal-actions{
-
   position:sticky;
-
   bottom:0;
-
   background:rgba(255,255,255,.92);
-
   backdrop-filter:blur(6px);
-
   padding-top:10px;
-
   display:flex;
-
   gap:10px;
-
   justify-content:flex-end;
-
 }
-
 .pos-layout,.card,.carrito-wrap,#carritoTable,.modal-box{ max-width:100%; }
-
 body{ overflow-x:hidden; }
 
-
-
 #carritoTable{ width:100%; table-layout:fixed; }
-
-#carritoTable th,#carritoTable td{ overflow:hidden; text-overflow:ellipsis; vertical-align:top; }
-
+#carritoTable th,#carritoTable td{ overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
 #carritoTable td.td-left,#carritoTable td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
-
-
 
 .qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
 
-
-
 /* Estilos para el buscador dinámico */
-
 #lista_clientes div {
-
   padding: 12px;
-
   border-bottom: 1px solid #eee;
-
   cursor: pointer;
-
   font-size: 0.95rem;
-
 }
-
 #lista_clientes div:hover {
-
   background-color: #f8f8f8;
-
   color: #b32417; /* Tu rojo de marca */
-
 }
-
 #lista_clientes strong {
-
   display: block;
-
 }
-
-
 
 </style>
 
-
-
 <script>
-
 /* ================== FIX VH (iOS) ================== */
-
 function setVH(){
-
   const vh = window.innerHeight * 0.01;
-
   document.documentElement.style.setProperty('--vh', `${vh}px`);
-
 }
-
 setVH();
-
 window.addEventListener('resize', setVH);
-
 window.addEventListener('orientationchange', setVH);
 
-
-
 /* ================== DATA (FIX JINJA) ================== */
-
 const PROTEINAS_DB = {{ proteinas|tojson|safe }};
-
 const SALSAS_DB    = {{ salsas|tojson|safe }};
 
-
-
 const PROTEINA_NONE = { id: "", nombre: "Sin proteína" };
-
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
 
-
-
 const NO_MOD_CATEGORIAS = ["bebidas", "extras", "extra", "complementos", "postres"];
-
 const NO_MOD_KEYWORDS = ["coca", "refresco", "agua", "café", "cafe", "chai", "capuccino", "capuchino", "jugo", "jarrito"];
 
-
-
 let carrito = {};
-
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
-
 let editandoUid = null;
-
 let descuentoTotal = 0;
 
-
-
 /* ================== HELPERS ================== */
-
 function clampMin0(n){
-
   n = Number(n);
-
   return (isNaN(n) || n < 0) ? 0 : n;
-
 }
-
-
 
 function escapeHtml(str){
-
   return String(str ?? "")
-
     .replace(/&/g, "&amp;")
-
     .replace(/</g, "&lt;")
-
     .replace(/>/g, "&gt;")
-
     .replace(/"/g, "&quot;")
-
     .replace(/'/g, "&#039;");
-
 }
-
-
 
 function uidLinea(producto_id){
-
   return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-
 }
-
-
 
 function normaliza(str){
-
   return (str || "").toString().trim().toLowerCase();
-
 }
-
-
 
 function productoTieneModificadores(nombre, categoria){
-
   const cat = normaliza(categoria);
-
   const nom = normaliza(nombre);
 
-
-
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
-
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
-
 }
-
-
 
 function nombreProteinaPorId(id){
-
   if (!id) return "";
-
   const x = PROTEINAS_DB.find(p => String(p.id) === String(id));
-
   return x ? x.nombre : "";
-
 }
-
-
 
 function nombreSalsaPorId(id){
-
   if (!id) return "";
-
   const x = SALSAS_DB.find(s => String(s.id) === String(id));
-
   return x ? x.nombre : "";
-
 }
 
-
-
 /* ================== INIT ================== */
-
 document.addEventListener("DOMContentLoaded", () => {
-
   toggleUberBox();
-
   document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
-
-
   /* 🔥 CLICK EN PRODUCTOS */
-
   const grid = document.getElementById("productosGrid");
-
   if (grid){
-
     grid.addEventListener("click", (e) => {
-
       const btn = e.target.closest(".js-add");
-
       if (!btn) return;
 
-
-
       const id = btn.dataset.id;
-
       const nombre = btn.dataset.nombre;
-
       const precio = btn.dataset.precio;
-
       const categoria = btn.dataset.categoria || "";
 
-
-
       agregarProducto(id, nombre, precio, categoria);
-
     });
-
   }
-
-
 
   /* 🔍 BUSCADOR CLIENTES */
-
   const inputBuscar = document.getElementById('buscador_cliente');
-
   const divResultados = document.getElementById('resultados_busqueda');
-
   const listaClientes = document.getElementById('lista_clientes');
 
-
-
   if (inputBuscar) {
-
     inputBuscar.addEventListener('keyup', function() {
-
       let query = inputBuscar.value;
-
       if (query.length >= 3) {
-
         fetch(`/api/buscar_cliente?q=${query}`)
-
           .then(r => r.json())
-
           .then(data => {
-
             listaClientes.innerHTML = '';
-
             if (data.length > 0) {
-
               divResultados.style.display = 'block';
-
               data.forEach(cliente => {
-
                 const item = document.createElement('div');
-
-                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164}</small>`;
-
+                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164 || cliente.telefono || ''}</small>`;
+                
+                // ✅ NUEVO: Al hacer clic, mostramos la tarjeta de detalles
                 item.onclick = function() {
-
-                  inputBuscar.value = cliente.phone_e164;
-
+                  inputBuscar.value = cliente.phone_e164 || cliente.telefono || query;
                   divResultados.style.display = 'none';
-
+                  mostrarDetallesCliente(cliente);
                 };
-
+                
                 listaClientes.appendChild(item);
-
               });
-
             } else {
-
               divResultados.style.display = 'none';
-
             }
-
           });
-
       } else {
-
         divResultados.style.display = 'none';
-
       }
-
     });
-
   }
-
-
 
   document.addEventListener('click', (e) => {
-
     if (inputBuscar && e.target !== inputBuscar) {
-
       divResultados.style.display = 'none';
-
     }
-
   });
 
-
-
   /* 💸 DESCUENTO */
-
   const descInput = document.getElementById("descuentoInput");
-
   if (descInput){
-
     descInput.addEventListener("input", () => {
-
       descuentoTotal = clampMin0(descInput.value);
-
       renderCarrito();
-
     });
-
-
 
     descInput.addEventListener("blur", () => {
-
       descuentoTotal = clampMin0(descInput.value);
-
       descInput.value = descuentoTotal.toFixed(2);
-
       renderCarrito();
-
     });
-
   }
-
 });
 
+/* ================== DETALLES CLIENTE (NUEVO) ================== */
+function mostrarDetallesCliente(cliente) {
+  document.getElementById('detalle_nombre').innerText = cliente.nombre || 'Cliente sin nombre';
+  document.getElementById('detalle_tel').innerText = "📞 " + (cliente.phone_e164 || cliente.telefono || 'Sin teléfono');
+  
+  let extraInfo = "";
+  if(cliente.direccion) extraInfo += `📍 ${cliente.direccion}<br>`;
+  if(cliente.email) extraInfo += `📧 ${cliente.email}`;
+  
+  document.getElementById('detalle_extra').innerHTML = extraInfo;
+  document.getElementById('cliente_seleccionado_card').style.display = 'block';
+}
+
+function limpiarCliente() {
+  document.getElementById('buscador_cliente').value = '';
+  document.getElementById('cliente_seleccionado_card').style.display = 'none';
+}
 
 
 /* ================== CORE & CARRITO ================== */
-
 function agregarProducto(id, nombre, precio, categoria) {
-
   const uid = uidLinea(id);
 
-
-
   carrito[uid] = {
-
     producto_id: id,
-
     nombre: nombre,
-
     precio: Number(precio),
-
     cantidad: 1,
-
+    isNew: true, // ✅ NUEVO: Bandera para saber si se acaba de agregar
     custom: {
-
       proteina_id: "", salsa_id: "", proteina: "", salsa: "", sin: [], nota: ""
-
     }
-
   };
-
-
 
   if (productoTieneModificadores(nombre, categoria)){
-
     editandoUid = uid;
-
     modalState = { producto_id: id, nombre, precio: Number(precio), uid };
-
     abrirCustomModal(); 
-
   } else {
-
+    delete carrito[uid].isNew;
     renderCarrito();
-
   }
-
 }
-
-
 
 function cambiarCantidad(uid, delta) {
-
   if (carrito[uid]) {
-
     carrito[uid].cantidad += delta;
-
     if (carrito[uid].cantidad <= 0) {
-
       eliminarProducto(uid);
-
     } else {
-
       renderCarrito();
-
     }
-
   }
-
 }
-
-
 
 function eliminarProducto(uid){
-
   delete carrito[uid];
-
   renderCarrito();
-
 }
-
-
 
 function renderCarrito(){
-
   const tbody = document.querySelector("#carritoTable tbody");
-
   const hidden = document.getElementById("inputsHidden");
 
-
-
   tbody.innerHTML = "";
-
   hidden.innerHTML = "";
-
   let subtotalGeneral = 0;
 
-
-
   Object.keys(carrito).forEach(uid => {
-
     const item = carrito[uid];
-
     const subtotal = item.precio * item.cantidad;
-
     subtotalGeneral += subtotal;
 
-
-
-    // Generar badges de modificadores visuales
-
     let modsHtml = "";
-
     if (item.custom.proteina) modsHtml += `<div class="tag">🥩 ${escapeHtml(item.custom.proteina)}</div>`;
-
     if (item.custom.salsa) modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
-
     if (item.custom.sin.length > 0) modsHtml += `<div class="tag tag-warn">🚫 Sin ${escapeHtml(item.custom.sin.join(', '))}</div>`;
-
     if (item.custom.nota) modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
 
-
-
     tbody.innerHTML += `
-
       <tr>
-
         <td class="td-left">
-
           <strong>${escapeHtml(item.nombre)}</strong>
-
           ${modsHtml ? `<div class="cocina-meta">${modsHtml}</div>` : ''}
-
         </td>
-
         <td class="qty-controls" style="display:flex; align-items:center; gap:4px;">
-
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', -1)">-</button>
-
           <span>${item.cantidad}</span>
-
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', 1)">+</button>
-
         </td>
-
         <td>$${item.precio.toFixed(2)}</td>
-
         <td><strong>$${subtotal.toFixed(2)}</strong></td>
-
-        <td>
-
-          <button type="button" style="color:red; background:none; border:none; cursor:pointer;" onclick="eliminarProducto('${uid}')">🗑️</button>
-
+        <!-- ✅ NUEVO: Agregado botón para Editar en el carrito -->
+        <td style="text-align:right; min-width:60px;">
+          <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:5px;" onclick="abrirCustomModal('${uid}')">✏️</button>
+          <button type="button" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem;" onclick="eliminarProducto('${uid}')">🗑️</button>
         </td>
-
       </tr>
-
     `;
-
-
-
-    // Generar inputs ocultos completos para el backend
 
     hidden.innerHTML += `
-
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
-
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
-
       <input type="hidden" name="proteina_id[]" value="${item.custom.proteina_id}">
-
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
-
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
-
       <input type="hidden" name="notas[]" value="${escapeHtml(item.custom.nota)}">
-
     `;
-
   });
-
-
 
   const descuentoAplicado = Math.min(descuentoTotal, subtotalGeneral);
-
   const totalFinal = subtotalGeneral - descuentoAplicado;
 
-
-
   document.getElementById("subtotalPedido").innerText = "$" + subtotalGeneral.toFixed(2);
-
   document.getElementById("descuentoMostrado").innerText = "-$" + descuentoAplicado.toFixed(2);
-
   document.getElementById("totalPedido").innerText = "$" + totalFinal.toFixed(2);
-
   document.getElementById("descuentoHidden").value = descuentoAplicado.toFixed(2);
-
 }
 
 
-
-
-
-/* ================== MODAL PERSONALIZACIÓN ================== */
-
-function abrirCustomModal() {
-
-  document.getElementById('customProductoNombre').innerText = modalState.nombre;
-
+/* ================== MODAL PERSONALIZACIÓN (ACTUALIZADO) ================== */
+// ✅ NUEVO: Ahora recibe un 'uid' opcional para saber si está editando un item existente
+function abrirCustomModal(uid = null) {
+  let customData = { proteina_id: "", salsa_id: "", sin: [], nota: "" };
   
+  if (uid && carrito[uid]) {
+    editandoUid = uid;
+    customData = carrito[uid].custom;
+    document.getElementById('customModalTitle').innerText = "Editar Personalización";
+    document.getElementById('customProductoNombre').innerText = carrito[uid].nombre;
+  } else {
+    document.getElementById('customModalTitle').innerText = "Personalizar";
+    document.getElementById('customProductoNombre').innerText = modalState.nombre;
+  }
 
-  // Rellenar Proteínas
-
-  let htmlProt = `<label class="custom-pill"><input type="radio" name="modal_prot" value="" checked><span>Sin proteína</span></label>`;
-
+  // Rellenar Proteínas seleccionando la previa
+  let htmlProt = `<label class="custom-pill"><input type="radio" name="modal_prot" value="" ${!customData.proteina_id ? 'checked' : ''}><span>Sin proteína</span></label>`;
   PROTEINAS_DB.forEach(p => {
-
-    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${p.id}"><span>${p.nombre}</span></label>`;
-
+    let checked = (String(p.id) === String(customData.proteina_id)) ? "checked" : "";
+    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${p.id}" ${checked}><span>${p.nombre}</span></label>`;
   });
-
   document.getElementById('proteinaRadios').innerHTML = htmlProt;
 
-
-
-  // Rellenar Salsas
-
-  let htmlSal = `<label class="custom-pill"><input type="radio" name="modal_sal" value="" checked><span>Ninguna</span></label>`;
-
+  // Rellenar Salsas seleccionando la previa
+  let htmlSal = `<label class="custom-pill"><input type="radio" name="modal_sal" value="" ${!customData.salsa_id ? 'checked' : ''}><span>Ninguna</span></label>`;
   SALSAS_DB.forEach(s => {
-
-    htmlSal += `<label class="custom-pill"><input type="radio" name="modal_sal" value="${s.id}"><span>${s.nombre}</span></label>`;
-
+    let checked = (String(s.id) === String(customData.salsa_id)) ? "checked" : "";
+    htmlSal += `<label class="custom-pill"><input type="radio" name="modal_sal" value="${s.id}" ${checked}><span>${s.nombre}</span></label>`;
   });
-
   document.getElementById('salsaRadios').innerHTML = htmlSal;
 
-
-
-  // Rellenar Sin Opciones (Checkboxes)
-
+  // Rellenar Sin Opciones seleccionando las previas
   let htmlSin = "";
-
   SIN_OPCIONES.forEach(opc => {
-
-    htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}"><span>Sin ${opc}</span></label>`;
-
+    let checked = customData.sin.includes(opc) ? "checked" : "";
+    htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}" ${checked}><span>Sin ${opc}</span></label>`;
   });
-
   document.getElementById('sinChecks').innerHTML = htmlSin;
 
-
-
-  // Limpiar notas
-
-  document.getElementById('notaInput').value = "";
-
+  // Cargar nota previa
+  document.getElementById('notaInput').value = customData.nota || "";
   
-
   // Mostrar modal
-
   document.getElementById('customModal').classList.add('is-open');
-
 }
-
-
 
 function cerrarCustomModal() {
-
   document.getElementById('customModal').classList.remove('is-open');
-
-  // Si cancelamos y era un producto recién agregado, lo borramos del carrito
-
-  if(editandoUid && carrito[editandoUid] && !carrito[editandoUid].custom.proteina_id && !carrito[editandoUid].custom.nota) {
-
+  
+  // ✅ NUEVO: Si cancelamos y era un producto "Nuevo", lo borramos. Si era una edición, lo conservamos.
+  if(editandoUid && carrito[editandoUid] && carrito[editandoUid].isNew) {
      eliminarProducto(editandoUid);
-
   }
-
   editandoUid = null;
-
   renderCarrito();
-
 }
-
-
 
 function confirmarCustom() {
-
   if (!editandoUid || !carrito[editandoUid]) {
-
     cerrarCustomModal();
-
     return;
-
   }
-
   
-
   const protId = document.querySelector('input[name="modal_prot"]:checked').value;
-
   const salId = document.querySelector('input[name="modal_sal"]:checked').value;
-
   
-
   const sinNodos = document.querySelectorAll('.check-sin:checked');
-
   const sinArr = Array.from(sinNodos).map(n => n.value);
-
   
-
   const nota = document.getElementById('notaInput').value.trim();
 
-
-
   carrito[editandoUid].custom = {
-
     proteina_id: protId,
-
     salsa_id: salId,
-
     proteina: nombreProteinaPorId(protId),
-
     salsa: nombreSalsaPorId(salId),
-
     sin: sinArr,
-
     nota: nota
-
   };
 
-
-
+  delete carrito[editandoUid].isNew; // Ya fue guardado, deja de ser "Nuevo"
+  
   editandoUid = null;
-
   document.getElementById('customModal').classList.remove('is-open');
-
   renderCarrito();
-
 }
-
-
 
 /* ================== VISTA COCINA ================== */
-
 function abrirVistaCocina() {
-
   let html = "";
-
   const keys = Object.keys(carrito);
-
   
-
   if(keys.length === 0){
-
     html = "<p style='text-align:center;'>El carrito está vacío</p>";
-
   } else {
-
     keys.forEach(uid => {
-
       const item = carrito[uid];
-
       html += `<div style="margin-bottom: 12px;">
-
                  <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
-
       if(item.custom.proteina) html += `<span class="tag">🥩 ${item.custom.proteina}</span> `;
-
       if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
-
       if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
-
       if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
-
       html += `</div><hr style="border: 0.5px dashed #ccc;">`;
-
     });
-
   }
 
-
-
   document.getElementById('cocinaBody').innerHTML = html;
-
   document.getElementById('cocinaModal').classList.add('is-open');
-
 }
-
-
 
 function cerrarVistaCocina() {
-
   document.getElementById('cocinaModal').classList.remove('is-open');
-
 }
-
-
 
 /* ================== UI ================== */
-
 function toggleUberBox(){
-
   const origen = document.getElementById("origenSelect").value;
-
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
-
 }
-
 </script>
 
-
-
-{% endblock %}  
-
-
-
-
-
+{% endblock %}
