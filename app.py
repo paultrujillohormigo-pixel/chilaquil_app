@@ -4,7 +4,7 @@ import pymysql
 
 from flask import Flask, request, redirect, url_for, flash, render_template, jsonify
 from decimal import Decimal, InvalidOperation
-
+x
 from db import get_connection
 from costeo import costeo_bp
 
@@ -684,9 +684,17 @@ def lista_clientes():
 # MI PERFIL (PORTAL DE CLIENTES)
 # =========================================================
 
+# =========================================================
+# MI PERFIL (PORTAL DE CLIENTES)
+# =========================================================
+
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
+    # ✅ LÍNEA MÁGICA: Si Flask lo manda con "?phone=", lo atrapamos aquí
+    if not phone:
+        phone = request.args.get("phone")
+
     # 1. Si el cliente escribe su número en la cajita y le da a "Consultar"
     if request.method == "POST":
         telefono_raw = request.form.get("telefono", "")
@@ -739,7 +747,6 @@ def mi_perfil(phone=None):
 
     # 3. Pantalla principal con el input (sin número en la URL)
     return render_template("mi_perfil.html", cliente=None)
-
 
 
 @app.route("/cliente/<int:customer_id>", methods=["GET", "POST"])
