@@ -1419,6 +1419,7 @@ def compras():
 
 import json
 
+
 @app.route("/dashboard")
 def dashboard():
     mes = request.args.get("mes") # Formato YYYY-MM
@@ -1457,7 +1458,7 @@ def dashboard():
             costos_rows = cursor.fetchall()
             total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos_rows)
 
-          # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN
+            # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN
             cursor.execute(f"""
                 SELECT tipo_costo, SUM(costo) AS total
                 FROM insumos_compras
@@ -1469,21 +1470,19 @@ def dashboard():
             costo_insumos = Decimal("0")
             for ct in costos_tipo:
                 t = (ct["tipo_costo"] or "").lower()
-                # Para Margen Bruto solo sumamos Insumos/Alimentos (sin nómina)
+                # Para Margen Bruto solo sumamos Insumos/Alimentos
                 if any(word in t for word in ["insumo", "alimento", "bebida", "materia prima"]):
                     costo_insumos += Decimal(str(ct["total"] or 0))
             
             # Margen Bruto % = ((Ventas - Costo Insumos) / Ventas) * 100
             gross_margin_pct = ((total_ingresos - costo_insumos) / total_ingresos * 100) if total_ingresos > 0 else 0
+
             # 4. INGENIERÍA DE MENÚ (Matriz BCG)
-            # x = Popularidad (Cantidad), y = Rentabilidad (Precio - Costo)
-            # Ajustamos el filtro para la subconsulta
             filtro_bcg = filtro.replace("fecha", "pe.fecha")
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
                        SUM(pi.subtotal) AS ingreso_total,
-                       -- Margen unitario promedio: (Ingreso / Cantidad) - Costo Base
                        ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo, 0)) AS margen_unitario
                 FROM pedido_items pi
                 JOIN pedidos pe ON pe.id = pi.pedido_id
@@ -1498,11 +1497,11 @@ def dashboard():
             for item in bcg_raw:
                 menu_engineering_data.append({
                     "nombre": item["nombre"],
-                    "x": float(item["cantidad"]), # Popularidad
-                    "y": float(item["margen_unitario"]) # Rentabilidad en Pesos
+                    "x": float(item["cantidad"]), 
+                    "y": float(item["margen_unitario"])
                 })
 
-            # 5. HORAS PICO (Análisis de Demanda)
+            # 5. HORAS PICO
             cursor.execute(f"""
                 SELECT HOUR(fecha) AS hora_num, COUNT(*) AS total_pedidos, SUM(total) AS total_dinero
                 FROM pedidos
@@ -1513,7 +1512,7 @@ def dashboard():
             ventas_hora_raw = cursor.fetchall()
             ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"])} for v in ventas_hora_raw]
 
-            # 6. VENTAS POR DÍA DE LA SEMANA (Promedios Reales)
+            # 6. VENTAS POR DÍA DE LA SEMANA
             cursor.execute(f"""
                 SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio
                 FROM (
@@ -1531,9 +1530,8 @@ def dashboard():
             """, params)
             ventas_semana = cursor.fetchall()
 
-            # 7. TABLAS DE APOYO (Top 10s)
-            top_productos = bcg_raw[:10] # Los 10 que más dinero dejan
-
+            # 7. TABLAS DE APOYO
+            top_productos = bcg_raw[:10]
             cursor.execute("""
                 SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado
                 FROM insumos_compras
@@ -1552,11 +1550,9 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
-            # Meses para el filtro lateral
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
-            # Utilidad y Margen General
             utilidad = total_ingresos - total_costos
             margen_gral = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
 
@@ -1571,8 +1567,7 @@ def dashboard():
         total_costos=float(total_costos),
         utilidad=float(utilidad),
         margen=round(float(margen_gral), 2),
-        prime_cost_pct=round(float(prime_cost_pct), 1),
-        # Datos para gráficas (convertidos a JSON para JS)
+        gross_margin_pct=round(float(gross_margin_pct), 1), # <-- CAMBIADO AQUÍ
         ingresos_json=json.dumps([float(i["total"]) for i in ingresos_rows]),
         costos_json=json.dumps([float(c["costo"]) for c in costos_rows]),
         labels_mes_json=json.dumps([i["mes"] for i in ingresos_rows]),
@@ -1580,15 +1575,11 @@ def dashboard():
         menu_engineering_data=json.dumps(menu_engineering_data),
         ventas_hora=ventas_hora,
         ventas_por_dia_semana=ventas_semana,
-        # Datos para tablas
         top_productos=top_productos,
         top_gastos=top_gastos,
         ventas_dia=ventas_dia,
-        promedios_dia={"avg_pedidos": 0, "avg_total": 0, "avg_neto": 0} # Puedes calcularlo similar a ventas_semana
+        promedios_dia={"avg_pedidos": 0, "avg_total": 0, "avg_neto": 0}
     )
-
-
-
 
 
 # =========================================================
