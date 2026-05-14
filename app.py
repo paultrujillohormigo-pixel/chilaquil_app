@@ -1457,8 +1457,7 @@ def dashboard():
             costos_rows = cursor.fetchall()
             total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos_rows)
 
-            # 3. COSTOS POR TIPO Y CÁLCULO DE PRIME COST
-            # El Prime Cost es: (Costo Alimentos + Nómina) / Ventas Netas
+          # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN
             cursor.execute(f"""
                 SELECT tipo_costo, SUM(costo) AS total
                 FROM insumos_compras
@@ -1467,15 +1466,15 @@ def dashboard():
             """, params)
             costos_tipo = cursor.fetchall()
 
-            prime_cost_acumulado = Decimal("0")
+            costo_insumos = Decimal("0")
             for ct in costos_tipo:
                 t = (ct["tipo_costo"] or "").lower()
-                # Sumamos solo lo operativo: Alimentos, Bebidas y Sueldos
-                if any(word in t for word in ["insumo", "alimento", "nomina", "sueldo", "personal"]):
-                    prime_cost_acumulado += Decimal(str(ct["total"] or 0))
+                # Para Margen Bruto solo sumamos Insumos/Alimentos (sin nómina)
+                if any(word in t for word in ["insumo", "alimento", "bebida", "materia prima"]):
+                    costo_insumos += Decimal(str(ct["total"] or 0))
             
-            prime_cost_pct = (prime_cost_acumulado / total_ingresos * 100) if total_ingresos > 0 else 0
-
+            # Margen Bruto % = ((Ventas - Costo Insumos) / Ventas) * 100
+            gross_margin_pct = ((total_ingresos - costo_insumos) / total_ingresos * 100) if total_ingresos > 0 else 0
             # 4. INGENIERÍA DE MENÚ (Matriz BCG)
             # x = Popularidad (Cantidad), y = Rentabilidad (Precio - Costo)
             # Ajustamos el filtro para la subconsulta
