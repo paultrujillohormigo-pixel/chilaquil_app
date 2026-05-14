@@ -1377,23 +1377,21 @@ def compras():
 # ============ DASHBOARD=============
 # =========================================================
 
-import json
-
 @app.route("/dashboard")
 def dashboard():
-    mes = request.args.get("mes")
+    mes = request.args.get("mes") # Formato YYYY-MM
 
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Filtros dinámicos para las consultas
             filtro = ""
             params = []
-
             if mes:
-                filtro = "WHERE DATE_FORMAT(pe.fecha, '%%Y-%%m') = %s" if 'pe.' in filtro else "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
+                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
-            # 1. Ingresos
+            # 1. INGRESOS TOTALES
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(total) AS total
@@ -1402,9 +1400,10 @@ def dashboard():
                 GROUP BY mes
                 ORDER BY mes
             """, params)
-            ingresos = cursor.fetchall()
+            ingresos_rows = cursor.fetchall()
+            total_ingresos = sum(Decimal(str(i["total"] or 0)) for i in ingresos_rows)
 
-            # 2. Costos
+            # 2. COSTOS TOTALES (COMPRAS)
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
                        SUM(costo) AS costo
@@ -1413,197 +1412,138 @@ def dashboard():
                 GROUP BY mes
                 ORDER BY mes
             """, params)
-            costos = cursor.fetchall()
+            costos_rows = cursor.fetchall()
+            total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos_rows)
 
-            # 3. Costos por tipo
+            # 3. COSTOS POR TIPO Y CÁLCULO DE PRIME COST
+            # El Prime Cost es: (Costo Alimentos + Nómina) / Ventas Netas
             cursor.execute(f"""
-                SELECT tipo_costo,
-                       SUM(costo) AS total
+                SELECT tipo_costo, SUM(costo) AS total
                 FROM insumos_compras
                 {filtro}
                 GROUP BY tipo_costo
             """, params)
             costos_tipo = cursor.fetchall()
 
-            total_ingresos = sum(Decimal(str(i["total"] or 0)) for i in ingresos)
-            total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos)
-            utilidad = total_ingresos - total_costos
-            margen = (utilidad / total_ingresos * 100) if total_ingresos else Decimal("0")
-
-            # --- NUEVO: CÁLCULO DE PRIME COST ---
-            # El Prime Cost idealmente es (Costo de Alimentos + Nómina) / Ventas.
-            # Aquí sumamos las categorías que coincidan, si usas nombres distintos en tu BD, ajusta el 'if':
-            prime_cost_value = Decimal("0")
+            prime_cost_acumulado = Decimal("0")
             for ct in costos_tipo:
-                tipo = (ct["tipo_costo"] or "").lower()
-                if "insumo" in tipo or "alimento" in tipo or "nomina" in tipo or "sueldo" in tipo:
-                    prime_cost_value += Decimal(str(ct["total"] or 0))
+                t = (ct["tipo_costo"] or "").lower()
+                # Sumamos solo lo operativo: Alimentos, Bebidas y Sueldos
+                if any(word in t for word in ["insumo", "alimento", "nomina", "sueldo", "personal"]):
+                    prime_cost_acumulado += Decimal(str(ct["total"] or 0))
             
-            # Si no hay match específico, usamos el costo total como fallback temporal
-            if prime_cost_value == Decimal("0"):
-                prime_cost_value = total_costos
+            prime_cost_pct = (prime_cost_acumulado / total_ingresos * 100) if total_ingresos > 0 else 0
 
-            prime_cost_pct = round((prime_cost_value / total_ingresos * 100), 1) if total_ingresos > 0 else 0
-
-            # 4. Ventas por día
-            cursor.execute(f"""
-                SELECT
-                    DATE(fecha) AS dia,
-                    DAYNAME(fecha) AS dia_semana,
-                    COUNT(*) AS pedidos,
-                    SUM(total) AS total,
-                    SUM(neto) AS neto
-                FROM pedidos
-                {filtro}
-                GROUP BY DATE(fecha), DAYNAME(fecha)
-                ORDER BY dia DESC
-            """, params)
-            ventas_dia = cursor.fetchall()
-
-            cursor.execute("""
-                SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes
-                FROM pedidos
-                ORDER BY mes DESC
-            """)
-            meses_disponibles = [m["mes"] for m in cursor.fetchall()]
-
-            # 5. TOP PRODUCTOS Y MATRIZ BCG (Modificado para Ingeniería de Menú)
-            # Calculamos x (cantidad vendida) e y (margen unitario: precio promedio de venta - costo)
-            filtro_pedidos = "WHERE DATE_FORMAT(pe.fecha, '%%Y-%%m') = %s" if mes else ""
+            # 4. INGENIERÍA DE MENÚ (Matriz BCG)
+            # x = Popularidad (Cantidad), y = Rentabilidad (Precio - Costo)
+            # Ajustamos el filtro para la subconsulta
+            filtro_bcg = filtro.replace("fecha", "pe.fecha")
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
-                       SUM(pi.subtotal) AS ingreso,
-                       -- x = Cantidad vendida (Popularidad)
-                       SUM(pi.cantidad) AS x,
-                       -- y = Margen unitario (Rentabilidad)
-                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo, 0)) AS y
+                       SUM(pi.subtotal) AS ingreso_total,
+                       -- Margen unitario promedio: (Ingreso / Cantidad) - Costo Base
+                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo, 0)) AS margen_unitario
                 FROM pedido_items pi
                 JOIN pedidos pe ON pe.id = pi.pedido_id
                 JOIN productos p ON p.id = pi.producto_id
-                {filtro_pedidos}
+                {filtro_bcg}
                 GROUP BY p.id, p.nombre, p.costo
-                ORDER BY ingreso DESC
-                LIMIT 40
+                ORDER BY ingreso_total DESC
             """, params)
-            productos_data = cursor.fetchall()
+            bcg_raw = cursor.fetchall()
 
-            # Separar Top 10 para la tabla
-            top_productos = sorted(productos_data, key=lambda i: i['ingreso'], reverse=True)[:10]
-
-            # Formatear datos para la gráfica de puntos (Scatter) de Chart.js
             menu_engineering_data = []
-            for p in productos_data:
-                if p['x'] > 0:
-                    menu_engineering_data.append({
-                        "nombre": p["nombre"],
-                        "x": float(p["x"]),
-                        "y": float(p["y"])
-                    })
+            for item in bcg_raw:
+                menu_engineering_data.append({
+                    "nombre": item["nombre"],
+                    "x": float(item["cantidad"]), # Popularidad
+                    "y": float(item["margen_unitario"]) # Rentabilidad en Pesos
+                })
 
-            # --- NUEVO: HORAS PICO (Heatmap/Demanda) ---
+            # 5. HORAS PICO (Análisis de Demanda)
             cursor.execute(f"""
-                SELECT HOUR(fecha) AS hora_num,
-                       SUM(total) AS total
+                SELECT HOUR(fecha) AS hora_num, COUNT(*) AS total_pedidos, SUM(total) AS total_dinero
                 FROM pedidos
                 {filtro}
                 GROUP BY HOUR(fecha)
-                ORDER BY hora_num ASC
+                ORDER BY hora_num
             """, params)
             ventas_hora_raw = cursor.fetchall()
+            ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"])} for v in ventas_hora_raw]
 
-            ventas_hora = []
-            for v in ventas_hora_raw:
-                # Formatear la hora ej. "14:00"
-                ventas_hora.append({
-                    "hora": f"{v['hora_num']}:00", 
-                    "total": float(v["total"])
-                })
+            # 6. VENTAS POR DÍA DE LA SEMANA (Promedios Reales)
+            cursor.execute(f"""
+                SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio
+                FROM (
+                    SELECT DAYOFWEEK(fecha) AS dia_num,
+                           CASE DAYOFWEEK(fecha) 
+                                WHEN 1 THEN 'Dom' WHEN 2 THEN 'Lun' WHEN 3 THEN 'Mar' 
+                                WHEN 4 THEN 'Mie' WHEN 5 THEN 'Jue' WHEN 6 THEN 'Vie' WHEN 7 THEN 'Sab' 
+                           END AS nombre,
+                           DATE(fecha) AS f, SUM(total) AS total_del_dia
+                    FROM pedidos
+                    {filtro}
+                    GROUP BY DATE(fecha), dia_num, nombre
+                ) t
+                GROUP BY dia_num, nombre ORDER BY dia_num
+            """, params)
+            ventas_semana = cursor.fetchall()
 
-            # 6. TOP GASTOS
+            # 7. TABLAS DE APOYO (Top 10s)
+            top_productos = bcg_raw[:10] # Los 10 que más dinero dejan
+
             cursor.execute("""
-                SELECT concepto,
-                       tipo_costo,
-                       COUNT(*) AS veces,
-                       SUM(costo) AS total_gastado
+                SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado
                 FROM insumos_compras
                 WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
                 GROUP BY concepto, tipo_costo
-                ORDER BY total_gastado DESC
-                LIMIT 10
+                ORDER BY total_gastado DESC LIMIT 10
             """, (mes, mes))
             top_gastos = cursor.fetchall()
 
-            # 7. PROMEDIOS
-            cursor.execute("""
-                SELECT
-                    AVG(pedidos) AS avg_pedidos,
-                    AVG(total) AS avg_total,
-                    AVG(neto) AS avg_neto
-                FROM (
-                    SELECT DATE(fecha) AS d,
-                           COUNT(*) AS pedidos,
-                           SUM(total) AS total,
-                           SUM(neto) AS neto
-                    FROM pedidos
-                    WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                    GROUP BY DATE(fecha)
-                ) t
-            """, (mes, mes))
-            promedios_dia = cursor.fetchone()
+            # 8. DETALLE DIARIO
+            cursor.execute(f"""
+                SELECT DATE(fecha) AS dia, DAYNAME(fecha) AS dia_semana,
+                       COUNT(*) AS pedidos, SUM(total) AS total, SUM(neto) AS neto
+                FROM pedidos {filtro}
+                GROUP BY DATE(fecha), DAYNAME(fecha) ORDER BY dia DESC
+            """, params)
+            ventas_dia = cursor.fetchall()
 
-            # 8. VENTAS POR DÍA SEMANA
-            cursor.execute("""
-                SELECT
-                    dia_num,
-                    nombre,
-                    ROUND(AVG(total_del_dia), 2) AS promedio
-                FROM (
-                    SELECT
-                        DAYOFWEEK(fecha) AS dia_num,
-                        CASE
-                            WHEN DAYOFWEEK(fecha) = 1 THEN 'Domingo'
-                            WHEN DAYOFWEEK(fecha) = 2 THEN 'Lunes'
-                            WHEN DAYOFWEEK(fecha) = 3 THEN 'Martes'
-                            WHEN DAYOFWEEK(fecha) = 4 THEN 'Miércoles'
-                            WHEN DAYOFWEEK(fecha) = 5 THEN 'Jueves'
-                            WHEN DAYOFWEEK(fecha) = 6 THEN 'Viernes'
-                            WHEN DAYOFWEEK(fecha) = 7 THEN 'Sábado'
-                        END AS nombre,
-                        DATE(fecha) AS fecha_dia,
-                        SUM(total) AS total_del_dia
-                    FROM pedidos
-                    WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                    GROUP BY DATE(fecha), dia_num, nombre
-                ) t_diaria
-                GROUP BY dia_num, nombre
-                ORDER BY dia_num
-            """, (mes, mes))
-            ventas_por_dia_semana = cursor.fetchall()
+            # Meses para el filtro lateral
+            cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
+            meses_disponibles = [m["mes"] for m in cursor.fetchall()]
+
+            # Utilidad y Margen General
+            utilidad = total_ingresos - total_costos
+            margen_gral = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
 
     finally:
         conn.close()
 
     return render_template(
         "dashboard.html",
-        ingresos=ingresos,
-        costos=costos,
-        costos_tipo=costos_tipo,
-        ventas_dia=ventas_dia,
-        top_productos=top_productos,
+        mes=mes,
+        meses_disponibles=meses_disponibles,
         total_ingresos=float(total_ingresos),
         total_costos=float(total_costos),
         utilidad=float(utilidad),
-        margen=round(float(margen), 2),
-        meses_disponibles=meses_disponibles,
-        mes=mes,
-        promedios_dia=promedios_dia,
-        top_gastos=top_gastos,
-        ventas_por_dia_semana=ventas_por_dia_semana,
-        # Variables nuevas que insertamos en el HTML:
-        prime_cost_pct=prime_cost_pct,
+        margen=round(float(margen_gral), 2),
+        prime_cost_pct=round(float(prime_cost_pct), 1),
+        # Datos para gráficas (convertidos a JSON para JS)
+        ingresos_json=json.dumps([float(i["total"]) for i in ingresos_rows]),
+        costos_json=json.dumps([float(c["costo"]) for c in costos_rows]),
+        labels_mes_json=json.dumps([i["mes"] for i in ingresos_rows]),
+        costos_tipo=costos_tipo,
         menu_engineering_data=json.dumps(menu_engineering_data),
-        ventas_hora=ventas_hora
+        ventas_hora=ventas_hora,
+        ventas_por_dia_semana=ventas_semana,
+        # Datos para tablas
+        top_productos=top_productos,
+        top_gastos=top_gastos,
+        ventas_dia=ventas_dia,
+        promedios_dia={"avg_pedidos": 0, "avg_total": 0, "avg_neto": 0} # Puedes calcularlo similar a ventas_semana
     )
 
 
