@@ -3,89 +3,81 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menú de Filtros</button>
+<div class="mobile-header">
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <span class="icon">📊</span> Filtros y Menú
+    </button>
+    <span class="brand-name">Señor Chilaquil</span>
+</div>
 
 <div class="dashboard-container">
 
     <aside class="sidebar" id="sidebar">
-        <button class="close-sidebar-btn" onclick="toggleSidebar()">✖ Cerrar</button>
-        <h3>📊 Dashboard</h3>
-        
-        <h4>📅 Filtrar por Mes</h4>
-        <div class="meses-container">
-            {% if meses_disponibles %}
-                {% for m in meses_disponibles %}
-                    <a href="/dashboard?mes={{ m }}"
-                       class="mes-btn {% if m == mes %}activo{% endif %}">
-                        {{ m }}
-                    </a>
-                {% endfor %}
-            {% else %}
-                <span style="font-size:13px;color:#9ca3af;">Sin datos</span>
-            {% endif %}
+        <div class="sidebar-inner">
+            <button class="close-btn" onclick="toggleSidebar()">✕ Cerrar</button>
+            <h3>Dashboard</h3>
+            
+            <p class="filter-label">SELECCIONAR MES</p>
+            <div class="meses-flex">
+                {% if meses_disponibles %}
+                    {% for m in meses_disponibles %}
+                        <a href="/dashboard?mes={{ m }}" class="mes-link {% if m == mes %}active{% endif %}">
+                            {{ m }}
+                        </a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <a href="/dashboard" class="btn-reset">Limpiar Filtros</a>
         </div>
-
-        <a href="/dashboard" class="mes-btn limpiar">Ver Todo el Histórico</a>
     </aside>
 
-    <main class="main">
+    <main class="main-content">
 
-        <div class="kpi-grid">
-            <div class="kpi-card border-green">
-                <span>Ventas Totales</span>
-                <h2>{{ total_ingresos | money }}</h2>
+        <div class="kpi-wrapper">
+            <div class="kpi-box green">
+                <small>Ventas</small>
+                <p>{{ total_ingresos | money }}</p>
             </div>
-            <div class="kpi-card border-red">
-                <span>Gastos Totales</span>
-                <h2>{{ total_costos | money }}</h2>
+            <div class="kpi-box red">
+                <small>Gastos</small>
+                <p>{{ total_costos | money }}</p>
             </div>
-            <div class="kpi-card border-blue">
-                <span>Utilidad (Ganancia)</span>
-                <h2>{{ utilidad | money }}</h2>
+            <div class="kpi-box blue">
+                <small>Utilidad</small>
+                <p>{{ utilidad | money }}</p>
             </div>
-            <div class="kpi-card border-orange">
-                <span>Prime Cost (%)</span>
-                <h2 title="Alimentos + Nómina / Ventas">{{ prime_cost_pct }}%</h2>
-                <small style="color: #6b7280;">Objetivo: < 60%</small>
+            <div class="kpi-box orange">
+                <small>Prime Cost</small>
+                <p>{{ prime_cost_pct }}%</p>
             </div>
         </div>
 
-        <div class="bottom-grid">
-            <div class="card card-grafica">
-                <h4>Ingeniería de Menú (Popularidad vs Ganancia)</h4>
-                <canvas id="menuEngineeringChart"></canvas>
-                <div class="chart-legend">
-                    ⭐ Arriba-Derecha: Platos Estrella
+        <div class="responsive-grid">
+            <div class="chart-container card">
+                <h4>Ingeniería de Menú (BCG)</h4>
+                <div class="canvas-holder">
+                    <canvas id="menuEngineeringChart"></canvas>
+                </div>
+                <p class="chart-footer">Eje X: Popularidad | Eje Y: Margen ($ MXN)</p>
+            </div>
+
+            <div class="chart-container card">
+                <h4>Horas Pico (Ventas $)</h4>
+                <div class="canvas-holder">
+                    <canvas id="horasPicoChart"></canvas>
                 </div>
             </div>
-
-            <div class="card card-grafica">
-                <h4>Demanda por Hora (Horas Pico)</h4>
-                <canvas id="horasPicoChart"></canvas>
-            </div>
         </div>
 
-        <div class="bottom-grid">
-            <div class="card card-grafica">
-                <h4>Ingresos vs Costos ($ MXN)</h4>
-                <canvas id="ingresosChart"></canvas>
-            </div>
-
-            <div class="card card-grafica">
-                <h4>Distribución de Gastos</h4>
-                <canvas id="costosTipoChart"></canvas>
-            </div>
-        </div>
-
-        <div class="bottom-grid">
-            <div class="card card-tabla">
-                <h4>Top 10 Productos con más Ingreso</h4>
-                <div class="table-responsive">
+        <div class="responsive-grid">
+            <div class="card table-card">
+                <h4>Top 10 Productos</h4>
+                <div class="scrollable-table">
                     <table>
                         <thead>
                             <tr>
                                 <th>Producto</th>
-                                <th>Ventas</th>
+                                <th>Cant.</th>
                                 <th>Total ($)</th>
                             </tr>
                         </thead>
@@ -93,8 +85,8 @@
                             {% for p in top_productos %}
                             <tr>
                                 <td>{{ p.nombre }}</td>
-                                <td>{{ p.cantidad }} unid.</td>
-                                <td><strong>{{ p.ingreso_total | money }}</strong></td>
+                                <td>{{ p.cantidad }} piezas</td>
+                                <td>{{ p.ingreso_total | money }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -102,56 +94,26 @@
                 </div>
             </div>
 
-            <div class="card card-tabla">
-                <h4>Top 10 Gastos que más Impactaron</h4>
-                <div class="table-responsive">
+            <div class="card table-card">
+                <h4>Gastos Mayores</h4>
+                <div class="scrollable-table">
                     <table>
                         <thead>
                             <tr>
                                 <th>Concepto</th>
-                                <th>Tipo</th>
-                                <th>Total Pagado ($)</th>
+                                <th>Monto ($)</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for g in top_gastos %}
                             <tr>
                                 <td>{{ g.concepto }}</td>
-                                <td>{{ g.tipo_costo | capitalize }}</td>
-                                <td style="color:#ef4444; font-weight:bold;">{{ g.total_gastado | money }}</td>
+                                <td class="text-red">{{ g.total_gastado | money }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-
-        <div class="card card-tabla">
-            <h4>Ventas Detalladas por Día</h4>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Día</th>
-                            <th>Pedidos</th>
-                            <th>Total Bruto</th>
-                            <th>Neto (con Uber/Envío)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for v in ventas_dia %}
-                        <tr>
-                            <td>{{ v.dia }}</td>
-                            <td><strong>{{ v.dia_semana }}</strong></td>
-                            <td>{{ v.pedidos }}</td>
-                            <td>{{ v.total | money }}</td>
-                            <td><strong>{{ v.neto | money }}</strong></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -159,29 +121,23 @@
 </div>
 
 <script>
-// Toggle para menú móvil
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('active');
+    document.getElementById('sidebar').classList.toggle('open');
 }
 
-// Configuración Global de Moneda MXN para Chart.js
-const moneyFormatter = new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-});
+// Formateador de pesos para las gráficas
+const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 
-// 1. GRÁFICA DE PUNTOS (INGENIERÍA DE MENÚ) - CORRECCIÓN USD/PIEZAS
-const menuData = {{ menu_engineering_data | safe }}; 
-new Chart(document.getElementById('menuEngineeringChart'), {
+// Gráfica de Ingeniería de Menú
+const menuCtx = document.getElementById('menuEngineeringChart').getContext('2d');
+new Chart(menuCtx, {
     type: 'scatter',
     data: {
         datasets: [{
-            label: 'Platos del Menú',
-            data: menuData,
-            backgroundColor: '#3b82f6',
-            pointRadius: 7,
-            pointHoverRadius: 9
+            label: 'Platos',
+            data: {{ menu_engineering_data | safe }},
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            pointRadius: 6
         }]
     },
     options: {
@@ -190,182 +146,185 @@ new Chart(document.getElementById('menuEngineeringChart'), {
         plugins: {
             tooltip: {
                 callbacks: {
-                    label: function(ctx) {
-                        // AQUÍ CORREGIMOS EL TEXTO DE "UDS" POR "PIEZAS"
-                        let plato = ctx.raw.nombre;
-                        let cantidad = ctx.raw.x;
-                        let ganancia = moneyFormatter.format(ctx.raw.y);
-                        return plato + ': ' + cantidad + ' piezas vendidas | Ganancia: ' + ganancia;
-                    }
+                    label: (c) => `${c.raw.nombre}: ${c.raw.x} piezas | Ganancia: ${fmt.format(c.raw.y)}`
                 }
             }
         },
         scales: {
-            x: { title: { display: true, text: 'Popularidad (Cantidad Vendida)' } },
-            y: { 
-                title: { display: true, text: 'Ganancia por Unidad ($ MXN)' },
-                ticks: { callback: (val) => moneyFormatter.format(val) }
-            }
+            y: { ticks: { callback: (v) => fmt.format(v) } }
         }
     }
 });
 
-// 2. HORAS PICO
-const horasData = {{ ventas_hora | tojson }};
-new Chart(document.getElementById('horasPicoChart'), {
+// Gráfica de Horas Pico
+const horaCtx = document.getElementById('horasPicoChart').getContext('2d');
+new Chart(horaCtx, {
     type: 'line',
     data: {
-        labels: horasData.map(h => h.hora),
+        labels: {{ ventas_hora | map(attribute="hora") | list | tojson }},
         datasets: [{
             label: 'Ventas por Hora',
-            data: horasData.map(h => h.total),
+            data: {{ ventas_hora | map(attribute="total") | list | tojson }},
             borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
             fill: true,
-            tension: 0.4
+            backgroundColor: 'rgba(245, 158, 11, 0.1)'
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { ticks: { callback: (val) => moneyFormatter.format(val) } } }
-    }
-});
-
-// 3. INGRESOS VS COSTOS
-new Chart(document.getElementById('ingresosChart'), {
-    type: 'bar',
-    data: {
-        labels: {{ labels_mes_json | safe }},
-        datasets: [
-            { label: 'Ingresos', data: {{ ingresos_json | safe }}, backgroundColor: '#10b981' },
-            { label: 'Costos', data: {{ costos_json | safe }}, backgroundColor: '#ef4444' }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { ticks: { callback: (val) => moneyFormatter.format(val) } } }
-    }
-});
-
-// 4. COSTOS POR TIPO (Doughnut)
-new Chart(document.getElementById('costosTipoChart'), {
-    type: 'doughnut',
-    data: {
-        labels: {{ costos_tipo | map(attribute="tipo_costo") | list | tojson }},
-        datasets: [{
-            data: {{ costos_tipo | map(attribute="total") | list | tojson }},
-            backgroundColor: ['#6366f1', '#f43f5e', '#eab308', '#22c55e', '#8b5cf6']
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
+        scales: { y: { ticks: { callback: (v) => fmt.format(v) } } }
     }
 });
 </script>
 
 <style>
+/* --- BASE & RESPONSIVE REPAIR --- */
 :root {
+    --side-width: 250px;
     --primary: #111827;
-    --accent: #3b82f6;
-    --bg: #f3f4f6;
-    --white: #ffffff;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1f2937; }
+body { background: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
 
-/* LAYOUT */
 .dashboard-container {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    min-height: 100vh;
+    display: flex;
+    width: 100%;
 }
 
-/* SIDEBAR */
+/* SIDEBAR: Se oculta en móvil, se muestra al lado en Desktop */
 .sidebar {
+    width: var(--side-width);
     background: var(--primary);
     color: white;
-    padding: 24px;
-    transition: 0.3s ease;
+    min-height: 100vh;
+    padding: 20px;
+    flex-shrink: 0;
 }
-.sidebar h3 { margin-bottom: 20px; border-bottom: 1px solid #374151; padding-bottom: 10px; }
-.sidebar h4 { font-size: 13px; color: #9ca3af; margin: 15px 0 10px; text-transform: uppercase; }
 
-.meses-container { display: flex; flex-wrap: wrap; gap: 8px; }
-.mes-btn {
-    text-decoration: none; padding: 8px 12px; background: #374151; color: white;
-    border-radius: 6px; font-size: 13px; transition: 0.2s;
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+    width: 100%;
+    max-width: 100vw; /* Evita que el contenido empuje el ancho */
 }
-.mes-btn.activo { background: var(--accent); font-weight: bold; }
-.mes-btn.limpiar { display: block; margin-top: 20px; text-align: center; background: #4b5563; }
 
-/* CONTENIDO */
-.main { padding: 24px; overflow-y: auto; }
-
-/* KPI CARDS */
-.kpi-grid {
+/* KPIs: Sistema de cuadrícula flexible */
+.kpi-wrapper {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
 }
-.kpi-card {
-    background: var(--white);
+
+.kpi-box {
+    background: white;
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    border-left: 5px solid #e5e7eb;
+    border-left: 5px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.kpi-card span { font-size: 13px; color: #6b7280; font-weight: 500; }
-.kpi-card h2 { font-size: 22px; margin-top: 8px; }
-.border-green { border-left-color: #10b981; }
-.border-red { border-left-color: #ef4444; }
-.border-blue { border-left-color: #3b82f6; }
-.border-orange { border-left-color: #f59e0b; }
+.kpi-box p { font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
+.green { border-color: #10b981; }
+.red { border-color: #ef4444; }
+.blue { border-color: #3b82f6; }
+.orange { border-color: #f59e0b; }
 
-/* GRIDS DE GRÁFICAS */
-.bottom-grid {
+/* GRIDS DE GRÁFICAS Y TABLAS */
+.responsive-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
-    margin-bottom: 24px;
-}
-.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.card h4 { margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px; }
-.card-grafica { height: 350px; }
-.chart-legend { font-size: 12px; color: #6b7280; text-align: center; margin-top: 10px; }
-
-/* TABLAS */
-.table-responsive { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th { text-align: left; background: #f9fafb; padding: 12px; font-size: 12px; color: #6b7280; border-bottom: 2px solid #f3f4f6; }
-td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
-
-/* BOTONES MÓVIL */
-.mobile-menu-btn { display: none; width: 100%; padding: 15px; background: var(--primary); color: white; border: none; font-size: 16px; text-align: left; }
-.close-sidebar-btn { display: none; background: #ef4444; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; margin-bottom: 15px; }
-
-/* ADAPTACIÓN MÓVIL */
-@media (max-width: 1024px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
-    .bottom-grid { grid-template-columns: 1fr; }
+    margin-bottom: 25px;
 }
 
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden; /* Importante para que no se salga nada */
+}
+
+.canvas-holder {
+    height: 250px;
+    position: relative;
+}
+
+/* TABLAS: Scroll horizontal solo si es necesario */
+.scrollable-table {
+    overflow-x: auto;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 400px; /* Asegura legibilidad en móvil */
+}
+
+th { text-align: left; background: #f9fafb; padding: 10px; font-size: 0.8rem; color: #6b7280; }
+td { padding: 10px; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; }
+
+/* HEADER PARA MÓVIL */
+.mobile-header {
+    display: none;
+    background: var(--primary);
+    color: white;
+    padding: 15px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu-toggle {
+    background: #374151;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.close-btn { display: none; }
+
+/* --- MEDIA QUERIES PARA CELULAR --- */
 @media (max-width: 768px) {
-    .dashboard-container { grid-template-columns: 1fr; }
     .sidebar {
-        position: fixed; left: -260px; top: 0; height: 100%; z-index: 1000; width: 260px;
-        box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+        position: fixed;
+        left: -100%;
+        top: 0;
+        z-index: 999;
+        transition: 0.3s;
+        width: 80%;
     }
-    .sidebar.active { left: 0; }
-    .mobile-menu-btn, .close-sidebar-btn { display: block; }
-    .kpi-grid { grid-template-columns: 1fr; }
-    .main { padding: 15px; }
+    .sidebar.open { left: 0; }
+    .mobile-header { display: flex; }
+    .close-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 20px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    .dashboard-container { flex-direction: column; }
+    .main-content { padding: 15px; }
+    .kpi-box p { font-size: 1.2rem; }
 }
+
+/* OTROS ESTILOS */
+.meses-flex { display: flex; flex-wrap: wrap; gap: 5px; }
+.mes-link {
+    text-decoration: none; background: #374151; color: #d1d5db;
+    padding: 5px 10px; border-radius: 4px; font-size: 0.8rem;
+}
+.mes-link.active { background: #3b82f6; color: white; }
+.btn-reset {
+    display: block; margin-top: 15px; text-align: center; color: #9ca3af; text-decoration: none; font-size: 0.8rem;
+}
+.text-red { color: #ef4444; font-weight: bold; }
+.chart-footer { font-size: 0.7rem; color: #9ca3af; text-align: center; margin-top: 5px; }
 </style>
 
 {% endblock %}
