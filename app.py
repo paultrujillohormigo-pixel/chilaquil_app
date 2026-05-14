@@ -1370,6 +1370,15 @@ def compras():
         insumos=insumos,
         form_data={}
     )
+
+
+
+# =========================================================
+# ============ DASHBOARD=============
+# =========================================================
+
+import json
+
 @app.route("/dashboard")
 def dashboard():
     mes = request.args.get("mes")
@@ -1381,7 +1390,7 @@ def dashboard():
             params = []
 
             if mes:
-                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
+                filtro = "WHERE DATE_FORMAT(pe.fecha, '%%Y-%%m') = %s" if 'pe.' in filtro else "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
                 params.append(mes)
 
             # 1. Ingresos
@@ -1421,7 +1430,22 @@ def dashboard():
             utilidad = total_ingresos - total_costos
             margen = (utilidad / total_ingresos * 100) if total_ingresos else Decimal("0")
 
-            # 4. Ventas por día (Corregido: día_semana ahora es parte del GROUP BY)
+            # --- NUEVO: CÁLCULO DE PRIME COST ---
+            # El Prime Cost idealmente es (Costo de Alimentos + Nómina) / Ventas.
+            # Aquí sumamos las categorías que coincidan, si usas nombres distintos en tu BD, ajusta el 'if':
+            prime_cost_value = Decimal("0")
+            for ct in costos_tipo:
+                tipo = (ct["tipo_costo"] or "").lower()
+                if "insumo" in tipo or "alimento" in tipo or "nomina" in tipo or "sueldo" in tipo:
+                    prime_cost_value += Decimal(str(ct["total"] or 0))
+            
+            # Si no hay match específico, usamos el costo total como fallback temporal
+            if prime_cost_value == Decimal("0"):
+                prime_cost_value = total_costos
+
+            prime_cost_pct = round((prime_cost_value / total_ingresos * 100), 1) if total_ingresos > 0 else 0
+
+            # 4. Ventas por día
             cursor.execute(f"""
                 SELECT
                     DATE(fecha) AS dia,
@@ -1443,22 +1467,60 @@ def dashboard():
             """)
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
-            # 5. TOP PRODUCTOS (Corregido: p.nombre ahora es parte del GROUP BY)
+            # 5. TOP PRODUCTOS Y MATRIZ BCG (Modificado para Ingeniería de Menú)
+            # Calculamos x (cantidad vendida) e y (margen unitario: precio promedio de venta - costo)
+            filtro_pedidos = "WHERE DATE_FORMAT(pe.fecha, '%%Y-%%m') = %s" if mes else ""
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
-                       SUM(pi.subtotal) AS ingreso
+                       SUM(pi.subtotal) AS ingreso,
+                       -- x = Cantidad vendida (Popularidad)
+                       SUM(pi.cantidad) AS x,
+                       -- y = Margen unitario (Rentabilidad)
+                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo, 0)) AS y
                 FROM pedido_items pi
                 JOIN pedidos pe ON pe.id = pi.pedido_id
                 JOIN productos p ON p.id = pi.producto_id
-                {filtro}
-                GROUP BY p.id, p.nombre
+                {filtro_pedidos}
+                GROUP BY p.id, p.nombre, p.costo
                 ORDER BY ingreso DESC
-                LIMIT 10
+                LIMIT 40
             """, params)
-            top_productos = cursor.fetchall()
+            productos_data = cursor.fetchall()
 
-            # 6. TOP GASTOS (Corregido: lógica de parámetros para evitar errores de tipo)
+            # Separar Top 10 para la tabla
+            top_productos = sorted(productos_data, key=lambda i: i['ingreso'], reverse=True)[:10]
+
+            # Formatear datos para la gráfica de puntos (Scatter) de Chart.js
+            menu_engineering_data = []
+            for p in productos_data:
+                if p['x'] > 0:
+                    menu_engineering_data.append({
+                        "nombre": p["nombre"],
+                        "x": float(p["x"]),
+                        "y": float(p["y"])
+                    })
+
+            # --- NUEVO: HORAS PICO (Heatmap/Demanda) ---
+            cursor.execute(f"""
+                SELECT HOUR(fecha) AS hora_num,
+                       SUM(total) AS total
+                FROM pedidos
+                {filtro}
+                GROUP BY HOUR(fecha)
+                ORDER BY hora_num ASC
+            """, params)
+            ventas_hora_raw = cursor.fetchall()
+
+            ventas_hora = []
+            for v in ventas_hora_raw:
+                # Formatear la hora ej. "14:00"
+                ventas_hora.append({
+                    "hora": f"{v['hora_num']}:00", 
+                    "total": float(v["total"])
+                })
+
+            # 6. TOP GASTOS
             cursor.execute("""
                 SELECT concepto,
                        tipo_costo,
@@ -1490,15 +1552,13 @@ def dashboard():
             """, (mes, mes))
             promedios_dia = cursor.fetchone()
 
-            # 8. VENTAS POR DÍA SEMANA (Corregido: nombre incluido en GROUP BY)
-            # 8. VENTAS POR DÍA SEMANA (CORREGIDO PARA MOSTRAR PROMEDIO DIARIO REAL)
+            # 8. VENTAS POR DÍA SEMANA
             cursor.execute("""
                 SELECT
                     dia_num,
                     nombre,
                     ROUND(AVG(total_del_dia), 2) AS promedio
                 FROM (
-                    -- Primero sumamos el total de cada día calendario
                     SELECT
                         DAYOFWEEK(fecha) AS dia_num,
                         CASE
@@ -1519,7 +1579,6 @@ def dashboard():
                 GROUP BY dia_num, nombre
                 ORDER BY dia_num
             """, (mes, mes))
-            
             ventas_por_dia_semana = cursor.fetchall()
 
     finally:
@@ -1540,8 +1599,17 @@ def dashboard():
         mes=mes,
         promedios_dia=promedios_dia,
         top_gastos=top_gastos,
-        ventas_por_dia_semana=ventas_por_dia_semana
+        ventas_por_dia_semana=ventas_por_dia_semana,
+        # Variables nuevas que insertamos en el HTML:
+        prime_cost_pct=prime_cost_pct,
+        menu_engineering_data=json.dumps(menu_engineering_data),
+        ventas_hora=ventas_hora
     )
+
+
+
+
+
 # =========================================================
 # ============ ELIMINAR ITEM / ELIMINAR PEDIDO =============
 # =========================================================
