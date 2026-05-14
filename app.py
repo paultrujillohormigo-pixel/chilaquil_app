@@ -24,10 +24,50 @@ def menu():
 
 
 # =========================================================
-# ================== PORTAL DE CLIENTES ===================
+# ================== Raw Data ===================
 # =========================================================
 
+@app.route("/raw-data")
+def raw_data():
+    mes = request.args.get("mes")
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            filtro = ""
+            params = []
+            if mes:
+                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
+                params.append(mes)
 
+            # Obtenemos todos los pedidos individuales
+            cursor.execute(f"""
+                SELECT id, fecha, DATE(fecha) as dia, 
+                       origen, mesero, total, neto, estado, metodo_pago
+                FROM pedidos
+                {filtro}
+                ORDER BY fecha DESC, id DESC
+            """, params)
+            todos_pedidos = cursor.fetchall()
+
+            # Agrupamos por día en un diccionario: { '2023-10-25': [pedidos...], '2023-10-24': [...] }
+            pedidos_agrupados = {}
+            for p in todos_pedidos:
+                dia_str = str(p['dia'])
+                if dia_str not in pedidos_agrupados:
+                    pedidos_agrupados[dia_str] = []
+                pedidos_agrupados[dia_str].append(p)
+
+            # También necesitamos los meses para el filtro lateral
+            cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
+            meses_disponibles = [m["mes"] for m in cursor.fetchall()]
+
+    finally:
+        conn.close()
+
+    return render_template("raw_data.html", 
+                           pedidos_agrupados=pedidos_agrupados, 
+                           meses_disponibles=meses_disponibles, 
+                           mes=mes)
 
 
 # =========================================================
