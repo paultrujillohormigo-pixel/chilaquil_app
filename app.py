@@ -1377,6 +1377,8 @@ def compras():
 # ============ DASHBOARD=============
 # =========================================================
 
+import json
+
 @app.route("/dashboard")
 def dashboard():
     mes = request.args.get("mes") # Formato YYYY-MM
