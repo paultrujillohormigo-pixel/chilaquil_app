@@ -1458,24 +1458,24 @@ def dashboard():
             costos_rows = cursor.fetchall()
             total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos_rows)
 
-            # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN
-            cursor.execute(f"""
-                SELECT tipo_costo, SUM(costo) AS total
-                FROM insumos_compras
-                {filtro}
-                GROUP BY tipo_costo
-            """, params)
-            costos_tipo = cursor.fetchall()
+        # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN (TOTAL DE GASTOS)
+         cursor.execute(f"""
+             SELECT tipo_costo, SUM(costo) AS total
+             FROM insumos_compras
+             {filtro}
+             GROUP BY tipo_costo
+         """, params)
+         costos_tipo = cursor.fetchall()
 
-            costo_insumos = Decimal("0")
-            for ct in costos_tipo:
-                t = (ct["tipo_costo"] or "").lower()
-                # Para Margen Bruto solo sumamos Insumos/Alimentos
-                if any(word in t for word in ["insumo", "alimento", "bebida", "materia prima"]):
-                    costo_insumos += Decimal(str(ct["total"] or 0))
-            
-            # Margen Bruto % = ((Ventas - Costo Insumos) / Ventas) * 100
-            gross_margin_pct = ((total_ingresos - costo_insumos) / total_ingresos * 100) if total_ingresos > 0 else 0
+         # Inicializamos el total de todos los gastos
+         total_gastos = Decimal("0")
+         
+         for ct in costos_tipo:
+             # Sumamos TODOS los costos sin importar su tipo
+             total_gastos += Decimal(str(ct["total"] or 0))
+         
+         # Margen Bruto % = ((Total Ingresos - Total Gastos) / Total Ingresos) * 100
+         gross_margin_pct = ((total_ingresos - total_gastos) / total_ingresos * 100) if total_ingresos > 0 else 0
 
             # 4. INGENIERÍA DE MENÚ (Matriz BCG)
             filtro_bcg = filtro.replace("fecha", "pe.fecha")
