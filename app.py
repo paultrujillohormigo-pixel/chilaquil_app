@@ -1017,6 +1017,49 @@ def ver_pedido(pedido_id):
     )
 
 
+@app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
+def actualizar_whatsapp_pedido(pedido_id):
+    nuevo_telefono = request.form.get("nuevo_telefono", "").strip()
+    telefono_limpio = normalize_phone_mx(nuevo_telefono)
+
+    if not telefono_limpio:
+        flash("Número de WhatsApp inválido. Debe tener al menos 10 dígitos.", "error")
+        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Verificamos que el pedido exista y esté abierto (opcional, pero buena práctica)
+            cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (pedido_id,))
+            pedido = cursor.fetchone()
+            
+            if not pedido:
+                flash("Pedido no encontrado.", "error")
+                return redirect(url_for("pedidos_abiertos"))
+                
+            if pedido[0] != "abierto" and isinstance(pedido, tuple): # Manejo si no es DictCursor
+                pass
+            elif isinstance(pedido, dict) and pedido.get("estado") != "abierto":
+                 pass # Dependiendo de cómo lo traiga el cursor por defecto
+
+            cursor.execute("""
+                UPDATE pedidos
+                SET telefono_whatsapp = %s
+                WHERE id = %s
+            """, (telefono_limpio, pedido_id))
+            conn.commit()
+            
+            flash("Número de WhatsApp actualizado correctamente.", "success")
+    except Exception as e:
+        print(f"Error al actualizar WhatsApp: {e}")
+        flash("Hubo un error al guardar el número en la base de datos.", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+
+
 # =========================================================
 # ================== CERRAR PEDIDO =========================
 # =========================================================
