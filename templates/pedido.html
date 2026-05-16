@@ -3,812 +3,758 @@
 
 <style>
   :root {
-    --pos-primary: #0ea5e9;
-    --pos-primary-hover: #0284c7;
-    --pos-success: #10b981;
-    --pos-success-hover: #059669;
-    --pos-danger: #ef4444;
-    --pos-danger-hover: #dc2626;
-    --pos-warning: #f59e0b;
-    --pos-bg: #f1f5f9;
-    --pos-surface: #ffffff;
+    --pos-primary: #2563eb;
+    --pos-primary-hover: #1d4ed8;
+    --pos-bg: #f8fafc;
+    --pos-card-bg: #ffffff;
     --pos-text-main: #0f172a;
     --pos-text-muted: #64748b;
     --pos-border: #e2e8f0;
-    
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 20px;
-    
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-    
-    --transition-fast: 0.15s ease-in-out;
+    --pos-radius: 12px;
+    --pos-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
 
-  /* Reset & Base PRO */
-  .pos-container {
-    font-family: system-ui, -apple-system, sans-serif;
-    color: var(--pos-text-main);
-    background-color: var(--pos-bg);
-    min-height: 100vh;
-    padding-bottom: 2rem;
+  body { 
+    background-color: var(--pos-bg); 
+    color: var(--pos-text-main); 
   }
-
-  /* Tipografía y Utilidades */
-  .text-h2 { font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: -0.025em; }
-  .text-h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
-  .text-muted { color: var(--pos-text-muted); font-size: 0.875rem; }
-  .text-primary { color: var(--pos-primary); font-weight: 700; }
-  .text-success { color: var(--pos-success); font-weight: 700; }
-  .flex-between { display: flex; justify-content: space-between; align-items: center; }
-  .flex-row { display: flex; align-items: center; gap: 0.75rem; }
+  
+  /* Utilidades */
+  .m-0 { margin: 0; }
+  .mt-1 { margin-top: 4px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .mt-4 { margin-top: 16px; }
+  .mb-3 { margin-bottom: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .p-4 { padding: 16px; }
   .w-100 { width: 100%; }
-  .hidden { display: none !important; }
-  
-  /* Componentes de Tarjeta */
-  .pos-card {
-    background: var(--pos-surface);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--pos-border);
-    padding: 1.25rem;
-    margin-bottom: 1rem;
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .fw-bold { font-weight: 700; }
+  .d-flex { display: flex; }
+  .align-items-center { align-items: center; }
+  .justify-content-between { justify-content: space-between; }
+  .flex-wrap { flex-wrap: wrap; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+
+  /* HEADER & CARDS */
+  .pos-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; 
+    margin-bottom: 24px; 
+    flex-wrap: wrap; 
+    gap: 16px; 
   }
-  .pos-card-header {
-    border-bottom: 1px solid var(--pos-border);
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
+  .pos-card { 
+    background: var(--pos-card-bg); 
+    border-radius: var(--pos-radius); 
+    padding: 20px; 
+    box-shadow: var(--pos-shadow); 
+    border: 1px solid var(--pos-border); 
+  }
+  .total-display { 
+    font-size: 2.5rem; 
+    font-weight: 900; 
+    color: var(--pos-primary); 
+    line-height: 1; 
+    letter-spacing: -1px; 
   }
 
-  /* Header del Pedido */
-  .order-header-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    align-items: center;
+  /* BOTONES PRO */
+  .btn-pos { 
+    padding: 12px 20px; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    font-size: 0.95rem; 
+    cursor: pointer; 
+    border: none; 
+    transition: all 0.2s ease; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
   }
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .status-abierto { background: #dcfce7; color: #166534; }
-  .status-cerrado { background: #f1f5f9; color: #475569; }
-
-  /* Módulo WhatsApp PRO */
-  .wa-module {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: var(--radius-sm);
-    padding: 0.75rem 1rem;
-  }
-  .wa-input-group {
-    display: flex;
-    gap: 0.5rem;
-  }
-  .wa-input {
-    flex: 1;
-    padding: 0.5rem;
-    border: 1px solid var(--pos-border);
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
-    outline: none;
-    transition: var(--transition-fast);
-  }
-  .wa-input:focus { border-color: var(--pos-success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
-
-  /* Botones PRO */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    border: none;
-    transition: var(--transition-fast);
-    user-select: none;
-  }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: var(--pos-primary); color: white; }
+  .btn-pos:active { transform: scale(0.98); }
+  .btn-primary { background: var(--pos-primary); color: white; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39); }
   .btn-primary:hover { background: var(--pos-primary-hover); }
-  .btn-success { background: var(--pos-success); color: white; }
-  .btn-success:hover { background: var(--pos-success-hover); }
-  .btn-danger { background: #fee2e2; color: var(--pos-danger); }
-  .btn-danger:hover { background: #fecaca; }
-  .btn-ghost { background: transparent; color: var(--pos-text-muted); }
-  .btn-ghost:hover { background: var(--pos-bg); color: var(--pos-text-main); }
-  .btn-icon { padding: 0.5rem; border-radius: var(--radius-sm); font-size: 1.1rem; }
+  .btn-wa { background: #25D366; color: white; box-shadow: 0 4px 14px 0 rgba(37, 211, 102, 0.39); }
+  .btn-wa:hover { background: #1da851; }
+  .btn-outline { background: transparent; border: 1px solid var(--pos-border); color: var(--pos-text-main); }
+  .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
+  .btn-danger-ghost { background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; }
+  .btn-danger-ghost:hover { background: #fef2f2; }
 
-  /* Layout Principal (Grid CSS) */
-  .pos-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  /* LAYOUT POS */
+  .pos-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 380px; 
+    gap: 24px; 
+    align-items: start; 
   }
-  @media (min-width: 1024px) {
-    .pos-layout { grid-template-columns: 1.6fr 1fr; }
-    .pos-sidebar { position: sticky; top: 1rem; height: fit-content; }
+  @media (max-width: 1024px) { 
+    .pos-grid { grid-template-columns: 1fr; } 
   }
 
-  /* Catálogo de Productos */
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 1rem;
+  /* TABLAS */
+  .pos-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .pos-table th { 
+    text-align: left; 
+    padding: 12px 16px; 
+    font-size: 0.75rem; 
+    text-transform: uppercase; 
+    color: var(--pos-text-muted); 
+    border-bottom: 2px solid var(--pos-border); 
   }
-  .product-card {
-    background: var(--pos-surface);
-    border: 1px solid var(--pos-border);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-    text-align: left;
-    cursor: pointer;
-    transition: var(--transition-fast);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 100px;
+  .pos-table td { 
+    padding: 16px; 
+    border-bottom: 1px solid var(--pos-border); 
+    vertical-align: top; 
   }
-  .product-card:hover { border-color: var(--pos-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  .product-card:active { transform: translateY(0); }
-  .product-title { font-weight: 700; font-size: 0.95rem; line-height: 1.2; margin-bottom: 0.5rem; }
+  .item-row:last-child td { border-bottom: none; }
 
-  /* Tablas de Pedido */
-  .order-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  .order-table th { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 2px solid var(--pos-border); color: var(--pos-text-muted); font-size: 0.85rem; text-transform: uppercase; }
-  .order-table td { padding: 1rem 0.5rem; border-bottom: 1px solid var(--pos-border); vertical-align: top; }
-  
-  /* Tags de Personalización PRO */
-  .mod-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
-  .mod-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    background: var(--pos-bg);
-    border: 1px solid var(--pos-border);
-    color: var(--pos-text-main);
+  /* MODIFICADORES (TAGS) */
+  .pos-modifiers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pos-tag { 
+    display: inline-flex; 
+    align-items: center; 
+    padding: 4px 10px; 
+    border-radius: 20px; 
+    font-size: 0.75rem; 
+    font-weight: 600; 
+    background: #f1f5f9; 
+    color: #334155; 
+    border: 1px solid #e2e8f0; 
   }
-  .mod-tag.danger { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-  .mod-tag.note { background: #f0f9ff; border-color: #bae6fd; color: #075985; border-style: dashed; }
-
-  /* Modales Glassmorphism */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(4px);
-    display: none;
-    place-items: center;
-    z-index: 9999;
-    padding: 1rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+  .pos-tag-warn { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+  .pos-note { 
+    width: 100%; 
+    font-size: 0.8rem; 
+    color: #64748b; 
+    background: #f8fafc; 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    border-left: 3px solid #cbd5e1; 
   }
-  .modal-overlay.active { display: grid; opacity: 1; }
-  .modal-content {
-    background: var(--pos-surface);
-    width: 100%;
-    max-width: 600px;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    transform: translateY(20px);
-    transition: transform 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
+
+  /* CATÁLOGO PRODUCTOS */
+  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .product-btn { 
+    background: #fff; 
+    border: 1px solid var(--pos-border); 
+    border-radius: 10px; 
+    padding: 16px 12px; 
+    text-align: center; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between; 
+    min-height: 100px; 
   }
-  .modal-overlay.active .modal-content { transform: translateY(0); }
-  .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--pos-border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
-  .modal-body { padding: 1.5rem; overflow-y: auto; }
-  .modal-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--pos-border); display: flex; justify-content: flex-end; gap: 1rem; background: #f8fafc; }
+  .product-btn:hover { border-color: var(--pos-primary); box-shadow: 0 4px 12px rgba(37,99,235,0.1); transform: translateY(-2px); }
+  .product-name { font-weight: 600; font-size: 0.9rem; color: var(--pos-text-main); margin-bottom: 8px; line-height: 1.2; }
+  .product-price { font-weight: 800; color: var(--pos-primary); font-size: 0.95rem; }
 
-  /* Selector de Personalización (Pills) */
-  .pill-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
-  .pill-label { cursor: pointer; display: block; }
-  .pill-input { display: none; }
-  .pill-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem;
-    border: 2px solid var(--pos-border);
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-align: center;
-    transition: var(--transition-fast);
-    background: var(--pos-surface);
-    color: var(--pos-text-muted);
+  /* CONTROLES CANTIDAD */
+  .qty-ctrl { display: inline-flex; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+  .qty-btn { 
+    width: 28px; 
+    height: 28px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    border: none; 
+    background: #fff; 
+    border-radius: 6px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    color: var(--pos-text-main); 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
   }
-  .pill-label:hover .pill-content { background: var(--pos-bg); }
-  .pill-input:checked + .pill-content { border-color: var(--pos-primary); background: #eff6ff; color: var(--pos-primary); }
-  .pill-input[type="checkbox"]:checked + .pill-content { border-color: var(--pos-warning); background: #fffbeb; color: #b45309; }
+  .qty-val { width: 32px; text-align: center; font-weight: 700; font-size: 0.9rem; }
 
-  .text-area-pro { width: 100%; padding: 0.75rem; border: 2px solid var(--pos-border); border-radius: var(--radius-sm); font-family: inherit; font-size: 1rem; outline: none; resize: vertical; transition: var(--transition-fast); }
-  .text-area-pro:focus { border-color: var(--pos-primary); }
+  /* ESTADOS WHATSAPP Y MODALES */
+  .wa-badge { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 6px; 
+    padding: 8px 16px; 
+    border-radius: 20px; 
+    font-size: 0.85rem; 
+    font-weight: 600; 
+    background: #ecfdf5; 
+    color: #059669; 
+    border: 1px solid #a7f3d0; 
+  }
+  .wa-badge.empty { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
 
-  /* Controles de Cantidad */
-  .qty-control { display: inline-flex; align-items: center; background: var(--pos-bg); border-radius: var(--radius-sm); border: 1px solid var(--pos-border); overflow: hidden; }
-  .qty-btn { background: transparent; border: none; padding: 0.5rem 0.75rem; cursor: pointer; font-weight: bold; font-size: 1.1rem; color: var(--pos-text-main); }
-  .qty-btn:hover { background: #e2e8f0; }
-  .qty-val { padding: 0 0.5rem; font-weight: 700; min-width: 2ch; text-align: center; }
+  .wa-input-group { display: flex; gap: 8px; margin-top: 12px; }
+  .wa-input { flex: 1; padding: 10px 14px; border: 2px solid var(--pos-border); border-radius: 8px; font-size: 1rem; outline: none; }
+  .wa-input:focus { border-color: var(--pos-primary); }
 
-  /* Helper para modales monospace */
-  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  .modal-overlay { 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(15, 23, 42, 0.6); 
+    backdrop-filter: blur(4px); 
+    display: none; 
+    place-items: center; 
+    z-index: 9999; 
+    padding: 16px; 
+  }
+  .modal-overlay.active { display: grid; animation: fadeIn 0.2s ease-out; }
+  .modal-content { 
+    background: #fff; 
+    border-radius: 16px; 
+    width: 100%; 
+    max-width: 500px; 
+    max-height: 90vh; 
+    overflow-y: auto; 
+    padding: 24px; 
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+  /* OPCIONES CUSTOM (MODAL) */
+  .custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .custom-pill { 
+    position: relative; 
+    display: flex; 
+    align-items: center; 
+    padding: 12px; 
+    border: 2px solid var(--pos-border); 
+    border-radius: 10px; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    font-weight: 500; 
+    font-size: 0.9rem; 
+  }
+  .custom-pill:hover { background: #f8fafc; }
+  .custom-pill input { position: absolute; opacity: 0; }
+  .custom-pill input:checked + span { color: var(--pos-primary); font-weight: 700; }
+  .custom-pill:has(input:checked) { border-color: var(--pos-primary); background: #eff6ff; }
+  textarea.custom-note { 
+    width: 100%; 
+    padding: 12px; 
+    border: 2px solid var(--pos-border); 
+    border-radius: 10px; 
+    resize: vertical; 
+    min-height: 80px; 
+    font-family: inherit; 
+    margin-top: 8px; 
+    outline: none; 
+  }
 </style>
 
-<div class="pos-container">
-  
-  <div class="pos-card" style="border-top: 4px solid var(--pos-primary); border-radius: 0 0 var(--radius-md) var(--radius-md);">
-    <div class="flex-between" style="margin-bottom: 1.5rem;">
-      <h2 class="text-h2">🧾 Pedido #{{ pedido.id }}</h2>
-      <div class="status-badge status-{{ pedido.estado }}">{{ pedido.estado }}</div>
-    </div>
-
-    <div class="order-header-grid">
-      <!-- Módulo de Total -->
-      <div>
-        <div class="text-muted text-sm uppercase">Total Actual</div>
-        <div class="text-primary" style="font-size: 2.5rem; font-weight: 900; line-height: 1;">{{ pedido.total | money }}</div>
-      </div>
-
-      <!-- Módulo de WhatsApp (Edición Inteligente) -->
-      <div class="wa-module">
-        <div class="text-muted text-sm uppercase" style="margin-bottom: 0.25rem;">Cliente / WhatsApp</div>
-        
-        <!-- Vista de Lectura -->
-        <div id="waReadMode" class="{% if not pedido.telefono_whatsapp %}hidden{% endif %}">
-          <div class="flex-between">
-            <span class="text-h3" style="color: #065f46;">📱 <span id="waDisplayNumber">{{ pedido.telefono_whatsapp }}</span></span>
-            <button type="button" class="btn-ghost btn-icon" onclick="PosApp.toggleWaEdit(true)" title="Editar Número">✏️</button>
-          </div>
-        </div>
-
-        <!-- Estado Vacío -->
-        <div id="waEmptyMode" class="{% if pedido.telefono_whatsapp %}hidden{% endif %}">
-          <div class="flex-between">
-            <span class="text-muted italic">No registrado</span>
-            <button type="button" class="btn btn-ghost text-primary" style="padding: 0.25rem 0.5rem;" onclick="PosApp.toggleWaEdit(true)">+ Añadir Número</button>
-          </div>
-        </div>
-
-        <!-- Vista de Edición (Formulario Inline) -->
-        <form id="waEditMode" class="hidden" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
-          <div class="wa-input-group">
-            <input type="tel" name="nuevo_telefono" id="waInputNumber" class="wa-input" placeholder="Ej. 4491234567" pattern="[0-9+ ]{10,15}" required>
-            <button type="submit" class="btn btn-success" style="padding: 0.5rem;">Guardar</button>
-            <button type="button" class="btn btn-ghost" style="padding: 0.5rem;" onclick="PosApp.toggleWaEdit(false)">✕</button>
-          </div>
-          <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">Presiona guardar para actualizar el teléfono.</div>
-        </form>
-      </div>
-
-      <!-- Módulo de Acciones -->
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;">
-        <button type="button" class="btn btn-ghost w-100" style="border: 1px solid var(--pos-border);" onclick="PosApp.abrirTicketPreview({{ pedido.id }})">
-          📄 Visualizar Ticket
-        </button>
-        
-        {% if pedido.estado == 'abierto' %}
-        <div style="display: flex; gap: 0.5rem;">
-          <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" class="w-100">
-            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('¿Estás seguro de cerrar el pedido SIN enviar notificación?')">
-              Cerrar Mudo
-            </button>
-          </form>
-          <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" class="w-100">
-            <button type="submit" class="btn btn-success w-100" onclick="return PosApp.validateCloseWithWa('{{ pedido.telefono_whatsapp }}');">
-              📲 Cerrar + WA
-            </button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-    </div>
+<div class="pos-header">
+  <div>
+    <h2 class="m-0" style="color: #64748b; font-size: 1.1rem; font-weight: 600;">🧾 Pedido #{{ pedido.id }}</h2>
+    <div class="total-display mt-1">{{ pedido.total | money }}</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 4px;">Total Actual</div>
   </div>
 
-  <div class="pos-layout">
-    
-    <!-- LADO IZQUIERDO -->
-    <main>
-      
-      <!-- Artículos ya en Comanda -->
-      <section class="pos-card">
-        <div class="pos-card-header">
-          <h3 class="text-h3">Artículos Confirmados en Comanda</h3>
-        </div>
-
-        {% if items %}
-        <div style="overflow-x: auto;">
-          <table class="order-table">
-            <thead>
-              <tr>
-                <th style="width: 50%;">Producto</th>
-                <th style="text-align: center;">Cant.</th>
-                <th>Precio</th>
-                <th style="text-align: right;">Subtotal</th>
-                {% if pedido.estado == 'abierto' %}<th style="text-align: center;">Acción</th>{% endif %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for it in items %}
-              <tr>
-                <td>
-                  <div style="font-weight: 700; font-size: 1.05rem;">{{ it.nombre }}</div>
-                  
-                  <!-- Metadatos visuales PRO -->
-                  {% if it.salsa or it.proteina or it.sin or it.nota %}
-                  <div class="mod-tags">
-                    {% if it.proteina %}<span class="mod-tag">🥩 {{ it.proteina }}</span>{% endif %}
-                    {% if it.salsa %}<span class="mod-tag">🌶️ {{ it.salsa }}</span>{% endif %}
-                    {% if it.sin %}<span class="mod-tag danger">🚫 Sin {{ it.sin }}</span>{% endif %}
-                    {% if it.nota %}<span class="mod-tag note">📝 {{ it.nota }}</span>{% endif %}
-                  </div>
-                  {% endif %}
-                </td>
-                <td style="text-align: center; font-weight: 700;">x{{ it.cantidad }}</td>
-                <td class="text-muted">{{ it.precio_unitario | money }}</td>
-                <td style="text-align: right; font-weight: 800;">{{ it.subtotal | money }}</td>
-                
-                {% if pedido.estado == 'abierto' %}
-                <td style="text-align: center; vertical-align: middle;">
-                  <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" style="margin:0;">
-                    <button type="submit" class="btn btn-ghost btn-icon text-danger" title="Eliminar" onclick="return confirm('¿Quitar este platillo de la comanda?')">
-                      ✕
-                    </button>
-                  </form>
-                </td>
-                {% endif %}
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div style="text-align: center; padding: 2rem; color: var(--pos-text-muted); font-style: italic;">
-          Aún no hay platillos procesados en este pedido.
-        </div>
-        {% endif %}
-      </section>
-
-      <!-- Catálogo para añadir más productos -->
+  <div class="pos-card" style="padding: 16px; min-width: 260px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Cliente / WhatsApp</span>
       {% if pedido.estado == 'abierto' %}
-      <section class="pos-card" style="border-color: var(--pos-primary);">
-        <div class="pos-card-header flex-between">
-          <h3 class="text-h3">Catálogo <span class="text-muted" style="font-size: 0.9rem; font-weight: normal;">| Toca para agregar al carrito</span></h3>
-        </div>
-        
-        <div class="product-grid">
-          {% for p in productos %}
-          <div class="product-card js-add-product" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio }}" data-cat="{{ p.categoria or '' }}">
-            <div class="product-title">{{ p.nombre }}</div>
-            <div class="flex-between mt-auto">
-              <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase;">{{ p.categoria }}</span>
-              <span class="text-primary">{{ p.precio | money }}</span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </section>
+        <button class="btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border:none; color: var(--pos-primary);" onclick="PosApp.toggleWaEdit()">✏️ Editar</button>
       {% endif %}
+    </div>
 
-    </main>
+    <div id="waDisplayBadge">
+      {% if pedido.telefono_whatsapp %}
+        <div class="wa-badge">✅ {{ pedido.telefono_whatsapp }}</div>
+      {% else %}
+        <div class="wa-badge empty">⚠️ No registrado</div>
+      {% endif %}
+    </div>
 
-    <!-- LADO DERECHO: Carrito Dinámico -->
     {% if pedido.estado == 'abierto' %}
-    <aside class="pos-sidebar">
-      <div class="pos-card" style="box-shadow: var(--shadow-md);">
-        <div class="pos-card-header flex-between">
-          <h3 class="text-h3">Nuevas Adiciones</h3>
-          <button type="button" class="btn btn-ghost btn-icon text-primary" onclick="PosApp.showKitchenPreview()" title="Vista Cocina">👨‍🍳</button>
+    <form id="waEditMode" style="display:none;" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
+      <div class="wa-input-group">
+        <input type="tel" name="telefono_whatsapp" class="wa-input" placeholder="Ej. 449..." value="{{ pedido.telefono_whatsapp or '' }}">
+        <button type="submit" class="btn-primary" style="padding: 0 16px; border-radius: 8px;">OK</button>
+      </div>
+      <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Necesario para ganar totopos.</div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap">
+  <button type="button" class="btn-pos btn-outline" onclick="PosApp.abrirTicketPreview({{ pedido.id }})">
+    🖨️ Ver ticket
+  </button>
+
+  {% if pedido.estado == 'abierto' %}
+    <button type="button" class="btn-pos btn-outline" onclick="PosApp.abrirVistaCocina()">
+      👨‍🍳 Vista cocina
+    </button>
+
+    <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
+      <button type="submit" class="btn-pos btn-outline" onclick="return confirm('¿Cerrar sin enviar WhatsApp?')">
+        🔒 Cerrar (Sin enviar)
+      </button>
+    </form>
+
+    <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" style="margin: 0;">
+      <button type="submit" class="btn-pos btn-wa" onclick="return PosApp.confirmarCierreWa('{{ pedido.telefono_whatsapp or '' }}')">
+        📲 Cerrar y Mandar WhatsApp
+      </button>
+    </form>
+  {% else %}
+    <div class="wa-badge" style="background:#e2e8f0; color:#475569; border:none;">Este pedido ya está cerrado</div>
+  {% endif %}
+</div>
+
+<div class="pos-grid">
+
+  <div>
+    <div class="pos-card mb-4" style="padding: 0; overflow: hidden;">
+      <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--pos-border);">
+        <h3 class="m-0" style="font-size: 1.1rem;">Artículos Confirmados en Comanda</h3>
+      </div>
+      
+      {% if items %}
+      <div style="overflow-x: auto;">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="text-center">Cant.</th>
+              <th class="text-right">Precio</th>
+              {% if pedido.estado == 'abierto' %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in items %}
+            <tr class="item-row">
+              <td>
+                <div class="fw-bold" style="color: #0f172a;">{{ it.nombre }}</div>
+                
+                {% if it.salsa_id or it.proteina or it.sin or it.nota %}
+                <div class="pos-modifiers mt-2">
+                  {% if it.salsa_id %}
+                    {% for s in salsas %}
+                      {% if s.id == it.salsa_id %}
+                        <span class="pos-tag">🌶️ {{ s.nombre }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {% if it.proteina %}
+                    <span class="pos-tag">🥩 {{ it.proteina }}</span>
+                  {% endif %}
+                  {% if it.sin %}
+                    <span class="pos-tag pos-tag-warn">🚫 Sin {{ it.sin }}</span>
+                  {% endif %}
+                  {% if it.nota %}
+                    <div class="pos-note mt-1">📝 {{ it.nota }}</div>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </td>
+              <td class="text-center fw-bold" style="vertical-align: middle;">x{{ it.cantidad }}</td>
+              <td class="text-right text-gray-600" style="vertical-align: middle; color: #475569;">{{ it.precio_unitario | money }}</td>
+              {% if pedido.estado == 'abierto' %}
+              <td class="text-right" style="vertical-align: middle;">
+                <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" style="margin: 0;">
+                  <button type="submit" class="btn-danger-ghost" onclick="return confirm('¿Eliminar este platillo de la base de datos?')" title="Eliminar">🗑️</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-center" style="color: var(--pos-text-muted);">
+        No hay artículos guardados todavía.
+      </div>
+      {% endif %}
+    </div>
+
+    {% if pedido.estado == 'abierto' %}
+    <div class="pos-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0" style="font-size: 1.1rem;">Agregar Nuevos Productos</h3>
+        <span class="pos-tag" style="background:#e0e7ff; color:#4338ca; border:none;">Catálogo</span>
+      </div>
+      
+      <div class="catalog-grid">
+        {% for p in productos %}
+        <button type="button" class="product-btn" onclick='PosApp.seleccionarProducto({{ p.id }}, {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
+          <div class="product-name">{{ p.nombre }}</div>
+          <div class="product-price">{{ p.precio | money }}</div>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if pedido.estado == 'abierto' %}
+  <div>
+    <div class="pos-card" style="position: sticky; top: 24px; padding: 0; overflow: hidden; border: 2px solid var(--pos-primary);">
+      <div style="padding: 16px; background: var(--pos-primary); color: white;">
+        <h3 class="m-0" style="font-size: 1.1rem; display: flex; justify-content: space-between;">
+          <span>Nuevos a agregar</span>
+          <span id="cartBadge" style="background: white; color: var(--pos-primary); padding: 2px 8px; border-radius: 12px; font-size: 0.85rem;">0</span>
+        </h3>
+      </div>
+
+      <form method="post" id="newItemsForm" action="{{ url_for('ver_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
+        <div id="cartContainer" style="max-height: 400px; overflow-y: auto; padding: 16px;">
+          <div id="emptyCartMsg" class="text-center" style="color: #94a3b8; padding: 20px 0;">Selecciona productos del catálogo para agregarlos aquí.</div>
+          <div id="cartItemsList" style="display: flex; flex-direction: column; gap: 16px;"></div>
         </div>
 
-        <!-- FORMULARIO CORREGIDO: apunta a ver_pedido en lugar de agregar_items... -->
-        <form method="post" id="newItemsForm" action="{{ url_for('ver_pedido', pedido_id=pedido.id) }}">
-          
-          <div id="cartContainer" style="min-height: 150px; max-height: 50vh; overflow-y: auto; margin-bottom: 1rem;">
-            <div class="text-center text-muted" style="padding: 2rem 0;">Carrito vacío. Agrega productos del catálogo.</div>
+        <div style="padding: 16px; background: #f8fafc; border-top: 1px solid var(--pos-border);">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span style="font-weight: 600; color: var(--pos-text-muted);">Total Extra:</span>
+            <span id="cartTotal" style="font-size: 1.4rem; font-weight: 900; color: var(--pos-text-main);">$0.00</span>
           </div>
-
-          <div style="border-top: 2px dashed var(--pos-border); padding-top: 1rem; margin-bottom: 1.5rem;">
-            <div class="flex-between">
-              <span class="text-muted font-bold uppercase text-sm">Subtotal Extra</span>
-              <span id="cartSubtotal" class="text-primary" style="font-size: 1.5rem; font-weight: 900;">$0.00</span>
-            </div>
-          </div>
-
-          <!-- Inputs ocultos inyectados por JS -->
-          <div id="cartHiddenInputs"></div>
-
-          <button type="submit" id="btnSaveCart" class="btn btn-primary w-100" style="padding: 1rem; font-size: 1.1rem;" disabled>
-            💾 Confirmar y Agregar al Pedido
+          <div id="inputsHidden"></div>
+          <button type="submit" id="btnSaveItems" class="btn-pos btn-primary w-100" style="opacity: 0.5; pointer-events: none;">
+            💾 Guardar Cambios en Pedido
           </button>
-        </form>
-      </div>
-    </aside>
-    {% endif %}
-
+        </div>
+      </form>
+    </div>
   </div>
+  {% endif %}
+
 </div>
 
-<!-- Modal: Personalización de Platillo -->
-<div id="modalCustomization" class="modal-overlay">
+<div id="modalCustom" class="modal-overlay">
   <div class="modal-content">
-    <div class="modal-header">
+    <div class="d-flex justify-content-between align-items-start mb-3">
       <div>
-        <h3 class="text-h3">Personalizar Platillo</h3>
-        <div id="modalProdName" class="text-primary" style="font-weight: 700; margin-top: 0.25rem;">Nombre</div>
+        <h3 class="m-0" style="font-size: 1.25rem;">Personalizar</h3>
+        <p class="m-0 mt-1 fw-bold text-primary" id="mcProductName" style="color: var(--pos-primary);"></p>
       </div>
-      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalCustomization')">✕</button>
-    </div>
-    
-    <div class="modal-body">
-      <div style="margin-bottom: 1.5rem;">
-        <label class="text-muted font-bold text-sm uppercase">Selecciona Proteína</label>
-        <div class="pill-group" id="renderProteinas"></div>
-      </div>
-
-      <div style="margin-bottom: 1.5rem;">
-        <label class="text-muted font-bold text-sm uppercase">Baña con Salsa <span style="text-transform: none; font-weight: normal;">(Opcional)</span></label>
-        <div class="pill-group" id="renderSalsas"></div>
-      </div>
-
-      <div style="margin-bottom: 1.5rem;">
-        <label class="text-muted font-bold text-sm uppercase">Excluir Ingredientes</label>
-        <div class="pill-group" id="renderSin"></div>
-      </div>
-
-      <div>
-        <label class="text-muted font-bold text-sm uppercase" style="display:block; margin-bottom: 0.5rem;">Instrucciones Especiales</label>
-        <textarea id="modalNotes" class="text-area-pro" rows="2" placeholder="Ej. bien dorados, aguacate extra..."></textarea>
-      </div>
+      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCustom')">✕</button>
     </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="PosApp.closeModal('modalCustomization')">Cancelar</button>
-      <button type="button" class="btn btn-primary" onclick="PosApp.saveCustomization()">Guardar Cambios</button>
+    <div class="mt-4">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Salsa <span style="text-transform:none; font-weight:normal;">(Opcional)</span></label>
+      <div id="mcSalsas" class="custom-grid"></div>
+    </div>
+
+    <div class="mt-4">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Proteína</label>
+      <div id="mcProteinas" class="custom-grid"></div>
+    </div>
+
+    <div class="mt-4">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Quitar Ingredientes</label>
+      <div id="mcSin" class="custom-grid"></div>
+    </div>
+
+    <div class="mt-4">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Notas Extra</label>
+      <textarea id="mcNota" class="custom-note" placeholder="Ej. salsa aparte, sin dorar mucho..."></textarea>
+    </div>
+
+    <div class="d-flex gap-2 mt-4">
+      <button type="button" class="btn-pos btn-outline w-100" onclick="PosApp.cerrarModal('modalCustom')">Cancelar</button>
+      <button type="button" class="btn-pos btn-primary w-100" onclick="PosApp.confirmarCustomizacion()">Confirmar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Vista Cocina -->
-<div id="modalKitchen" class="modal-overlay">
-  <div class="modal-content" style="max-width: 400px;">
-    <div class="modal-header">
-      <h3 class="text-h3">Comanda (Nuevos Items)</h3>
-      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalKitchen')">✕</button>
-    </div>
-    <div class="modal-body monospace" style="background: #fffbeb;">
-      <div id="kitchenContent"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="window.print()">🖨️ Imprimir</button>
-      <button class="btn btn-primary" onclick="PosApp.closeModal('modalKitchen')">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Preview Ticket -->
 <div id="modalTicket" class="modal-overlay">
-  <div class="modal-content" style="max-width: 400px;">
-    <div class="modal-header">
-      <h3 class="text-h3">Preview Ticket</h3>
-      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalTicket')">✕</button>
+  <div class="modal-content" style="background: #fdfbf7;">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <h3 class="m-0">Vista previa del Ticket</h3>
+      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalTicket')">✕</button>
     </div>
-    <div class="modal-body monospace">
-      <pre id="ticketTextContent" style="white-space: pre-wrap; font-size: 0.9rem; margin: 0;"></pre>
+    <pre id="ticketText" style="font-family: monospace; background: white; padding: 16px; border: 1px dashed #cbd5e1; border-radius: 8px; white-space: pre-wrap; font-size: 0.85rem; color: #334155;"></pre>
+    <a id="btnSendWaModal" href="#" target="_blank" class="btn-pos btn-wa w-100 mt-3" style="text-decoration: none;">
+      📲 Abrir en WhatsApp
+    </a>
+  </div>
+</div>
+
+<div id="modalCocina" class="modal-overlay">
+  <div class="modal-content">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h3 class="m-0">Comanda (Nuevos Artículos)</h3>
+        <p class="m-0 mt-1" style="color: var(--pos-text-muted); font-size: 0.85rem;">Imprime o visualiza lo que está en el carrito derecho.</p>
+      </div>
+      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCocina')">✕</button>
     </div>
-    <div class="modal-footer" style="flex-direction: column;">
-      <a id="btnTicketWhatsapp" target="_blank" class="btn btn-success w-100" style="text-decoration: none;">📲 Enviar por WhatsApp</a>
+    <div id="cocinaBody" class="mt-4"></div>
+    <div class="d-flex gap-2 mt-4">
+      <button type="button" class="btn-pos btn-outline w-100" onclick="window.print()">🖨️ Imprimir</button>
+      <button type="button" class="btn-pos btn-primary w-100" onclick="PosApp.cerrarModal('modalCocina')">Cerrar</button>
     </div>
   </div>
 </div>
 
 <script>
-class PosManager {
-  constructor(config) {
-    this.db = {
-      proteinas: config.proteinas || [],
-      salsas: config.salsas || [],
-      sinOpciones: ["Cebolla", "Crema", "Queso", "Aguacate"],
-      noModCats: ["bebidas", "extras", "postres", "complementos"],
-      noModWords: ["coca", "agua", "cafe", "refresco", "jugo", "boing"]
-    };
-    
-    this.cart = new Map();
-    this.activeItemUid = null;
-    this.formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-    this.init();
-  }
+const SALSAS_DB = {{ (salsas or [])|tojson }};
+const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
+
+// Opciones estáticas
+const LISTA_PROTEINAS = ["Pollo", "Arrachera", "Chorizo", "Cochinita", "Huevo", "Sin proteína"];
+const LISTA_SIN = ["Cebolla", "Crema", "Queso", "Aguacate"];
+const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
+const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
+
+const PosApp = {
+  cart: {},
+  activeItem: null,
 
   init() {
-    this.bindEvents();
-  }
+    this.renderCart();
+  },
 
-  bindEvents() {
-    const grid = document.querySelector('.product-grid');
-    if(grid) {
-      grid.addEventListener('click', (e) => {
-        const card = e.target.closest('.js-add-product');
-        if (card) this.handleProductClick(card.dataset);
-      });
-    }
-
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-      overlay.addEventListener('mousedown', (e) => {
-        if(e.target === overlay) this.closeModal(overlay.id);
-      });
-    });
-  }
-
-  // Lógica WhatsApp UI
-  toggleWaEdit(show) {
-    const read = document.getElementById('waReadMode');
-    const empty = document.getElementById('waEmptyMode');
+  toggleWaEdit() {
+    document.getElementById('waDisplayBadge').style.display = 'none';
     const form = document.getElementById('waEditMode');
-    const input = document.getElementById('waInputNumber');
-    const currentNumber = document.getElementById('waDisplayNumber');
+    form.style.display = 'block';
+    form.querySelector('input').focus();
+  },
 
-    if (show) {
-      read.classList.add('hidden');
-      empty.classList.add('hidden');
-      form.classList.remove('hidden');
-      if(currentNumber && currentNumber.innerText !== 'None') input.value = currentNumber.innerText;
-      input.focus();
-    } else {
-      form.classList.add('hidden');
-      if (currentNumber && currentNumber.innerText.trim() !== '' && currentNumber.innerText !== 'None') {
-        read.classList.remove('hidden');
-      } else {
-        empty.classList.remove('hidden');
-      }
-    }
-  }
-
-  validateCloseWithWa(currentPhone) {
-    if (!currentPhone || currentPhone.trim() === 'None' || currentPhone.trim() === '') {
-      alert('⚠️ ATENCIÓN: No hay un número de WhatsApp registrado en este pedido.\n\nAñade el número en el recuadro verde antes de cerrar para enviar el ticket.');
-      this.toggleWaEdit(true);
+  confirmarCierreWa(telefono) {
+    if (!telefono || telefono.trim() === '') {
+      alert("⚠️ No hay número de WhatsApp registrado.\n\nPor favor, haz clic en 'Editar' arriba a la derecha, ingresa el número y presiona OK antes de cerrar.");
+      this.toggleWaEdit();
       return false;
     }
-    return confirm('Se cerrará la comanda y se enviará la notificación automática al cliente.\n¿Continuar?');
-  }
+    return confirm("¿Estás seguro de cerrar el pedido y mandar el mensaje de WhatsApp con Totopos?");
+  },
 
-  // Lógica Carrito
-  generateUid() {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  }
+  generarUid() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  },
 
-  needsCustomization(nombre, cat) {
-    const n = (nombre || '').toLowerCase();
-    const c = (cat || '').toLowerCase();
-    if (this.db.noModCats.some(kw => c.includes(kw))) return false;
-    if (this.db.noModWords.some(kw => n.includes(kw))) return false;
+  escapeHtml(str) {
+    return String(str || "").replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
+  },
+
+  requiereModificadores(nombre, categoria) {
+    const cat = String(categoria || "").toLowerCase();
+    const nom = String(nombre || "").toLowerCase();
+    if (NO_MOD_CATEGORIAS.some(c => cat.includes(c))) return false;
+    if (NO_MOD_KEYWORDS.some(k => nom.includes(k))) return false;
     return true;
-  }
+  },
 
-  handleProductClick(dataset) {
-    const { id, nombre, precio, cat } = dataset;
-    const uid = this.generateUid();
-    
-    const item = {
-      id, nombre, 
-      precio: parseFloat(precio), 
-      cantidad: 1,
-      custom: { proteina: "", proteina_id: "", salsa: "", salsa_id: "", sin: [], nota: "" }
-    };
+  mapSalsaId(nombre) {
+    const match = SALSAS_DB.find(s => s.nombre.toLowerCase() === String(nombre).toLowerCase());
+    return match ? match.id : "";
+  },
 
-    if (this.needsCustomization(nombre, cat)) {
-      this.cart.set(uid, item);
-      this.openCustomizationModal(uid);
-    } else {
-      this.cart.set(uid, item);
-      this.updateCartUI();
-    }
-  }
+  mapProteinaId(nombre) {
+    const match = PROTEINAS_DB.find(p => p.nombre.toLowerCase() === String(nombre).toLowerCase());
+    return match ? match.id : "";
+  },
 
-  updateQty(uid, delta) {
-    const item = this.cart.get(uid);
-    if (!item) return;
-    item.cantidad += delta;
-    if (item.cantidad <= 0) this.cart.delete(uid);
-    this.updateCartUI();
-  }
-
-  removeItem(uid) {
-    this.cart.delete(uid);
-    this.updateCartUI();
-  }
-
-  // Renderizado Modal Customización
-  openCustomizationModal(uid) {
-    this.activeItemUid = uid;
-    const item = this.cart.get(uid);
-    document.getElementById('modalProdName').innerText = item.nombre;
-
-    document.getElementById('renderProteinas').innerHTML = `
-      <label class="pill-label">
-        <input type="radio" name="mod_prot" value="" data-nombre="" class="pill-input" ${!item.custom.proteina_id ? 'checked' : ''}>
-        <span class="pill-content">Ninguna</span>
-      </label>
-      ${this.db.proteinas.map(p => `
-        <label class="pill-label">
-          <input type="radio" name="mod_prot" value="${p.id}" data-nombre="${p.nombre}" class="pill-input" ${item.custom.proteina_id == p.id ? 'checked' : ''}>
-          <span class="pill-content">${p.nombre}</span>
-        </label>
-      `).join('')}
-    `;
-
-    document.getElementById('renderSalsas').innerHTML = `
-      <label class="pill-label">
-        <input type="radio" name="mod_salsa" value="" data-nombre="" class="pill-input" ${!item.custom.salsa_id ? 'checked' : ''}>
-        <span class="pill-content">Sin Salsa</span>
-      </label>
-      ${this.db.salsas.map(s => `
-        <label class="pill-label">
-          <input type="radio" name="mod_salsa" value="${s.id}" data-nombre="${s.nombre}" class="pill-input" ${item.custom.salsa_id == s.id ? 'checked' : ''}>
-          <span class="pill-content">${s.nombre}</span>
-        </label>
-      `).join('')}
-    `;
-
-    document.getElementById('renderSin').innerHTML = this.db.sinOpciones.map(opt => `
-      <label class="pill-label">
-        <input type="checkbox" name="mod_sin" value="${opt}" class="pill-input" ${item.custom.sin.includes(opt) ? 'checked' : ''}>
-        <span class="pill-content">Sin ${opt}</span>
-      </label>
-    `).join('');
-
-    document.getElementById('modalNotes').value = item.custom.nota || "";
-    this.showModal('modalCustomization');
-  }
-
-  saveCustomization() {
-    if (!this.activeItemUid) return;
-    const item = this.cart.get(this.activeItemUid);
-    
-    const protEl = document.querySelector('input[name="mod_prot"]:checked');
-    const salsaEl = document.querySelector('input[name="mod_salsa"]:checked');
-    const sinEls = Array.from(document.querySelectorAll('input[name="mod_sin"]:checked'));
-    
-    item.custom = {
-      proteina_id: protEl ? protEl.value : "",
-      proteina: protEl && protEl.value ? protEl.dataset.nombre : "",
-      salsa_id: salsaEl ? salsaEl.value : "",
-      salsa: salsaEl && salsaEl.value ? salsaEl.dataset.nombre : "",
-      sin: sinEls.map(el => el.value),
-      nota: document.getElementById('modalNotes').value.trim()
-    };
-
-    this.closeModal('modalCustomization');
-    this.updateCartUI();
-  }
-
-  // Generador de UI y datos para el Backend
-  updateCartUI() {
-    const container = document.getElementById('cartContainer');
-    const hiddenContainer = document.getElementById('cartHiddenInputs');
-    const btnSave = document.getElementById('btnSaveCart');
-    const subtotalEl = document.getElementById('cartSubtotal');
-    
-    let html = '';
-    let hiddenHtml = '';
-    let subtotal = 0;
-
-    if (this.cart.size === 0) {
-      container.innerHTML = '<div class="text-center text-muted" style="padding: 2rem 0;">No hay adiciones nuevas.</div>';
-      hiddenContainer.innerHTML = '';
-      subtotalEl.innerText = '$0.00';
-      btnSave.disabled = true;
+  seleccionarProducto(id, nombre, precio, categoria) {
+    if (!this.requiereModificadores(nombre, categoria)) {
+      const uid = this.generarUid();
+      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", proteina: "", proteina_id: "", sin: [], nota: "" } };
+      this.renderCart();
       return;
     }
 
-    this.cart.forEach((item, uid) => {
-      const lineTotal = item.precio * item.cantidad;
-      subtotal += lineTotal;
+    this.activeItem = { id, nombre, precio: Number(precio), uid: this.generarUid() };
+    this.abrirModalCustom();
+  },
+
+  abrirModalCustom() {
+    document.getElementById('mcProductName').innerText = this.activeItem.nombre;
+    
+    let htmlSalsas = `<label class="custom-pill"><input type="radio" name="mc_salsa" value="" checked><span>— Sin salsa</span></label>`;
+    SALSAS_DB.forEach(s => {
+      htmlSalsas += `<label class="custom-pill"><input type="radio" name="mc_salsa" value="${this.escapeHtml(s.nombre)}"><span>${this.escapeHtml(s.nombre)}</span></label>`;
+    });
+    document.getElementById('mcSalsas').innerHTML = htmlSalsas;
+
+    let htmlProt = '';
+    LISTA_PROTEINAS.forEach((p, i) => {
+      htmlProt += `<label class="custom-pill"><input type="radio" name="mc_prot" value="${this.escapeHtml(p)}" ${i===0?'checked':''}><span>${this.escapeHtml(p)}</span></label>`;
+    });
+    document.getElementById('mcProteinas').innerHTML = htmlProt;
+
+    let htmlSin = '';
+    LISTA_SIN.forEach(s => {
+      htmlSin += `<label class="custom-pill"><input type="checkbox" name="mc_sin" value="${this.escapeHtml(s)}"><span>Sin ${this.escapeHtml(s)}</span></label>`;
+    });
+    document.getElementById('mcSin').innerHTML = htmlSin;
+
+    document.getElementById('mcNota').value = "";
+    document.getElementById('modalCustom').classList.add('active');
+  },
+
+  cerrarModal(id) {
+    document.getElementById(id).classList.remove('active');
+    if (id === 'modalCustom') this.activeItem = null;
+  },
+
+  confirmarCustomizacion() {
+    const salsaNode = document.querySelector('input[name="mc_salsa"]:checked');
+    const salsa = salsaNode ? salsaNode.value : "";
+    const salsa_id = this.mapSalsaId(salsa);
+
+    const protNode = document.querySelector('input[name="mc_prot"]:checked');
+    const proteina = protNode ? protNode.value : "";
+    const proteina_id = this.mapProteinaId(proteina);
+
+    const sinNodes = document.querySelectorAll('input[name="mc_sin"]:checked');
+    const sin = Array.from(sinNodes).map(n => n.value);
+
+    const nota = document.getElementById('mcNota').value.trim();
+
+    this.cart[this.activeItem.uid] = {
+      id: this.activeItem.id,
+      nombre: this.activeItem.nombre,
+      precio: this.activeItem.precio,
+      qty: 1,
+      custom: { salsa, salsa_id, proteina, proteina_id, sin, nota }
+    };
+
+    this.cerrarModal('modalCustom');
+    this.renderCart();
+  },
+
+  modQty(uid, delta) {
+    if (!this.cart[uid]) return;
+    this.cart[uid].qty += delta;
+    if (this.cart[uid].qty <= 0) delete this.cart[uid];
+    this.renderCart();
+  },
+
+  eliminarCart(uid) {
+    delete this.cart[uid];
+    this.renderCart();
+  },
+
+  renderCart() {
+    const container = document.getElementById('cartItemsList');
+    const emptyMsg = document.getElementById('emptyCartMsg');
+    const hiddenCont = document.getElementById('inputsHidden');
+    const btnSave = document.getElementById('btnSaveItems');
+    const badge = document.getElementById('cartBadge');
+    
+    let html = '';
+    let hidden = '';
+    let total = 0;
+    let count = 0;
+
+    Object.entries(this.cart).forEach(([uid, item]) => {
+      const sub = item.precio * item.qty;
+      total += sub;
+      count += item.qty;
       const c = item.custom;
 
-      let tags = '';
-      if (c.proteina) tags += `<span class="mod-tag">🥩 ${c.proteina}</span>`;
-      if (c.salsa) tags += `<span class="mod-tag">🌶️ ${c.salsa}</span>`;
-      if (c.sin.length) tags += `<span class="mod-tag danger">🚫 Sin ${c.sin.join(', ')}</span>`;
-      if (c.nota) tags += `<span class="mod-tag note">📝 ${c.nota}</span>`;
+      let meta = '';
+      if (c.salsa || c.proteina || c.sin.length || c.nota) {
+        meta += `<div class="pos-modifiers mt-2">`;
+        if(c.salsa) meta += `<span class="pos-tag">🌶️ ${this.escapeHtml(c.salsa)}</span>`;
+        if(c.proteina) meta += `<span class="pos-tag">🥩 ${this.escapeHtml(c.proteina)}</span>`;
+        if(c.sin.length) meta += `<span class="pos-tag pos-tag-warn">🚫 Sin ${this.escapeHtml(c.sin.join(', '))}</span>`;
+        if(c.nota) meta += `<div class="pos-note mt-1">📝 ${this.escapeHtml(c.nota)}</div>`;
+        meta += `</div>`;
+      }
 
       html += `
-        <div style="border-bottom: 1px solid var(--pos-border); padding: 1rem 0;">
-          <div class="flex-between" style="align-items: flex-start; margin-bottom: 0.5rem;">
-            <div style="flex:1; padding-right: 1rem;">
-              <div style="font-weight: 700;">${item.nombre}</div>
-              <div class="mod-tags">${tags}</div>
-              <button type="button" class="btn-ghost text-sm" style="padding:0; margin-top:0.5rem;" onclick="PosApp.openCustomizationModal('${uid}')">✏️ Editar mod</button>
+        <div style="border: 1px solid var(--pos-border); border-radius: 10px; padding: 12px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position:relative;">
+          <button type="button" class="btn-danger-ghost" style="position:absolute; top:8px; right:8px; padding:4px;" onclick="PosApp.eliminarCart('${uid}')">✕</button>
+          <div class="fw-bold" style="padding-right:24px;">${this.escapeHtml(item.nombre)}</div>
+          <div style="color: var(--pos-primary); font-weight:800; font-size:0.95rem; margin-top:2px;">$${sub.toFixed(2)}</div>
+          ${meta}
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top:1px dashed var(--pos-border);">
+            <div class="qty-ctrl">
+              <button type="button" class="qty-btn" onclick="PosApp.modQty('${uid}', -1)">-</button>
+              <div class="qty-val">${item.qty}</div>
+              <button type="button" class="qty-btn" onclick="PosApp.modQty('${uid}', 1)">+</button>
             </div>
-            <div style="font-weight: 800;">${this.formatter.format(lineTotal)}</div>
-          </div>
-          <div class="flex-between">
-            <div class="qty-control">
-              <button type="button" class="qty-btn" onclick="PosApp.updateQty('${uid}', -1)">−</button>
-              <span class="qty-val">${item.cantidad}</span>
-              <button type="button" class="qty-btn" onclick="PosApp.updateQty('${uid}', 1)">+</button>
-            </div>
-            <button type="button" class="btn-ghost btn-icon text-danger" onclick="PosApp.removeItem('${uid}')">✕</button>
+            <span style="font-size:0.8rem; color:var(--pos-text-muted);">${item.qty} x $${item.precio.toFixed(2)}</span>
           </div>
         </div>
       `;
 
-      // Formulario Data Mapeada al Backend
-      hiddenHtml += `
+      hidden += `
         <input type="hidden" name="producto_id[]" value="${item.id}">
-        <input type="hidden" name="cantidad[]" value="${item.cantidad}">
-        <input type="hidden" name="proteina[]" value="${c.proteina}">
+        <input type="hidden" name="cantidad[]" value="${item.qty}">
+        <input type="hidden" name="proteina[]" value="${this.escapeHtml(c.proteina)}">
         <input type="hidden" name="proteina_id[]" value="${c.proteina_id}">
         <input type="hidden" name="salsa_id[]" value="${c.salsa_id}">
-        <input type="hidden" name="sin[]" value="${c.sin.join(',')}">
-        <input type="hidden" name="nota[]" value="${c.nota}">
+        <input type="hidden" name="sin[]" value="${this.escapeHtml(c.sin.join(','))}">
+        <input type="hidden" name="nota[]" value="${this.escapeHtml(c.nota)}">
       `;
     });
 
     container.innerHTML = html;
-    hiddenContainer.innerHTML = hiddenHtml;
-    subtotalEl.innerText = this.formatter.format(subtotal);
-    btnSave.disabled = false;
-  }
+    hiddenCont.innerHTML = hidden;
+    document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
+    badge.innerText = count;
 
-  showKitchenPreview() {
-    const container = document.getElementById('kitchenContent');
-    if (this.cart.size === 0) {
-      container.innerHTML = "<div>No hay productos nuevos para enviar a cocina.</div>";
+    if (count > 0) {
+      emptyMsg.style.display = 'none';
+      btnSave.style.opacity = '1';
+      btnSave.style.pointerEvents = 'auto';
     } else {
-      let html = "";
-      this.cart.forEach((item) => {
-        const c = item.custom;
-        html += `<div style="border-bottom: 1px dashed #ccc; padding: 10px 0;">
-          <strong>[ ${item.cantidad} ] x ${item.nombre.toUpperCase()}</strong><br>
-          ${c.salsa ? `>> SALSA: ${c.salsa}<br>` : ''}
-          ${c.proteina ? `>> PROT: ${c.proteina}<br>` : ''}
-          ${c.sin.length ? `>> SIN: ${c.sin.join(', ')}<br>` : ''}
-          ${c.nota ? `>> NOTA: ${c.nota}<br>` : ''}
-        </div>`;
-      });
-      container.innerHTML = html;
+      emptyMsg.style.display = 'block';
+      btnSave.style.opacity = '0.5';
+      btnSave.style.pointerEvents = 'none';
     }
-    this.showModal('modalKitchen');
-  }
+  },
 
   abrirTicketPreview(id) {
     fetch(`/pedido/${id}/ticket_preview`)
       .then(r => r.json())
-      .then(d => {
-        document.getElementById('ticketTextContent').innerText = d.texto;
-        document.getElementById('btnTicketWhatsapp').href = d.whatsapp_url;
-        this.showModal('modalTicket');
+      .then(data => {
+        document.getElementById('ticketText').innerText = data.texto;
+        document.getElementById('btnSendWaModal').href = data.whatsapp_url;
+        document.getElementById('modalTicket').classList.add('active');
       })
-      .catch(err => alert("Error al obtener ticket: " + err));
-  }
+      .catch(err => alert("Error cargando ticket"));
+  },
 
-  showModal(id) { document.getElementById(id).classList.add('active'); }
-  closeModal(id) { 
-    document.getElementById(id).classList.remove('active');
-    if(id === 'modalCustomization' && this.activeItemUid) this.activeItemUid = null;
-  }
-}
+  /* NUEVO: Lógica restaurada para Vista Cocina */
+  abrirVistaCocina() {
+    const body = document.getElementById("cocinaBody");
+    const entries = Object.values(this.cart);
 
-// Inicialización de la aplicación POS con los datos de Jinja
-const PosApp = new PosManager({
-  proteinas: {{ proteinas | tojson | safe | default('[]') }},
-  salsas: {{ salsas | tojson | safe | default('[]') }}
+    if (!entries.length) {
+      body.innerHTML = "<div class='text-center p-4' style='color: var(--pos-text-muted);'>No hay productos nuevos en el carrito derecho para imprimir.</div>";
+      document.getElementById('modalCocina').classList.add('active');
+      return;
+    }
+
+    body.innerHTML = entries.map(it => {
+      const c = it.custom || {};
+      return `
+        <div style="border:1px solid var(--pos-border); border-radius:10px; padding:16px; margin-bottom:12px; background:#f8fafc;">
+          <div class="d-flex justify-content-between align-items-center">
+            <div style="font-size:1.1rem; font-weight:800; color: var(--pos-text-main);">${this.escapeHtml(it.nombre)}</div>
+            <div style="font-size:1.2rem; font-weight:900; background:white; padding:4px 12px; border:2px solid var(--pos-border); border-radius:8px;">x${it.qty}</div>
+          </div>
+          <div class="pos-modifiers mt-3">
+            <div><span class="pos-tag">SALSA: ${c.salsa ? this.escapeHtml(c.salsa) : '—'}</span></div>
+            <div><span class="pos-tag">PROT: ${c.proteina ? this.escapeHtml(c.proteina) : '—'}</span></div>
+            <div><span class="pos-tag ${c.sin && c.sin.length ? 'pos-tag-warn' : ''}">SIN: ${c.sin && c.sin.length ? this.escapeHtml(c.sin.join(", ")) : '—'}</span></div>
+            ${c.nota ? `<div class="pos-note mt-2"><strong>NOTA:</strong> ${this.escapeHtml(c.nota)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    document.getElementById('modalCocina').classList.add('active');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  PosApp.init();
 });
 </script>
 
