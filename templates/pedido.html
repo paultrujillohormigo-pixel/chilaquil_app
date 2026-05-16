@@ -1,706 +1,825 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="pos-header-wrap">
-  <h2 class="pos-title m-0">🧾 Pedido #{{ pedido.id }}</h2>
-</div>
+<!-- Variables de diseño (Sistema PRO) -->
+<style>
+  :root {
+    --pos-primary: #0ea5e9;
+    --pos-primary-hover: #0284c7;
+    --pos-success: #10b981;
+    --pos-success-hover: #059669;
+    --pos-danger: #ef4444;
+    --pos-danger-hover: #dc2626;
+    --pos-warning: #f59e0b;
+    --pos-bg: #f1f5f9;
+    --pos-surface: #ffffff;
+    --pos-text-main: #0f172a;
+    --pos-text-muted: #64748b;
+    --pos-border: #e2e8f0;
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+    
+    --transition-fast: 0.15s ease-in-out;
+  }
 
-<div class="pedido-header card">
-  <div class="pedido-info flex-row gap-md">
-    <div><strong>Estado:</strong> <span class="tag-status">{{ pedido.estado | capitalize }}</span></div>
-    <div><strong>Total:</strong> <span class="text-primary">{{ pedido.total | money }}</span></div>
-    {% if pedido.telefono_whatsapp %}
-      <div><strong>WhatsApp:</strong> {{ pedido.telefono_whatsapp }}</div>
-    {% else %}
-      <div class="hint">WhatsApp: —</div>
-    {% endif %}
-  </div>
+  /* Reset & Base PRO */
+  .pos-container {
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--pos-text-main);
+    background-color: var(--pos-bg);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+  }
 
-  <div class="pedido-actions flex-row gap-sm flex-wrap">
-    <button type="button" class="btn-primary" onclick="abrirTicketPreview({{ pedido.id }})">
-      🧾 Ver ticket
-    </button>
-
-    {% if pedido.estado == 'abierto' %}
-      <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" class="inline-form">
-        <button type="submit" class="btn-gray" onclick="return confirm('¿Cerrar pedido sin enviar WhatsApp?')">
-          ✅ Cerrar (sin enviar)
-        </button>
-      </form>
-
-      <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" class="inline-form">
-        <button type="submit" class="btn-whatsapp" onclick="return confirmarCerrarWhatsApp();">
-          📲 Cerrar y mandar WhatsApp + Totopos
-        </button>
-      </form>
-    {% endif %}
-  </div>
-</div>
-
-<div class="pos-layout mt-md">
+  /* Tipografía y Utilidades */
+  .text-h2 { font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: -0.025em; }
+  .text-h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
+  .text-muted { color: var(--pos-text-muted); font-size: 0.875rem; }
+  .text-primary { color: var(--pos-primary); font-weight: 700; }
+  .text-success { color: var(--pos-success); font-weight: 700; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-row { display: flex; align-items: center; gap: 0.75rem; }
+  .w-100 { width: 100%; }
   
-  <!-- ================== LADO IZQUIERDO ================== -->
-  <section class="pos-left">
+  /* Componentes de Tarjeta */
+  .pos-card {
+    background: var(--pos-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--pos-border);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .pos-card-header {
+    border-bottom: 1px solid var(--pos-border);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+  }
 
-    <div class="card mb-md">
-      <div class="card-head">
-        <h3 class="m-0">Productos en el pedido</h3>
-      </div>
+  /* Header del Pedido */
+  .order-header-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    align-items: center;
+  }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-abierto { background: #dcfce7; color: #166534; }
+  .status-cerrado { background: #f1f5f9; color: #475569; }
 
-      {% if items %}
-      <div class="table-responsive">
-        <table class="pedido-table">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th class="text-center">Cant.</th>
-              <th>Precio</th>
-              <th>Subtotal</th>
-              <th class="text-center">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for it in items %}
-            <tr>
-              <td class="td-left">
-                <strong>{{ it.nombre }}</strong>
+  /* Módulo WhatsApp PRO (Edición Inline) */
+  .wa-module {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+  }
+  .wa-input-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .wa-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--pos-border);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    outline: none;
+    transition: var(--transition-fast);
+  }
+  .wa-input:focus { border-color: var(--pos-success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
 
-                {% if it.salsa or it.proteina or it.sin or it.nota %}
-                <div class="cocina-meta mt-sm">
-                  {% if it.salsa %}<div><span class="tag">SALSA: {{ it.salsa }}</span></div>{% endif %}
-                  {% if it.proteina %}<div><span class="tag">PROT: {{ it.proteina }}</span></div>{% endif %}
-                  {% if it.sin %}<div><span class="tag tag-warn">SIN: {{ it.sin }}</span></div>{% endif %}
-                  {% if it.nota %}<div class="nota"><strong>NOTA:</strong> {{ it.nota }}</div>{% endif %}
-                </div>
-                {% endif %}
-              </td>
-              <td class="text-center">{{ it.cantidad }}</td>
-              <td>{{ it.precio_unitario | money }}</td>
-              <td><strong>{{ it.subtotal | money }}</strong></td>
-              <td class="text-center">
-                {% if pedido.estado == 'abierto' %}
-                <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" class="inline-form" onsubmit="return confirm('¿Eliminar este producto?')">
-                  <button type="submit" class="btn-red btn-icon" title="Eliminar">✕</button>
-                </form>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <p class="hint text-center py-md">No hay productos guardados en este pedido aún.</p>
-      {% endif %}
+  /* Botones PRO */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition-fast);
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--pos-primary); color: white; }
+  .btn-primary:hover { background: var(--pos-primary-hover); }
+  .btn-success { background: var(--pos-success); color: white; }
+  .btn-success:hover { background: var(--pos-success-hover); }
+  .btn-danger { background: #fee2e2; color: var(--pos-danger); }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-ghost { background: transparent; color: var(--pos-text-muted); }
+  .btn-ghost:hover { background: var(--pos-bg); color: var(--pos-text-main); }
+  .btn-icon { padding: 0.5rem; border-radius: var(--radius-sm); font-size: 1.1rem; }
+
+  /* Layout Principal (Grid CSS) */
+  .pos-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  @media (min-width: 1024px) {
+    .pos-layout { grid-template-columns: 1.6fr 1fr; }
+    .pos-sidebar { position: sticky; top: 1rem; height: fit-content; }
+  }
+
+  /* Catálogo de Productos */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+  .product-card {
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100px;
+  }
+  .product-card:hover { border-color: var(--pos-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .product-card:active { transform: translateY(0); }
+  .product-title { font-weight: 700; font-size: 0.95rem; line-height: 1.2; margin-bottom: 0.5rem; }
+
+  /* Tablas de Pedido */
+  .order-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .order-table th { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 2px solid var(--pos-border); color: var(--pos-text-muted); font-size: 0.85rem; text-transform: uppercase; }
+  .order-table td { padding: 1rem 0.5rem; border-bottom: 1px solid var(--pos-border); vertical-align: top; }
+  
+  /* Tags de Personalización PRO */
+  .mod-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+  .mod-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: var(--pos-bg);
+    border: 1px solid var(--pos-border);
+    color: var(--pos-text-main);
+  }
+  .mod-tag.danger { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+  .mod-tag.note { background: #f0f9ff; border-color: #bae6fd; color: #075985; border-style: dashed; }
+
+  /* Modales Glassmorphism */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    place-items: center;
+    z-index: 9999;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.active { display: grid; opacity: 1; }
+  .modal-content {
+    background: var(--pos-surface);
+    width: 100%;
+    max-width: 600px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+  .modal-overlay.active .modal-content { transform: translateY(0); }
+  .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--pos-border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+  .modal-body { padding: 1.5rem; overflow-y: auto; }
+  .modal-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--pos-border); display: flex; justify-content: flex-end; gap: 1rem; background: #f8fafc; }
+
+  /* Selector de Personalización (Pills) */
+  .pill-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
+  .pill-label { cursor: pointer; display: block; }
+  .pill-input { display: none; }
+  .pill-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    border: 2px solid var(--pos-border);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: var(--transition-fast);
+    background: var(--pos-surface);
+    color: var(--pos-text-muted);
+  }
+  .pill-label:hover .pill-content { background: var(--pos-bg); }
+  .pill-input:checked + .pill-content { border-color: var(--pos-primary); background: #eff6ff; color: var(--pos-primary); }
+  .pill-input[type="checkbox"]:checked + .pill-content { border-color: var(--pos-warning); background: #fffbeb; color: #b45309; }
+
+  .text-area-pro { width: 100%; padding: 0.75rem; border: 2px solid var(--pos-border); border-radius: var(--radius-sm); font-family: inherit; font-size: 1rem; outline: none; resize: vertical; transition: var(--transition-fast); }
+  .text-area-pro:focus { border-color: var(--pos-primary); }
+
+  /* Controles de Cantidad */
+  .qty-control { display: inline-flex; align-items: center; background: var(--pos-bg); border-radius: var(--radius-sm); border: 1px solid var(--pos-border); overflow: hidden; }
+  .qty-btn { background: transparent; border: none; padding: 0.5rem 0.75rem; cursor: pointer; font-weight: bold; font-size: 1.1rem; color: var(--pos-text-main); }
+  .qty-btn:hover { background: #e2e8f0; }
+  .qty-val { padding: 0 0.5rem; font-weight: 700; min-width: 2ch; text-align: center; }
+
+  /* Animación Toast */
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+
+<div class="pos-container">
+  
+  <!-- ================= HEADER & INFO DEL PEDIDO ================= -->
+  <div class="pos-card" style="border-top: 4px solid var(--pos-primary); border-radius: 0 0 var(--radius-md) var(--radius-md);">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+      <h2 class="text-h2">🧾 Pedido #{{ pedido.id }}</h2>
+      <div class="status-badge status-{{ pedido.estado }}">{{ pedido.estado }}</div>
     </div>
 
-    {% if pedido.estado == 'abierto' %}
-    <div class="card">
-      <div class="card-head flex-between">
-        <h3 class="m-0">Agregar productos</h3>
-        <span class="hint">Toca para sumar</span>
+    <div class="order-header-grid">
+      <!-- Módulo de Total -->
+      <div>
+        <div class="text-muted text-sm uppercase">Total Actual</div>
+        <div class="text-primary" style="font-size: 2.5rem; font-weight: 900; line-height: 1;">{{ pedido.total | money }}</div>
       </div>
 
-      <div class="productos-grid mt-sm">
-        {% for p in productos %}
-        <button type="button" class="producto-card" onclick='agregarProducto("{{ p.id }}", {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
-          <div class="producto-nombre">{{ p.nombre }}</div>
-          <div class="producto-meta mt-xs">
-            <span class="categoria">{{ p.categoria }}</span>
-            <span class="precio">{{ p.precio | money }}</span>
+      <!-- Módulo de WhatsApp (Edición Inteligente) -->
+      <div class="wa-module">
+        <div class="text-muted text-sm uppercase" style="margin-bottom: 0.25rem;">Cliente / WhatsApp</div>
+        
+        <!-- Vista de Lectura -->
+        <div id="waReadMode" class="{% if not pedido.telefono_whatsapp %}hidden{% endif %}">
+          <div class="flex-between">
+            <span class="text-h3" style="color: #065f46;">📱 <span id="waDisplayNumber">{{ pedido.telefono_whatsapp }}</span></span>
+            <button type="button" class="btn-ghost btn-icon" onclick="PosApp.toggleWaEdit(true)" title="Editar Número">✏️</button>
           </div>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div id="waEmptyMode" class="{% if pedido.telefono_whatsapp %}hidden{% endif %}">
+          <div class="flex-between">
+            <span class="text-muted italic">No registrado</span>
+            <button type="button" class="btn btn-ghost text-primary" style="padding: 0.25rem 0.5rem;" onclick="PosApp.toggleWaEdit(true)">+ Añadir Número</button>
+          </div>
+        </div>
+
+        <!-- Vista de Edición (Formulario Inline) -->
+        <form id="waEditMode" class="hidden" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
+          <div class="wa-input-group">
+            <input type="tel" name="nuevo_telefono" id="waInputNumber" class="wa-input" placeholder="Ej. 4491234567" pattern="[0-9]{10,12}" required>
+            <button type="submit" class="btn btn-success" style="padding: 0.5rem;">Guardar</button>
+            <button type="button" class="btn btn-ghost" style="padding: 0.5rem;" onclick="PosApp.toggleWaEdit(false)">✕</button>
+          </div>
+          <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">Presiona guardar para actualizar el pedido actual.</div>
+        </form>
+      </div>
+
+      <!-- Módulo de Acciones (Solo abierto) -->
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-ghost w-100" style="border: 1px solid var(--pos-border);" onclick="abrirTicketPreview({{ pedido.id }})">
+          📄 Visualizar Ticket
         </button>
-        {% endfor %}
+        
+        {% if pedido.estado == 'abierto' %}
+        <div style="display: flex; gap: 0.5rem;">
+          <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" class="w-100">
+            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('¿Estás seguro de cerrar el pedido SIN enviar notificación al cliente?')">
+              Cerrar Mudo
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" class="w-100">
+            <button type="submit" class="btn btn-success w-100" onclick="return PosApp.validateCloseWithWa('{{ pedido.telefono_whatsapp }}');">
+              📲 Cerrar + WA
+            </button>
+          </form>
+        </div>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
+  </div>
 
-  </section>
+  <!-- ================= LAYOUT PRINCIPAL (IZQ/DER) ================= -->
+  <div class="pos-layout">
+    
+    <!-- LADO IZQUIERDO: Productos guardados y Catálogo -->
+    <main>
+      
+      <!-- Tabla de Productos ya en DB -->
+      <section class="pos-card">
+        <div class="pos-card-header">
+          <h3 class="text-h3">Artículos Confirmados en Comanda</h3>
+        </div>
 
-  <!-- ================== LADO DERECHO (CARRITO) ================== -->
-  {% if pedido.estado == 'abierto' %}
-  <aside class="pos-right">
-
-    <div class="card card-sticky">
-      <div class="card-head flex-between align-center">
-        <h3 class="m-0">Carrito nuevo</h3>
-        <button type="button" class="btn-gray btn-sm" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-      </div>
-
-      <form method="post" class="mt-sm">
-        <div class="table-responsive">
-          <table id="carritoTable" class="pedido-table">
+        {% if items %}
+        <div style="overflow-x: auto;">
+          <table class="order-table">
             <thead>
               <tr>
-                <th>Producto</th>
-                <th class="text-center">Cant.</th>
-                <th>Total</th>
-                <th></th>
+                <th style="width: 50%;">Producto</th>
+                <th style="text-align: center;">Cant.</th>
+                <th>Precio</th>
+                <th style="text-align: right;">Subtotal</th>
+                {% if pedido.estado == 'abierto' %}<th></th>{% endif %}
               </tr>
             </thead>
             <tbody>
-              <!-- Dinámico vía JS -->
+              {% for it in items %}
+              <tr>
+                <td>
+                  <div style="font-weight: 700; font-size: 1.05rem;">{{ it.nombre }}</div>
+                  
+                  <!-- Renderizado PRO de Personalizaciones -->
+                  {% if it.salsa or it.proteina or it.sin or it.nota %}
+                  <div class="mod-tags">
+                    {% if it.proteina %}<span class="mod-tag">🥩 {{ it.proteina }}</span>{% endif %}
+                    {% if it.salsa %}<span class="mod-tag">🌶️ {{ it.salsa }}</span>{% endif %}
+                    {% if it.sin %}<span class="mod-tag danger">🚫 Sin {{ it.sin }}</span>{% endif %}
+                    {% if it.nota %}<span class="mod-tag note">📝 {{ it.nota }}</span>{% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+                <td style="text-align: center; font-weight: 700;">x{{ it.cantidad }}</td>
+                <td class="text-muted">{{ it.precio_unitario | money }}</td>
+                <td style="text-align: right; font-weight: 800;">{{ it.subtotal | money }}</td>
+                
+                {% if pedido.estado == 'abierto' %}
+                <td style="text-align: center; vertical-align: middle;">
+                  <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" style="margin:0;">
+                    <button type="submit" class="btn btn-ghost btn-icon text-danger" title="Eliminar" onclick="return confirm('¿Quitar este platillo de la comanda?')">
+                      <i class="fa-solid fa-trash-can"></i> ✕
+                    </button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: var(--pos-text-muted); font-style: italic;">
+          Aún no hay platillos procesados en este pedido.
+        </div>
+        {% endif %}
+      </section>
 
-        <div class="total-box mt-md">
-          <div class="font-bold">Total a agregar:</div>
-          <div class="total-amount text-primary" id="totalPedido">$0.00</div>
+      <!-- Grid de Catálogo (Solo para agregar más si está abierto) -->
+      {% if pedido.estado == 'abierto' %}
+      <section class="pos-card" style="border-color: var(--pos-primary);">
+        <div class="pos-card-header flex-between">
+          <h3 class="text-h3">Catálogo <span class="text-muted" style="font-size: 0.9rem; font-weight: normal;">| Toca para agregar al carrito</span></h3>
+        </div>
+        
+        <div class="product-grid">
+          {% for p in productos %}
+          <div class="product-card js-add-product" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio }}" data-cat="{{ p.categoria or '' }}">
+            <div class="product-title">{{ p.nombre }}</div>
+            <div class="flex-between mt-auto">
+              <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase;">{{ p.categoria }}</span>
+              <span class="text-primary">{{ p.precio | money }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </main>
+
+    <!-- LADO DERECHO: Carrito en Memoria (Nuevas adiciones) -->
+    {% if pedido.estado == 'abierto' %}
+    <aside class="pos-sidebar">
+      <div class="pos-card" style="box-shadow: var(--shadow-md);">
+        <div class="pos-card-header flex-between">
+          <h3 class="text-h3">Nuevas Adiciones</h3>
+          <button type="button" class="btn btn-ghost btn-icon text-primary" onclick="PosApp.showKitchenPreview()" title="Vista Cocina">👨‍🍳</button>
         </div>
 
-        <div id="inputsHidden"></div>
+        <form method="post" id="newItemsForm" action="{{ url_for('agregar_items_a_pedido', pedido_id=pedido.id) }}">
+          
+          <!-- Contenedor dinámico del carrito -->
+          <div id="cartContainer" style="min-height: 150px; max-height: 50vh; overflow-y: auto; margin-bottom: 1rem;">
+            <!-- Renderizado por JS -->
+            <div class="text-center text-muted" style="padding: 2rem 0;">Carrito vacío. Agrega productos del catálogo.</div>
+          </div>
 
-        <button type="submit" class="btn-guardar mt-sm w-100">
-          ➕ Confirmar y Guardar
-        </button>
-      </form>
-    </div>
+          <div style="border-top: 2px dashed var(--pos-border); padding-top: 1rem; margin-bottom: 1.5rem;">
+            <div class="flex-between">
+              <span class="text-muted font-bold uppercase text-sm">Subtotal Extra</span>
+              <span id="cartSubtotal" class="text-primary" style="font-size: 1.5rem; font-weight: 900;">$0.00</span>
+            </div>
+          </div>
 
-  </aside>
-  {% endif %}
+          <!-- Inputs ocultos para enviar la data estructurada al backend -->
+          <div id="cartHiddenInputs"></div>
 
-</div>
+          <button type="submit" id="btnSaveCart" class="btn btn-primary w-100" style="padding: 1rem; font-size: 1.1rem;" disabled>
+            💾 Confirmar y Agregar al Pedido
+          </button>
+        </form>
+      </div>
+    </aside>
+    {% endif %}
 
-<!-- ================== MODAL TICKET ================== -->
-<div id="ticketModal" class="modal">
-  <div class="modal-box monospace">
-    <button type="button" class="modal-close" onclick="toggleModal('ticketModal', false)">✕</button>
-    <h3 class="mt-0">Preview del ticket</h3>
-    <pre id="ticketTexto" class="ticket-preview"></pre>
-    <a id="btnWhatsapp" target="_blank" class="btn-whatsapp w-100 text-center mt-sm">
-      📲 Enviar por WhatsApp
-    </a>
   </div>
 </div>
 
-<!-- ================== MODAL PERSONALIZACIÓN ================== -->
-<div id="customModal" class="modal">
-  <div class="modal-box">
-    <button type="button" class="modal-close" onclick="cerrarCustomModal()">✕</button>
 
-    <h3 class="mt-0">Personalizar</h3>
-    <p class="hint mt-0" id="customProductoNombre"></p>
+<!-- ================= MODALES PRO ================= -->
 
-    <div class="custom-section">
-      <label><strong>Salsa</strong> <span class="hint text-sm">(Opcional)</span></label>
-      <div id="salsaRadios" class="custom-grid"></div>
+<!-- Modal: Personalización de Platillo -->
+<div id="modalCustomization" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <h3 class="text-h3">Personalizar Platillo</h3>
+        <div id="modalProdName" class="text-primary" style="font-weight: 700; margin-top: 0.25rem;">Nombre</div>
+      </div>
+      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalCustomization')">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Proteínas -->
+      <div style="margin-bottom: 1.5rem;">
+        <label class="text-muted font-bold text-sm uppercase">Selecciona Proteína</label>
+        <div class="pill-group" id="renderProteinas"></div>
+      </div>
+
+      <!-- Salsas -->
+      <div style="margin-bottom: 1.5rem;">
+        <label class="text-muted font-bold text-sm uppercase">Baña con Salsa <span style="text-transform: none; font-weight: normal;">(Opcional)</span></label>
+        <div class="pill-group" id="renderSalsas"></div>
+      </div>
+
+      <!-- Quitar Ingredientes -->
+      <div style="margin-bottom: 1.5rem;">
+        <label class="text-muted font-bold text-sm uppercase">Excluir Ingredientes</label>
+        <div class="pill-group" id="renderSin"></div>
+      </div>
+
+      <!-- Notas -->
+      <div>
+        <label class="text-muted font-bold text-sm uppercase" style="display:block; margin-bottom: 0.5rem;">Instrucciones Especiales para Cocina</label>
+        <textarea id="modalNotes" class="text-area-pro" rows="2" placeholder="Ej. salsa aparte, bien dorados, aguacate extra..."></textarea>
+      </div>
     </div>
 
-    <div class="custom-section">
-      <label><strong>Proteína</strong></label>
-      <div id="proteinaRadios" class="custom-grid"></div>
-    </div>
-
-    <div class="custom-section">
-      <label><strong>Quitar</strong> <span class="hint text-sm">(Ingredientes)</span></label>
-      <div id="sinChecks" class="custom-grid"></div>
-    </div>
-
-    <div class="custom-section">
-      <label><strong>Notas adicionales</strong></label>
-      <textarea id="notaInput" rows="3" class="w-100 mt-xs" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
-    </div>
-
-    <div class="modal-actions mt-md">
-      <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
-      <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar Cambios</button>
-    </div>
-  </div>
-</div>
-
-<!-- ================== VISTA COCINA (OVERLAY) ================== -->
-<div id="cocinaModal" class="modal">
-  <div class="modal-box">
-    <button type="button" class="modal-close" onclick="toggleModal('cocinaModal', false)">✕</button>
-
-    <h3 class="mt-0">Comanda (Vista cocina)</h3>
-    <p class="hint mt-0">Pedido #{{ pedido.id }}</p>
-
-    <div id="cocinaBody" class="mt-sm"></div>
-
-    <div class="modal-actions mt-md">
-      <button type="button" class="btn-gray" onclick="window.print()">🖨️ Imprimir</button>
-      <button type="button" class="btn-primary" onclick="toggleModal('cocinaModal', false)">Cerrar</button>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="PosApp.closeModal('modalCustomization')">Cancelar</button>
+      <button type="button" class="btn btn-primary" onclick="PosApp.saveCustomization()">Guardar Cambios</button>
     </div>
   </div>
 </div>
 
-<style>
-/* ====== Utilidades ====== */
-.m-0 { margin: 0; }
-.mt-0 { margin-top: 0; }
-.mt-xs { margin-top: 4px; }
-.mt-sm { margin-top: 8px; }
-.mt-md { margin-top: 16px; }
-.mb-md { margin-bottom: 16px; }
-.py-md { padding-top: 16px; padding-bottom: 16px; }
-.w-100 { width: 100%; box-sizing: border-box; }
-.inline-form { display: inline-block; margin: 0; }
-.flex-row { display: flex; align-items: center; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.flex-wrap { flex-wrap: wrap; }
-.gap-xs { gap: 4px; }
-.gap-sm { gap: 8px; }
-.gap-md { gap: 16px; }
-.text-center { text-align: center; }
-.text-primary { color: var(--primary-color, #2b6cb0); }
-.text-sm { font-size: 0.85rem; }
-.font-bold { font-weight: bold; }
-.btn-icon { padding: 4px 8px; font-size: 1rem; }
+<!-- Modal: Vista Cocina (Preview) -->
+<div id="modalKitchen" class="modal-overlay">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3 class="text-h3">Ticket de Cocina (Preview)</h3>
+      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalKitchen')">✕</button>
+    </div>
+    <div class="modal-body" style="font-family: monospace; background: #fffbeb;">
+      <div id="kitchenContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="btn btn-primary" onclick="PosApp.closeModal('modalKitchen')">Cerrar</button>
+    </div>
+  </div>
+</div>
 
-/* ====== Layout responsive (iPad) ====== */
-@media (max-width: 1100px){
-  .pos-layout { display: flex; flex-direction: column; gap: 16px; }
-  .pos-left, .pos-right { width: 100%; }
-  .card-sticky { position: static !important; top: auto !important; }
-}
-
-/* ====== Tablas y contenedores ====== */
-.table-responsive { width: 100%; overflow-x: auto; }
-.pos-layout, .card, #carritoTable, .modal-box { max-width: 100%; }
-body { overflow-x: hidden; }
-
-.pedido-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-.pedido-table th, .pedido-table td {
-  padding: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: top;
-  border-bottom: 1px solid #eee;
-}
-.pedido-table th { background: #f9fafb; font-size: 0.9rem; text-align: left; }
-.pedido-table td.td-left, .pedido-table td:first-child {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* ====== Meta modificadores ====== */
-.cocina-meta { display: flex; flex-direction: column; gap: 6px; }
-.tag {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  font-weight: 700;
-  font-size: 0.8rem;
-  color: #374151;
-}
-.tag-warn { background: #fef3c7; border-color: #fde68a; color: #92400e; }
-.nota {
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px dashed #d1d5db;
-  background: #f9fafb;
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-
-/* ====== Grid personalización ====== */
-.custom-section { margin-top: 16px; }
-.custom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 8px; }
-.custom-pill { 
-  border: 1px solid #d1d5db; 
-  border-radius: 8px; 
-  padding: 10px 12px; 
-  display: flex; 
-  gap: 8px; 
-  align-items: center; 
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.custom-pill:hover { background: #f3f4f6; }
-.custom-pill input:checked + span { font-weight: bold; color: var(--primary-color, #2b6cb0); }
-
-/* ====== Modales ====== */
-.modal {
-  position: fixed;
-  inset: 0;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,0.5);
-  z-index: 2147483647;
-  padding: 16px;
-  box-sizing: border-box;
-  overscroll-behavior: contain;
-  backdrop-filter: blur(2px);
-}
-.modal.is-open { display: flex; animation: fadeIn 0.2s ease-out; }
-
-.modal-box {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  width: min(640px, 100%);
-  max-height: calc(var(--vh, 1vh) * 90);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  position: relative;
-}
-@media (max-width: 768px){
-  .modal { align-items: flex-end; padding: 0; }
-  .modal-box {
-    border-radius: 16px 16px 0 0;
-    max-height: calc(var(--vh, 1vh) * 92);
-    padding: 16px;
-  }
-}
-.modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  border: none;
-  background: #f3f4f6;
-  color: #374151;
-  font-size: 1.2rem;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-.modal-close:hover { background: #e5e7eb; }
-.modal-actions {
-  position: sticky;
-  bottom: -20px; /* Ajuste por el padding del modal */
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(4px);
-  padding: 16px 0;
-  margin-bottom: -20px;
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  border-top: 1px solid #f3f4f6;
-}
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-
+<!-- ================= LÓGICA JAVASCRIPT PRO ================= -->
 <script>
-/* ===== Fix vh real en iPad/iPhone ===== */
-function setVH(){
-  const vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
-}
-setVH();
-window.addEventListener('resize', setVH);
-window.addEventListener('orientationchange', setVH);
-
-/* ===== Utilidad de Modales ===== */
-function toggleModal(modalId, show) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-  
-  if (show) {
-    setVH();
-    document.body.style.overflow = "hidden";
-    modal.classList.add("is-open");
-  } else {
-    document.body.style.overflow = "";
-    modal.classList.remove("is-open");
-  }
-}
-
-/* ===== Confirmar cierre con WhatsApp ===== */
-function confirmarCerrarWhatsApp(){
-  const tel = "{{ (pedido.telefono_whatsapp or '')|e }}";
-  if (!tel){
-    alert("Este pedido no tiene WhatsApp registrado. Agrega el teléfono al crear el pedido o ciérralo sin enviar.");
-    return false;
-  }
-  return confirm("¿Cerrar pedido y mandar WhatsApp con el ticket y promoción de totopos?");
-}
-
-/* ===== Datos desde backend ===== */
-const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
-const SALSAS_DB    = {{ (salsas or [])|tojson }};
-
-function escapeHtml(str){
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-/* Mapear ID por nombre */
-function mapIdByNombre(arr, nombre){
-  const n = String(nombre || "").trim().toLowerCase();
-  const match = (arr || []).find(it => String(it.nombre || "").trim().toLowerCase() === n);
-  return match ? match.id : "";
-}
-
-/* ===== Config modificadores ===== */
-const PROTEINAS = ["Pollo", "Arrachera", "Chorizo", "Cochinita", "Huevo", "Sin proteína"];
-const SIN_OPCIONES = ["Cebolla", "Crema", "Queso", "Aguacate"];
-const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
-const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
-
-function normaliza(str){ return String(str || "").trim().toLowerCase(); }
-
-function productoTieneModificadores(nombre, categoria){
-  const cat = normaliza(categoria);
-  const nom = normaliza(nombre);
-
-  if (NO_MOD_CATEGORIAS.some(c => cat.includes(c))) return false;
-  if (NO_MOD_KEYWORDS.some(kw => nom.includes(kw))) return false;
-  return true;
-}
-
-function uidLinea(producto_id){
-  return `${producto_id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-let carrito = {}; // carrito[uid]
-let modalState = { producto_id: null, nombre: "", precio: 0, uid: null };
-
-/* ===== Agregar producto ===== */
-function agregarProducto(producto_id, nombre, precio, categoria){
-  const uid = uidLinea(producto_id);
-
-  if (!productoTieneModificadores(nombre, categoria)){
-    carrito[uid] = {
-      producto_id, nombre, precio: Number(precio), cantidad: 1,
-      custom: { salsa: "", salsa_id: "", proteina: "", proteina_id: "", sin: [], nota: "" }
+/**
+ * Clase PosApp: Encapsula la lógica del frontend usando patrones modernos.
+ * Evita variables globales sueltas y proporciona un flujo estructurado.
+ */
+class PosManager {
+  constructor(config) {
+    // Configuración inyectada desde Jinja
+    this.db = {
+      proteinas: config.proteinas || [],
+      salsas: config.salsas || [],
+      sinOpciones: ["Cebolla", "Crema", "Queso", "Aguacate"],
+      noModCats: ["bebidas", "extras", "postres"],
+      noModWords: ["coca", "agua", "cafe", "refresco", "jugo"]
     };
-    renderCarrito();
-    return;
+    
+    // Estado de la aplicación
+    this.cart = new Map(); // Map garantiza orden de inserción y búsquedas rápidas por UID
+    this.activeItemUid = null;
+    
+    // Formateador de moneda nativo de JS
+    this.formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    
+    this.init();
   }
 
-  modalState = { producto_id, nombre, precio: Number(precio), uid };
-  abrirCustomModal();
-}
+  init() {
+    this.bindEvents();
+  }
 
-/* ===== Modal personalización ===== */
-function abrirCustomModal(){
-  document.getElementById("customProductoNombre").innerText = modalState.nombre;
-
-  // Render Salsas
-  const salsaRadios = document.getElementById("salsaRadios");
-  let salsasHtml = `
-    <label class="custom-pill">
-      <input type="radio" name="salsa_radio" value="" checked>
-      <span>— (Sin salsa)</span>
-    </label>
-  `;
-  (SALSAS_DB || []).forEach(s => {
-    salsasHtml += `
-      <label class="custom-pill">
-        <input type="radio" name="salsa_radio" value="${escapeHtml(s.nombre)}">
-        <span>${escapeHtml(s.nombre)}</span>
-      </label>
-    `;
-  });
-  salsaRadios.innerHTML = salsasHtml;
-
-  // Render Proteínas
-  const proteinaRadios = document.getElementById("proteinaRadios");
-  proteinaRadios.innerHTML = PROTEINAS.map((p, idx) => `
-    <label class="custom-pill">
-      <input type="radio" name="proteina_radio" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''}>
-      <span>${escapeHtml(p)}</span>
-    </label>
-  `).join('');
-
-  // Render Excluir (Sin)
-  const sinChecks = document.getElementById("sinChecks");
-  sinChecks.innerHTML = SIN_OPCIONES.map(s => `
-    <label class="custom-pill">
-      <input type="checkbox" name="sin_check" value="${escapeHtml(s)}">
-      <span>Sin ${escapeHtml(s)}</span>
-    </label>
-  `).join('');
-
-  document.getElementById("notaInput").value = "";
-  toggleModal('customModal', true);
-}
-
-function cerrarCustomModal(){
-  toggleModal('customModal', false);
-  modalState = { producto_id: null, nombre: "", precio: 0, uid: null };
-}
-
-function confirmarCustom(){
-  const salsaEl = document.querySelector("input[name='salsa_radio']:checked");
-  const salsa = salsaEl ? salsaEl.value : "";
-  const salsa_id = salsa ? mapIdByNombre(SALSAS_DB, salsa) : "";
-
-  const protEl = document.querySelector("input[name='proteina_radio']:checked");
-  const proteina = protEl ? protEl.value : "";
-  const proteina_id = proteina ? mapIdByNombre(PROTEINAS_DB, proteina) : "";
-
-  const sin = Array.from(document.querySelectorAll("input[name='sin_check']:checked")).map(x => x.value);
-  const nota = document.getElementById("notaInput").value.trim();
-
-  carrito[modalState.uid] = {
-    producto_id: modalState.producto_id,
-    nombre: modalState.nombre,
-    precio: Number(modalState.precio),
-    cantidad: 1,
-    custom: { salsa, salsa_id, proteina, proteina_id, sin, nota }
-  };
-
-  cerrarCustomModal();
-  renderCarrito();
-}
-
-/* ===== Controles carrito ===== */
-const updateQty = (uid, delta) => {
-  if (!carrito[uid]) return;
-  carrito[uid].cantidad += delta;
-  if (carrito[uid].cantidad <= 0) delete carrito[uid];
-  renderCarrito();
-};
-
-const eliminarProducto = (uid) => {
-  delete carrito[uid];
-  renderCarrito();
-};
-
-function editarLinea(uid){
-  const it = carrito[uid];
-  if (!it) return;
-
-  modalState = { producto_id: it.producto_id, nombre: it.nombre, precio: it.precio, uid };
-  abrirCustomModal();
-
-  const c = it.custom || {};
-  
-  // Set values
-  document.querySelectorAll("input[name='salsa_radio']").forEach(r => r.checked = (r.value === (c.salsa || "")));
-  document.querySelectorAll("input[name='proteina_radio']").forEach((r, idx) => r.checked = (r.value === (c.proteina || "")) || (!c.proteina && idx === 0));
-  
-  const setSin = new Set(c.sin || []);
-  document.querySelectorAll("input[name='sin_check']").forEach(chk => chk.checked = setSin.has(chk.value));
-  
-  document.getElementById("notaInput").value = c.nota || "";
-}
-
-/* ===== Render + hidden inputs ===== */
-function renderCarrito(){
-  const tbody = document.querySelector("#carritoTable tbody");
-  const hidden = document.getElementById("inputsHidden");
-  let total = 0;
-  
-  let rowsHtml = "";
-  let hiddenHtml = "";
-
-  Object.entries(carrito).forEach(([uid, it]) => {
-    const subtotal = it.precio * it.cantidad;
-    total += subtotal;
-    const c = it.custom || {};
-
-    let metaHtml = "";
-    if (c.salsa || c.proteina || (c.sin && c.sin.length) || c.nota){
-      metaHtml = `<div class="cocina-meta mt-xs">
-        ${c.salsa ? `<div><span class="tag">SALSA: ${escapeHtml(c.salsa)}</span></div>` : ''}
-        ${c.proteina ? `<div><span class="tag">PROT: ${escapeHtml(c.proteina)}</span></div>` : ''}
-        ${c.sin && c.sin.length ? `<div><span class="tag tag-warn">SIN: ${escapeHtml(c.sin.join(", "))}</span></div>` : ''}
-        ${c.nota ? `<div class="nota"><strong>NOTA:</strong> ${escapeHtml(c.nota)}</div>` : ''}
-      </div>`;
+  bindEvents() {
+    // Delegación de eventos para el grid de productos (Performance PRO)
+    const grid = document.querySelector('.product-grid');
+    if(grid) {
+      grid.addEventListener('click', (e) => {
+        const card = e.target.closest('.js-add-product');
+        if (card) this.handleProductClick(card.dataset);
+      });
     }
 
-    rowsHtml += `
-      <tr>
-        <td class="td-left">
-          <strong>${escapeHtml(it.nombre)}</strong>
-          ${metaHtml}
-          <div class="mt-sm">
-            <button type="button" class="btn-gray btn-sm" onclick="editarLinea('${uid}')">✏️ Editar</button>
+    // Cerrar modales clickeando el overlay oscuro
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('mousedown', (e) => {
+        if(e.target === overlay) this.closeModal(overlay.id);
+      });
+    });
+  }
+
+  // --- LÓGICA DE WHATSAPP ---
+  toggleWaEdit(show) {
+    const read = document.getElementById('waReadMode');
+    const empty = document.getElementById('waEmptyMode');
+    const form = document.getElementById('waEditMode');
+    const input = document.getElementById('waInputNumber');
+    const currentNumber = document.getElementById('waDisplayNumber');
+
+    if (show) {
+      read.classList.add('hidden');
+      empty.classList.add('hidden');
+      form.classList.remove('hidden');
+      if(currentNumber) input.value = currentNumber.innerText;
+      input.focus();
+    } else {
+      form.classList.add('hidden');
+      if (currentNumber && currentNumber.innerText.trim() !== '') {
+        read.classList.remove('hidden');
+      } else {
+        empty.classList.remove('hidden');
+      }
+    }
+  }
+
+  validateCloseWithWa(currentPhone) {
+    if (!currentPhone || currentPhone.trim() === 'None' || currentPhone.trim() === '') {
+      alert('⚠️ ATENCIÓN: No hay un número de WhatsApp registrado en este pedido.\n\nPor favor, añade el número en el recuadro verde superior antes de cerrar el pedido para poder enviar el mensaje.');
+      this.toggleWaEdit(true);
+      return false; // Bloquea el submit
+    }
+    return confirm('Se cerrará la comanda y se enviará la notificación automática al cliente.\n¿Continuar?');
+  }
+
+  // --- LÓGICA DEL CARRITO ---
+  generateUid() {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  }
+
+  needsCustomization(nombre, cat) {
+    const n = (nombre || '').toLowerCase();
+    const c = (cat || '').toLowerCase();
+    if (this.db.noModCats.some(kw => c.includes(kw))) return false;
+    if (this.db.noModWords.some(kw => n.includes(kw))) return false;
+    return true;
+  }
+
+  handleProductClick(dataset) {
+    const { id, nombre, precio, cat } = dataset;
+    const uid = this.generateUid();
+    
+    const item = {
+      id, nombre, 
+      precio: parseFloat(precio), 
+      cantidad: 1,
+      custom: { proteina: "", salsa: "", sin: [], nota: "" }
+    };
+
+    if (this.needsCustomization(nombre, cat)) {
+      this.cart.set(uid, item);
+      this.openCustomizationModal(uid);
+    } else {
+      this.cart.set(uid, item);
+      this.updateCartUI();
+    }
+  }
+
+  updateQty(uid, delta) {
+    const item = this.cart.get(uid);
+    if (!item) return;
+    
+    item.cantidad += delta;
+    if (item.cantidad <= 0) {
+      this.cart.delete(uid);
+    }
+    this.updateCartUI();
+  }
+
+  removeItem(uid) {
+    this.cart.delete(uid);
+    this.updateCartUI();
+  }
+
+  // --- MODAL DE PERSONALIZACIÓN ---
+  openCustomizationModal(uid) {
+    this.activeItemUid = uid;
+    const item = this.cart.get(uid);
+    
+    document.getElementById('modalProdName').innerText = item.nombre;
+
+    // Render Proteínas (Radio)
+    document.getElementById('renderProteinas').innerHTML = `
+      <label class="pill-label">
+        <input type="radio" name="mod_prot" value="" class="pill-input" ${!item.custom.proteina ? 'checked' : ''}>
+        <span class="pill-content">Ninguna</span>
+      </label>
+      ${this.db.proteinas.map(p => `
+        <label class="pill-label">
+          <input type="radio" name="mod_prot" value="${p.nombre}" class="pill-input" ${item.custom.proteina === p.nombre ? 'checked' : ''}>
+          <span class="pill-content">${p.nombre}</span>
+        </label>
+      `).join('')}
+    `;
+
+    // Render Salsas (Radio)
+    document.getElementById('renderSalsas').innerHTML = `
+      <label class="pill-label">
+        <input type="radio" name="mod_salsa" value="" class="pill-input" ${!item.custom.salsa ? 'checked' : ''}>
+        <span class="pill-content">Sin Salsa</span>
+      </label>
+      ${this.db.salsas.map(s => `
+        <label class="pill-label">
+          <input type="radio" name="mod_salsa" value="${s.nombre}" class="pill-input" ${item.custom.salsa === s.nombre ? 'checked' : ''}>
+          <span class="pill-content">${s.nombre}</span>
+        </label>
+      `).join('')}
+    `;
+
+    // Render Exclusiones (Checkboxes)
+    document.getElementById('renderSin').innerHTML = this.db.sinOpciones.map(opt => `
+      <label class="pill-label">
+        <input type="checkbox" name="mod_sin" value="${opt}" class="pill-input" ${item.custom.sin.includes(opt) ? 'checked' : ''}>
+        <span class="pill-content">Sin ${opt}</span>
+      </label>
+    `).join('');
+
+    document.getElementById('modalNotes').value = item.custom.nota || "";
+
+    this.showModal('modalCustomization');
+  }
+
+  saveCustomization() {
+    if (!this.activeItemUid) return;
+    const item = this.cart.get(this.activeItemUid);
+    
+    const protEl = document.querySelector('input[name="mod_prot"]:checked');
+    const salsaEl = document.querySelector('input[name="mod_salsa"]:checked');
+    const sinEls = Array.from(document.querySelectorAll('input[name="mod_sin"]:checked'));
+    
+    item.custom = {
+      proteina: protEl ? protEl.value : "",
+      salsa: salsaEl ? salsaEl.value : "",
+      sin: sinEls.map(el => el.value),
+      nota: document.getElementById('modalNotes').value.trim()
+    };
+
+    this.closeModal('modalCustomization');
+    this.updateCartUI();
+  }
+
+  // --- RENDERIZADO DEL DOM ---
+  updateCartUI() {
+    const container = document.getElementById('cartContainer');
+    const hiddenContainer = document.getElementById('cartHiddenInputs');
+    const btnSave = document.getElementById('btnSaveCart');
+    const subtotalEl = document.getElementById('cartSubtotal');
+    
+    let html = '';
+    let hiddenHtml = '';
+    let subtotal = 0;
+
+    if (this.cart.size === 0) {
+      container.innerHTML = '<div class="text-center text-muted" style="padding: 2rem 0;">No hay adiciones nuevas.</div>';
+      hiddenContainer.innerHTML = '';
+      subtotalEl.innerText = '$0.00';
+      btnSave.disabled = true;
+      return;
+    }
+
+    this.cart.forEach((item, uid) => {
+      const lineTotal = item.precio * item.cantidad;
+      subtotal += lineTotal;
+      const c = item.custom;
+
+      // Generar Tags Visuales
+      let tags = '';
+      if (c.proteina) tags += `<span class="mod-tag">🥩 ${c.proteina}</span>`;
+      if (c.salsa) tags += `<span class="mod-tag">🌶️ ${c.salsa}</span>`;
+      if (c.sin.length) tags += `<span class="mod-tag danger">🚫 Sin ${c.sin.join(', ')}</span>`;
+      if (c.nota) tags += `<span class="mod-tag note">📝 ${c.nota}</span>`;
+
+      html += `
+        <div style="border-bottom: 1px solid var(--pos-border); padding: 1rem 0;">
+          <div class="flex-between" style="align-items: flex-start; margin-bottom: 0.5rem;">
+            <div style="flex:1; padding-right: 1rem;">
+              <div style="font-weight: 700;">${item.nombre}</div>
+              <div class="mod-tags">${tags}</div>
+              <button type="button" class="btn-ghost text-sm" style="padding:0; margin-top:0.5rem;" onclick="PosApp.openCustomizationModal('${uid}')"><i class="fa-solid fa-pen"></i> Editar mod</button>
+            </div>
+            <div style="font-weight: 800;">${this.formatter.format(lineTotal)}</div>
           </div>
-        </td>
-        <td>
-          <div class="flex-row gap-xs" style="justify-content:center;">
-            <button type="button" class="btn-gray btn-icon" onclick="updateQty('${uid}', -1)">–</button>
-            <span style="min-width:24px; text-align:center; font-weight:bold;">${it.cantidad}</span>
-            <button type="button" class="btn-gray btn-icon" onclick="updateQty('${uid}', 1)">+</button>
+          <div class="flex-between mt-sm">
+            <div class="qty-control">
+              <button type="button" class="qty-btn" onclick="PosApp.updateQty('${uid}', -1)">−</button>
+              <span class="qty-val">${item.cantidad}</span>
+              <button type="button" class="qty-btn" onclick="PosApp.updateQty('${uid}', 1)">+</button>
+            </div>
+            <button type="button" class="btn-ghost btn-icon text-danger" onclick="PosApp.removeItem('${uid}')">✕</button>
           </div>
-        </td>
-        <td><strong>$${subtotal.toFixed(2)}</strong></td>
-        <td class="text-center">
-          <button type="button" class="btn-red btn-icon" onclick="eliminarProducto('${uid}')">✕</button>
-        </td>
-      </tr>
-    `;
-
-    hiddenHtml += `
-      <input type="hidden" name="producto_id[]" value="${escapeHtml(it.producto_id)}">
-      <input type="hidden" name="cantidad[]" value="${escapeHtml(it.cantidad)}">
-      <input type="hidden" name="proteina[]" value="${escapeHtml(c.proteina || "")}">
-      <input type="hidden" name="sin[]" value="${escapeHtml((c.sin || []).join(","))}">
-      <input type="hidden" name="nota[]" value="${escapeHtml(c.nota || "")}">
-      <input type="hidden" name="proteina_id[]" value="${escapeHtml(c.proteina_id || "")}">
-      <input type="hidden" name="salsa_id[]" value="${escapeHtml(c.salsa_id || "")}">
-    `;
-  });
-
-  if(Object.keys(carrito).length === 0) {
-    rowsHtml = `<tr><td colspan="4" class="text-center py-md hint">Carrito vacío</td></tr>`;
-  }
-
-  tbody.innerHTML = rowsHtml;
-  hidden.innerHTML = hiddenHtml;
-  document.getElementById("totalPedido").innerText = `$${total.toFixed(2)}`;
-}
-
-/* ===== Ticket modal ===== */
-function abrirTicketPreview(id){
-  fetch(`/pedido/${id}/ticket_preview`)
-    .then(r => r.json())
-    .then(d => {
-      document.getElementById("ticketTexto").innerText = d.texto;
-      document.getElementById("btnWhatsapp").href = d.whatsapp_url;
-      toggleModal('ticketModal', true);
-    })
-    .catch(err => console.error("Error al obtener ticket:", err));
-}
-
-/* ===== Vista cocina ===== */
-function abrirVistaCocina(){
-  const body = document.getElementById("cocinaBody");
-  const entries = Object.values(carrito);
-
-  if (!entries.length){
-    body.innerHTML = "<p class='hint text-center py-md'>No hay productos nuevos en el carrito.</p>";
-    toggleModal('cocinaModal', true);
-    return;
-  }
-
-  body.innerHTML = entries.map(it => {
-    const c = it.custom || {};
-    return `
-      <div style="border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:12px; background:#f9fafb;">
-        <div class="flex-between align-center">
-          <div style="font-size:1.1rem; font-weight:800;">${escapeHtml(it.nombre)}</div>
-          <div style="font-size:1.1rem; font-weight:800; background:#e5e7eb; padding:2px 8px; border-radius:6px;">x${it.cantidad}</div>
         </div>
-        <div class="cocina-meta mt-sm">
-          <div><span class="tag">SALSA: ${c.salsa ? escapeHtml(c.salsa) : '—'}</span></div>
-          <div><span class="tag">PROT: ${c.proteina ? escapeHtml(c.proteina) : '—'}</span></div>
-          <div><span class="tag ${c.sin && c.sin.length ? 'tag-warn' : ''}">SIN: ${c.sin && c.sin.length ? escapeHtml(c.sin.join(", ")) : '—'}</span></div>
-          ${c.nota ? `<div class="nota mt-xs"><strong>NOTA:</strong> ${escapeHtml(c.nota)}</div>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  toggleModal('cocinaModal', true);
+      `;
+
+      // Inputs ocultos para el POST de Flask
+      hiddenHtml += `
+        <input type="hidden" name="producto_id[]" value="${item.id}">
+        <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+        <input type="hidden" name="proteina[]" value="${c.proteina}">
+        <input type="hidden" name="salsa[]" value="${c.salsa}">
+        <input type="hidden" name="sin[]" value="${c.sin.join(',')}">
+        <input type="hidden" name="nota[]" value="${c.nota}">
+      `;
+    });
+
+    container.innerHTML = html;
+    hiddenContainer.innerHTML = hiddenHtml;
+    subtotalEl.innerText = this.formatter.format(subtotal);
+    btnSave.disabled = false;
+  }
+
+  showKitchenPreview() {
+    const container = document.getElementById('kitchenContent');
+    if (this.cart.size === 0) {
+      container.innerHTML = "<div>No hay productos nuevos para enviar a cocina.</div>";
+    } else {
+      let html = "";
+      this.cart.forEach((item) => {
+        const c = item.custom;
+        html += `<div style="border-bottom: 1px dashed #ccc; padding: 10px 0;">
+          <strong>[ ${item.cantidad} ] x ${item.nombre.toUpperCase()}</strong><br>
+          ${c.salsa ? `>> SALSA: ${c.salsa}<br>` : ''}
+          ${c.proteina ? `>> PROT: ${c.proteina}<br>` : ''}
+          ${c.sin.length ? `>> SIN: ${c.sin.join(', ')}<br>` : ''}
+          ${c.nota ? `>> NOTA: ${c.nota}<br>` : ''}
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+    this.showModal('modalKitchen');
+  }
+
+  // --- UTILS ---
+  showModal(id) { document.getElementById(id).classList.add('active'); }
+  closeModal(id) { 
+    document.getElementById(id).classList.remove('active');
+    // Si cerramos personalización y es un item recién creado sin confirmar, lo limpiamos para evitar basura en el carrito
+    if(id === 'modalCustomization' && this.activeItemUid) {
+      const item = this.cart.get(this.activeItemUid);
+      // Validamos si no se ha guardado nunca su custom.
+      if(!item.custom.proteina && !item.custom.salsa && item.custom.sin.length===0 && !item.custom.nota){
+          // Como requerimos click en Guardar para confirmar, en un flujo más estricto podríamos borrarlo. 
+          // Por usabilidad, lo dejamos en el carrito como "Natural".
+      }
+      this.activeItemUid = null;
+    }
+  }
 }
 
-/* ===== Cerrar Modales al click fuera ===== */
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains('modal') && e.target.classList.contains('is-open')) {
-    toggleModal(e.target.id, false);
-    if(e.target.id === 'customModal') modalState = { producto_id: null, nombre: "", precio: 0, uid: null };
-  }
+// Inicialización segura inyectando datos desde Jinja
+const PosApp = new PosManager({
+  proteinas: {{ proteinas | tojson | safe | default('[]') }},
+  salsas: {{ salsas | tojson | safe | default('[]') }}
 });
 </script>
 
