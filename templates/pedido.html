@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- Variables de diseño (Sistema PRO) -->
 <style>
   :root {
     --pos-primary: #0ea5e9;
@@ -46,6 +45,7 @@
   .flex-between { display: flex; justify-content: space-between; align-items: center; }
   .flex-row { display: flex; align-items: center; gap: 0.75rem; }
   .w-100 { width: 100%; }
+  .hidden { display: none !important; }
   
   /* Componentes de Tarjeta */
   .pos-card {
@@ -82,7 +82,7 @@
   .status-abierto { background: #dcfce7; color: #166534; }
   .status-cerrado { background: #f1f5f9; color: #475569; }
 
-  /* Módulo WhatsApp PRO (Edición Inline) */
+  /* Módulo WhatsApp PRO */
   .wa-module {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
@@ -246,13 +246,12 @@
   .qty-btn:hover { background: #e2e8f0; }
   .qty-val { padding: 0 0.5rem; font-weight: 700; min-width: 2ch; text-align: center; }
 
-  /* Animación Toast */
-  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  /* Helper para modales monospace */
+  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 </style>
 
 <div class="pos-container">
   
-  <!-- ================= HEADER & INFO DEL PEDIDO ================= -->
   <div class="pos-card" style="border-top: 4px solid var(--pos-primary); border-radius: 0 0 var(--radius-md) var(--radius-md);">
     <div class="flex-between" style="margin-bottom: 1.5rem;">
       <h2 class="text-h2">🧾 Pedido #{{ pedido.id }}</h2>
@@ -289,24 +288,24 @@
         <!-- Vista de Edición (Formulario Inline) -->
         <form id="waEditMode" class="hidden" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
           <div class="wa-input-group">
-            <input type="tel" name="nuevo_telefono" id="waInputNumber" class="wa-input" placeholder="Ej. 4491234567" pattern="[0-9]{10,12}" required>
+            <input type="tel" name="nuevo_telefono" id="waInputNumber" class="wa-input" placeholder="Ej. 4491234567" pattern="[0-9+ ]{10,15}" required>
             <button type="submit" class="btn btn-success" style="padding: 0.5rem;">Guardar</button>
             <button type="button" class="btn btn-ghost" style="padding: 0.5rem;" onclick="PosApp.toggleWaEdit(false)">✕</button>
           </div>
-          <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">Presiona guardar para actualizar el pedido actual.</div>
+          <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">Presiona guardar para actualizar el teléfono.</div>
         </form>
       </div>
 
-      <!-- Módulo de Acciones (Solo abierto) -->
+      <!-- Módulo de Acciones -->
       <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;">
-        <button type="button" class="btn btn-ghost w-100" style="border: 1px solid var(--pos-border);" onclick="abrirTicketPreview({{ pedido.id }})">
+        <button type="button" class="btn btn-ghost w-100" style="border: 1px solid var(--pos-border);" onclick="PosApp.abrirTicketPreview({{ pedido.id }})">
           📄 Visualizar Ticket
         </button>
         
         {% if pedido.estado == 'abierto' %}
         <div style="display: flex; gap: 0.5rem;">
           <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" class="w-100">
-            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('¿Estás seguro de cerrar el pedido SIN enviar notificación al cliente?')">
+            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('¿Estás seguro de cerrar el pedido SIN enviar notificación?')">
               Cerrar Mudo
             </button>
           </form>
@@ -321,13 +320,12 @@
     </div>
   </div>
 
-  <!-- ================= LAYOUT PRINCIPAL (IZQ/DER) ================= -->
   <div class="pos-layout">
     
-    <!-- LADO IZQUIERDO: Productos guardados y Catálogo -->
+    <!-- LADO IZQUIERDO -->
     <main>
       
-      <!-- Tabla de Productos ya en DB -->
+      <!-- Artículos ya en Comanda -->
       <section class="pos-card">
         <div class="pos-card-header">
           <h3 class="text-h3">Artículos Confirmados en Comanda</h3>
@@ -342,7 +340,7 @@
                 <th style="text-align: center;">Cant.</th>
                 <th>Precio</th>
                 <th style="text-align: right;">Subtotal</th>
-                {% if pedido.estado == 'abierto' %}<th></th>{% endif %}
+                {% if pedido.estado == 'abierto' %}<th style="text-align: center;">Acción</th>{% endif %}
               </tr>
             </thead>
             <tbody>
@@ -351,7 +349,7 @@
                 <td>
                   <div style="font-weight: 700; font-size: 1.05rem;">{{ it.nombre }}</div>
                   
-                  <!-- Renderizado PRO de Personalizaciones -->
+                  <!-- Metadatos visuales PRO -->
                   {% if it.salsa or it.proteina or it.sin or it.nota %}
                   <div class="mod-tags">
                     {% if it.proteina %}<span class="mod-tag">🥩 {{ it.proteina }}</span>{% endif %}
@@ -369,7 +367,7 @@
                 <td style="text-align: center; vertical-align: middle;">
                   <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" style="margin:0;">
                     <button type="submit" class="btn btn-ghost btn-icon text-danger" title="Eliminar" onclick="return confirm('¿Quitar este platillo de la comanda?')">
-                      <i class="fa-solid fa-trash-can"></i> ✕
+                      ✕
                     </button>
                   </form>
                 </td>
@@ -386,7 +384,7 @@
         {% endif %}
       </section>
 
-      <!-- Grid de Catálogo (Solo para agregar más si está abierto) -->
+      <!-- Catálogo para añadir más productos -->
       {% if pedido.estado == 'abierto' %}
       <section class="pos-card" style="border-color: var(--pos-primary);">
         <div class="pos-card-header flex-between">
@@ -409,7 +407,7 @@
 
     </main>
 
-    <!-- LADO DERECHO: Carrito en Memoria (Nuevas adiciones) -->
+    <!-- LADO DERECHO: Carrito Dinámico -->
     {% if pedido.estado == 'abierto' %}
     <aside class="pos-sidebar">
       <div class="pos-card" style="box-shadow: var(--shadow-md);">
@@ -418,11 +416,10 @@
           <button type="button" class="btn btn-ghost btn-icon text-primary" onclick="PosApp.showKitchenPreview()" title="Vista Cocina">👨‍🍳</button>
         </div>
 
-        <form method="post" id="newItemsForm" action="{{ url_for('agregar_items_a_pedido', pedido_id=pedido.id) }}">
+        <!-- FORMULARIO CORREGIDO: apunta a ver_pedido en lugar de agregar_items... -->
+        <form method="post" id="newItemsForm" action="{{ url_for('ver_pedido', pedido_id=pedido.id) }}">
           
-          <!-- Contenedor dinámico del carrito -->
           <div id="cartContainer" style="min-height: 150px; max-height: 50vh; overflow-y: auto; margin-bottom: 1rem;">
-            <!-- Renderizado por JS -->
             <div class="text-center text-muted" style="padding: 2rem 0;">Carrito vacío. Agrega productos del catálogo.</div>
           </div>
 
@@ -433,7 +430,7 @@
             </div>
           </div>
 
-          <!-- Inputs ocultos para enviar la data estructurada al backend -->
+          <!-- Inputs ocultos inyectados por JS -->
           <div id="cartHiddenInputs"></div>
 
           <button type="submit" id="btnSaveCart" class="btn btn-primary w-100" style="padding: 1rem; font-size: 1.1rem;" disabled>
@@ -447,9 +444,6 @@
   </div>
 </div>
 
-
-<!-- ================= MODALES PRO ================= -->
-
 <!-- Modal: Personalización de Platillo -->
 <div id="modalCustomization" class="modal-overlay">
   <div class="modal-content">
@@ -462,28 +456,24 @@
     </div>
     
     <div class="modal-body">
-      <!-- Proteínas -->
       <div style="margin-bottom: 1.5rem;">
         <label class="text-muted font-bold text-sm uppercase">Selecciona Proteína</label>
         <div class="pill-group" id="renderProteinas"></div>
       </div>
 
-      <!-- Salsas -->
       <div style="margin-bottom: 1.5rem;">
         <label class="text-muted font-bold text-sm uppercase">Baña con Salsa <span style="text-transform: none; font-weight: normal;">(Opcional)</span></label>
         <div class="pill-group" id="renderSalsas"></div>
       </div>
 
-      <!-- Quitar Ingredientes -->
       <div style="margin-bottom: 1.5rem;">
         <label class="text-muted font-bold text-sm uppercase">Excluir Ingredientes</label>
         <div class="pill-group" id="renderSin"></div>
       </div>
 
-      <!-- Notas -->
       <div>
-        <label class="text-muted font-bold text-sm uppercase" style="display:block; margin-bottom: 0.5rem;">Instrucciones Especiales para Cocina</label>
-        <textarea id="modalNotes" class="text-area-pro" rows="2" placeholder="Ej. salsa aparte, bien dorados, aguacate extra..."></textarea>
+        <label class="text-muted font-bold text-sm uppercase" style="display:block; margin-bottom: 0.5rem;">Instrucciones Especiales</label>
+        <textarea id="modalNotes" class="text-area-pro" rows="2" placeholder="Ej. bien dorados, aguacate extra..."></textarea>
       </div>
     </div>
 
@@ -494,14 +484,14 @@
   </div>
 </div>
 
-<!-- Modal: Vista Cocina (Preview) -->
+<!-- Modal: Vista Cocina -->
 <div id="modalKitchen" class="modal-overlay">
   <div class="modal-content" style="max-width: 400px;">
     <div class="modal-header">
-      <h3 class="text-h3">Ticket de Cocina (Preview)</h3>
+      <h3 class="text-h3">Comanda (Nuevos Items)</h3>
       <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalKitchen')">✕</button>
     </div>
-    <div class="modal-body" style="font-family: monospace; background: #fffbeb;">
+    <div class="modal-body monospace" style="background: #fffbeb;">
       <div id="kitchenContent"></div>
     </div>
     <div class="modal-footer">
@@ -511,30 +501,36 @@
   </div>
 </div>
 
-<!-- ================= LÓGICA JAVASCRIPT PRO ================= -->
+<!-- Modal: Preview Ticket -->
+<div id="modalTicket" class="modal-overlay">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3 class="text-h3">Preview Ticket</h3>
+      <button class="btn-ghost btn-icon" onclick="PosApp.closeModal('modalTicket')">✕</button>
+    </div>
+    <div class="modal-body monospace">
+      <pre id="ticketTextContent" style="white-space: pre-wrap; font-size: 0.9rem; margin: 0;"></pre>
+    </div>
+    <div class="modal-footer" style="flex-direction: column;">
+      <a id="btnTicketWhatsapp" target="_blank" class="btn btn-success w-100" style="text-decoration: none;">📲 Enviar por WhatsApp</a>
+    </div>
+  </div>
+</div>
+
 <script>
-/**
- * Clase PosApp: Encapsula la lógica del frontend usando patrones modernos.
- * Evita variables globales sueltas y proporciona un flujo estructurado.
- */
 class PosManager {
   constructor(config) {
-    // Configuración inyectada desde Jinja
     this.db = {
       proteinas: config.proteinas || [],
       salsas: config.salsas || [],
       sinOpciones: ["Cebolla", "Crema", "Queso", "Aguacate"],
-      noModCats: ["bebidas", "extras", "postres"],
-      noModWords: ["coca", "agua", "cafe", "refresco", "jugo"]
+      noModCats: ["bebidas", "extras", "postres", "complementos"],
+      noModWords: ["coca", "agua", "cafe", "refresco", "jugo", "boing"]
     };
     
-    // Estado de la aplicación
-    this.cart = new Map(); // Map garantiza orden de inserción y búsquedas rápidas por UID
+    this.cart = new Map();
     this.activeItemUid = null;
-    
-    // Formateador de moneda nativo de JS
     this.formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-    
     this.init();
   }
 
@@ -543,7 +539,6 @@ class PosManager {
   }
 
   bindEvents() {
-    // Delegación de eventos para el grid de productos (Performance PRO)
     const grid = document.querySelector('.product-grid');
     if(grid) {
       grid.addEventListener('click', (e) => {
@@ -552,7 +547,6 @@ class PosManager {
       });
     }
 
-    // Cerrar modales clickeando el overlay oscuro
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('mousedown', (e) => {
         if(e.target === overlay) this.closeModal(overlay.id);
@@ -560,7 +554,7 @@ class PosManager {
     });
   }
 
-  // --- LÓGICA DE WHATSAPP ---
+  // Lógica WhatsApp UI
   toggleWaEdit(show) {
     const read = document.getElementById('waReadMode');
     const empty = document.getElementById('waEmptyMode');
@@ -572,11 +566,11 @@ class PosManager {
       read.classList.add('hidden');
       empty.classList.add('hidden');
       form.classList.remove('hidden');
-      if(currentNumber) input.value = currentNumber.innerText;
+      if(currentNumber && currentNumber.innerText !== 'None') input.value = currentNumber.innerText;
       input.focus();
     } else {
       form.classList.add('hidden');
-      if (currentNumber && currentNumber.innerText.trim() !== '') {
+      if (currentNumber && currentNumber.innerText.trim() !== '' && currentNumber.innerText !== 'None') {
         read.classList.remove('hidden');
       } else {
         empty.classList.remove('hidden');
@@ -586,14 +580,14 @@ class PosManager {
 
   validateCloseWithWa(currentPhone) {
     if (!currentPhone || currentPhone.trim() === 'None' || currentPhone.trim() === '') {
-      alert('⚠️ ATENCIÓN: No hay un número de WhatsApp registrado en este pedido.\n\nPor favor, añade el número en el recuadro verde superior antes de cerrar el pedido para poder enviar el mensaje.');
+      alert('⚠️ ATENCIÓN: No hay un número de WhatsApp registrado en este pedido.\n\nAñade el número en el recuadro verde antes de cerrar para enviar el ticket.');
       this.toggleWaEdit(true);
-      return false; // Bloquea el submit
+      return false;
     }
     return confirm('Se cerrará la comanda y se enviará la notificación automática al cliente.\n¿Continuar?');
   }
 
-  // --- LÓGICA DEL CARRITO ---
+  // Lógica Carrito
   generateUid() {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   }
@@ -614,7 +608,7 @@ class PosManager {
       id, nombre, 
       precio: parseFloat(precio), 
       cantidad: 1,
-      custom: { proteina: "", salsa: "", sin: [], nota: "" }
+      custom: { proteina: "", proteina_id: "", salsa: "", salsa_id: "", sin: [], nota: "" }
     };
 
     if (this.needsCustomization(nombre, cat)) {
@@ -629,11 +623,8 @@ class PosManager {
   updateQty(uid, delta) {
     const item = this.cart.get(uid);
     if (!item) return;
-    
     item.cantidad += delta;
-    if (item.cantidad <= 0) {
-      this.cart.delete(uid);
-    }
+    if (item.cantidad <= 0) this.cart.delete(uid);
     this.updateCartUI();
   }
 
@@ -642,42 +633,38 @@ class PosManager {
     this.updateCartUI();
   }
 
-  // --- MODAL DE PERSONALIZACIÓN ---
+  // Renderizado Modal Customización
   openCustomizationModal(uid) {
     this.activeItemUid = uid;
     const item = this.cart.get(uid);
-    
     document.getElementById('modalProdName').innerText = item.nombre;
 
-    // Render Proteínas (Radio)
     document.getElementById('renderProteinas').innerHTML = `
       <label class="pill-label">
-        <input type="radio" name="mod_prot" value="" class="pill-input" ${!item.custom.proteina ? 'checked' : ''}>
+        <input type="radio" name="mod_prot" value="" data-nombre="" class="pill-input" ${!item.custom.proteina_id ? 'checked' : ''}>
         <span class="pill-content">Ninguna</span>
       </label>
       ${this.db.proteinas.map(p => `
         <label class="pill-label">
-          <input type="radio" name="mod_prot" value="${p.nombre}" class="pill-input" ${item.custom.proteina === p.nombre ? 'checked' : ''}>
+          <input type="radio" name="mod_prot" value="${p.id}" data-nombre="${p.nombre}" class="pill-input" ${item.custom.proteina_id == p.id ? 'checked' : ''}>
           <span class="pill-content">${p.nombre}</span>
         </label>
       `).join('')}
     `;
 
-    // Render Salsas (Radio)
     document.getElementById('renderSalsas').innerHTML = `
       <label class="pill-label">
-        <input type="radio" name="mod_salsa" value="" class="pill-input" ${!item.custom.salsa ? 'checked' : ''}>
+        <input type="radio" name="mod_salsa" value="" data-nombre="" class="pill-input" ${!item.custom.salsa_id ? 'checked' : ''}>
         <span class="pill-content">Sin Salsa</span>
       </label>
       ${this.db.salsas.map(s => `
         <label class="pill-label">
-          <input type="radio" name="mod_salsa" value="${s.nombre}" class="pill-input" ${item.custom.salsa === s.nombre ? 'checked' : ''}>
+          <input type="radio" name="mod_salsa" value="${s.id}" data-nombre="${s.nombre}" class="pill-input" ${item.custom.salsa_id == s.id ? 'checked' : ''}>
           <span class="pill-content">${s.nombre}</span>
         </label>
       `).join('')}
     `;
 
-    // Render Exclusiones (Checkboxes)
     document.getElementById('renderSin').innerHTML = this.db.sinOpciones.map(opt => `
       <label class="pill-label">
         <input type="checkbox" name="mod_sin" value="${opt}" class="pill-input" ${item.custom.sin.includes(opt) ? 'checked' : ''}>
@@ -686,7 +673,6 @@ class PosManager {
     `).join('');
 
     document.getElementById('modalNotes').value = item.custom.nota || "";
-
     this.showModal('modalCustomization');
   }
 
@@ -699,8 +685,10 @@ class PosManager {
     const sinEls = Array.from(document.querySelectorAll('input[name="mod_sin"]:checked'));
     
     item.custom = {
-      proteina: protEl ? protEl.value : "",
-      salsa: salsaEl ? salsaEl.value : "",
+      proteina_id: protEl ? protEl.value : "",
+      proteina: protEl && protEl.value ? protEl.dataset.nombre : "",
+      salsa_id: salsaEl ? salsaEl.value : "",
+      salsa: salsaEl && salsaEl.value ? salsaEl.dataset.nombre : "",
       sin: sinEls.map(el => el.value),
       nota: document.getElementById('modalNotes').value.trim()
     };
@@ -709,7 +697,7 @@ class PosManager {
     this.updateCartUI();
   }
 
-  // --- RENDERIZADO DEL DOM ---
+  // Generador de UI y datos para el Backend
   updateCartUI() {
     const container = document.getElementById('cartContainer');
     const hiddenContainer = document.getElementById('cartHiddenInputs');
@@ -733,7 +721,6 @@ class PosManager {
       subtotal += lineTotal;
       const c = item.custom;
 
-      // Generar Tags Visuales
       let tags = '';
       if (c.proteina) tags += `<span class="mod-tag">🥩 ${c.proteina}</span>`;
       if (c.salsa) tags += `<span class="mod-tag">🌶️ ${c.salsa}</span>`;
@@ -746,11 +733,11 @@ class PosManager {
             <div style="flex:1; padding-right: 1rem;">
               <div style="font-weight: 700;">${item.nombre}</div>
               <div class="mod-tags">${tags}</div>
-              <button type="button" class="btn-ghost text-sm" style="padding:0; margin-top:0.5rem;" onclick="PosApp.openCustomizationModal('${uid}')"><i class="fa-solid fa-pen"></i> Editar mod</button>
+              <button type="button" class="btn-ghost text-sm" style="padding:0; margin-top:0.5rem;" onclick="PosApp.openCustomizationModal('${uid}')">✏️ Editar mod</button>
             </div>
             <div style="font-weight: 800;">${this.formatter.format(lineTotal)}</div>
           </div>
-          <div class="flex-between mt-sm">
+          <div class="flex-between">
             <div class="qty-control">
               <button type="button" class="qty-btn" onclick="PosApp.updateQty('${uid}', -1)">−</button>
               <span class="qty-val">${item.cantidad}</span>
@@ -761,12 +748,13 @@ class PosManager {
         </div>
       `;
 
-      // Inputs ocultos para el POST de Flask
+      // Formulario Data Mapeada al Backend
       hiddenHtml += `
         <input type="hidden" name="producto_id[]" value="${item.id}">
         <input type="hidden" name="cantidad[]" value="${item.cantidad}">
         <input type="hidden" name="proteina[]" value="${c.proteina}">
-        <input type="hidden" name="salsa[]" value="${c.salsa}">
+        <input type="hidden" name="proteina_id[]" value="${c.proteina_id}">
+        <input type="hidden" name="salsa_id[]" value="${c.salsa_id}">
         <input type="hidden" name="sin[]" value="${c.sin.join(',')}">
         <input type="hidden" name="nota[]" value="${c.nota}">
       `;
@@ -799,24 +787,25 @@ class PosManager {
     this.showModal('modalKitchen');
   }
 
-  // --- UTILS ---
+  abrirTicketPreview(id) {
+    fetch(`/pedido/${id}/ticket_preview`)
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('ticketTextContent').innerText = d.texto;
+        document.getElementById('btnTicketWhatsapp').href = d.whatsapp_url;
+        this.showModal('modalTicket');
+      })
+      .catch(err => alert("Error al obtener ticket: " + err));
+  }
+
   showModal(id) { document.getElementById(id).classList.add('active'); }
   closeModal(id) { 
     document.getElementById(id).classList.remove('active');
-    // Si cerramos personalización y es un item recién creado sin confirmar, lo limpiamos para evitar basura en el carrito
-    if(id === 'modalCustomization' && this.activeItemUid) {
-      const item = this.cart.get(this.activeItemUid);
-      // Validamos si no se ha guardado nunca su custom.
-      if(!item.custom.proteina && !item.custom.salsa && item.custom.sin.length===0 && !item.custom.nota){
-          // Como requerimos click en Guardar para confirmar, en un flujo más estricto podríamos borrarlo. 
-          // Por usabilidad, lo dejamos en el carrito como "Natural".
-      }
-      this.activeItemUid = null;
-    }
+    if(id === 'modalCustomization' && this.activeItemUid) this.activeItemUid = null;
   }
 }
 
-// Inicialización segura inyectando datos desde Jinja
+// Inicialización de la aplicación POS con los datos de Jinja
 const PosApp = new PosManager({
   proteinas: {{ proteinas | tojson | safe | default('[]') }},
   salsas: {{ salsas | tojson | safe | default('[]') }}
