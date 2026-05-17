@@ -1019,7 +1019,7 @@ def ver_pedido(pedido_id):
 
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
 def actualizar_whatsapp_pedido(pedido_id):
-    # CORRECCIÓN: Buscamos "telefono_whatsapp" en lugar de "nuevo_telefono"
+    # 1. Recibimos el nombre correcto del input (telefono_whatsapp)
     telefono_recibido = request.form.get("telefono_whatsapp", "").strip()
     telefono_limpio = normalize_phone_mx(telefono_recibido)
 
@@ -1029,20 +1029,19 @@ def actualizar_whatsapp_pedido(pedido_id):
 
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
+        # 2. Usamos DictCursor, ¡igual que en la función que sí sirve!
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            
             # Verificamos que el pedido exista y esté abierto
             cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (pedido_id,))
             pedido = cursor.fetchone()
             
-            if not pedido:
-                flash("Pedido no encontrado.", "error")
+            # 3. Validamos exactamente igual que en tu código funcional
+            if not pedido or pedido["estado"] != "abierto":
+                flash("Pedido no encontrado o ya está cerrado.", "error")
                 return redirect(url_for("pedidos_abiertos"))
-                
-            if pedido[0] != "abierto" and isinstance(pedido, tuple):
-                pass
-            elif isinstance(pedido, dict) and pedido.get("estado") != "abierto":
-                 pass
 
+            # 4. Actualizamos el número
             cursor.execute("""
                 UPDATE pedidos
                 SET telefono_whatsapp = %s
@@ -1051,6 +1050,7 @@ def actualizar_whatsapp_pedido(pedido_id):
             conn.commit()
             
             flash("Número de WhatsApp actualizado correctamente.", "success")
+            
     except Exception as e:
         print(f"Error al actualizar WhatsApp: {e}")
         flash("Hubo un error al guardar el número en la base de datos.", "error")
