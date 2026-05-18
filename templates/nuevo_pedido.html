@@ -694,9 +694,11 @@ function renderCarrito(){
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
-      <!-- Enviamos el NOMBRE de la proteína y salsa -->
+      
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
-      <input type="hidden" name="salsa[]" value="${escapeHtml(item.custom.salsa)}">
+      
+      <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
+      
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
       <input type="hidden" name="notas[]" value="${escapeHtml(item.custom.nota)}">
     `;
