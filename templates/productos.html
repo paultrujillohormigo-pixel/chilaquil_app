@@ -93,7 +93,7 @@
 
                         <td style="padding: 12px; text-align: center;">
                             {% if p.platillo_id %}
-                              <a href="{{ url_for('costeo.ver_receta', platillo_id=p.platillo_id) }}" style="display: inline-flex; align-items: center; gap: 5px; background: #0056b3; color: white; text-decoration: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s;">
+                              <a href="{{ url_for('costeo.recetas_edit', platillo_id=p.platillo_id) }}" style="display: inline-flex; align-items: center; gap: 5px; background: #0056b3; color: white; text-decoration: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s;">
                                 🍳 Editar Receta
                               </a>
                             {% else %}
