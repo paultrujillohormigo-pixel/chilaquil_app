@@ -60,14 +60,14 @@
         <p class="descripcion">Explora nuestra selección de platillos y bebidas.</p>
 
         <!-- Botón muy útil para quienes nos visitan desde su teléfono celular -->
-        <a href="{{ url_for('static', filename='menu.pdf') }}" target="_blank" class="boton-descarga">
+        <a href="{{ url_for('static', filename='menu_Mayo.pdf') }}" target="_blank" class="boton-descarga">
             📄 Ver o Descargar Menú Completo
         </a>
 
         <!-- Visualizador del PDF para quienes nos visitan desde una computadora -->
-        <iframe src="{{ url_for('static', filename='menu.pdf') }}" class="visor-pdf" title="Menú del Restaurante">
+        <iframe src="{{ url_for('static', filename='menu_Mayo.pdf') }}" class="visor-pdf" title="Menú del Restaurante">
             <p>Tu navegador no puede mostrar el menú directamente. 
-            <a href="{{ url_for('static', filename='menu.pdf') }}">Haz clic aquí para descargarlo.</a></p>
+            <a href="{{ url_for('static', filename='menu_Mayo.pdf') }}">Haz clic aquí para descargarlo.</a></p>
         </iframe>
     </div>
 
