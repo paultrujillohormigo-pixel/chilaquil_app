@@ -26,11 +26,10 @@ from flask import Flask, render_template
 
 app = Flask(__name__)
 
-# Esta es la función que necesitas agregar
 @app.route('/carta')
 def mostrar_carta():
-    # render_template buscará automáticamente el archivo dentro de la carpeta "templates"
-    return render_template('carta.html')
+    # En lugar de abrir el HTML, enviamos directamente el PDF a pantalla completa
+    return send_from_directory(app.static_folder, 'menu_Mayo.pdf')
 
 if __name__ == '__main__':
     app.run(debug=True)
