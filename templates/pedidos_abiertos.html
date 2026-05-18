@@ -28,7 +28,6 @@
         Mesero: {{ p.mesero or '-' }}<br>
         Total: <strong>{{ p.total | money }}</strong><br>
 
-        <!-- ================= PREVIEW ITEMS ================= -->
         {% if p.items_preview %}
         <div style="margin:8px 0; font-size:14px; color:#444;">
             <strong>Items:</strong>
@@ -40,7 +39,6 @@
         </div>
         {% endif %}
 
-        <!-- ================= ACCIONES ================= -->
         <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
            class="btn btn-primary"
            style="display:block; text-align:center; margin-bottom:6px;">
@@ -76,5 +74,11 @@
 {% endif %}
 
 </div>
+
+<script>
+    setTimeout(function() {
+        window.location.reload();
+    }, 180000); // 180,000 milisegundos = 3 minutos
+</script>
 
 {% endblock %}
