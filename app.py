@@ -35,7 +35,10 @@ def mostrar_carta():
 if __name__ == '__main__':
     app.run(debug=True)
 
-
+@app.route('/ver-pdf')
+def ver_pdf():
+    # Esto fuerza a la aplicación a buscar y entregar el archivo PDF
+    return send_from_directory(app.static_folder, 'menu_Mayo.pdf')
 
 
 # =========================================================
