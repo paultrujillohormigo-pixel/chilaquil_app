@@ -1035,8 +1035,6 @@ def ver_pedido(pedido_id):
 
 
 from decimal import Decimal
-
-
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
 def actualizar_whatsapp_pedido(pedido_id):
     telefono_recibido = request.form.get("telefono_whatsapp", "").strip()
@@ -1085,6 +1083,8 @@ def actualizar_whatsapp_pedido(pedido_id):
         return redirect(url_for("ver_pedido", pedido_id=pedido_id))
     finally:
         conn.close()
+
+
 ==================================
 # ================== CERRAR PEDIDO =========================
 # =========================================================
