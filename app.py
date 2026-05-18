@@ -1017,9 +1017,10 @@ def ver_pedido(pedido_id):
     )
 
 
+from decimal import Decimal
+
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
 def actualizar_whatsapp_pedido(pedido_id):
-    # 1. Recibimos el nombre correcto del input (telefono_whatsapp)
     telefono_recibido = request.form.get("telefono_whatsapp", "").strip()
     telefono_limpio = normalize_phone_mx(telefono_recibido)
 
@@ -1029,36 +1030,83 @@ def actualizar_whatsapp_pedido(pedido_id):
 
     conn = get_connection()
     try:
-        # 2. Usamos DictCursor, ¡igual que en la función que sí sirve!
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            
-            # Verificamos que el pedido exista y esté abierto
-            cursor.execute("SELECT estado FROM pedidos WHERE id = %s", (pedido_id,))
+            # 1. Verificamos que el pedido exista y esté abierto
+            cursor.execute("SELECT estado, total FROM pedidos WHERE id = %s", (pedido_id,))
             pedido = cursor.fetchone()
             
-            # 3. Validamos exactamente igual que en tu código funcional
             if not pedido or pedido["estado"] != "abierto":
                 flash("Pedido no encontrado o ya está cerrado.", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
-            # 4. Actualizamos el número
+            # 2. Actualizamos el número en la base de datos
             cursor.execute("""
                 UPDATE pedidos
                 SET telefono_whatsapp = %s
                 WHERE id = %s
             """, (telefono_limpio, pedido_id))
+            
+            # 3. Consultar los artículos del pedido y sus modificadores para el mensaje
+            cursor.execute("""
+                SELECT i.cantidad, i.precio_unitario, p.nombre, 
+                       i.proteina, s.nombre AS salsa, i.sin, i.nota
+                FROM items_pedido i
+                JOIN productos p ON i.producto_id = p.id
+                LEFT JOIN salsas s ON i.salsa_id = s.id
+                WHERE i.pedido_id = %s
+            """, (pedido_id,))
+            items = cursor.fetchall()
+
+            # 4. Construir el mensaje con el nuevo formato
+            mensaje = "¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n\n"
+            
+            subtotal_calculado = Decimal('0.00')
+
+            for it in items:
+                sub_item = Decimal(str(it['cantidad'])) * Decimal(str(it['precio_unitario']))
+                subtotal_calculado += sub_item
+                
+                mensaje += f"▪️ {it['cantidad']}x {it['nombre']} (${sub_item:.2f})\n"
+                
+                if it.get('proteina'):
+                    mensaje += f"   🥩 {it['proteina']}\n"
+                if it.get('salsa'):
+                    mensaje += f"   🌶️ {it['salsa']}\n"
+                if it.get('sin'):
+                    mensaje += f"   🚫 Sin {it['sin']}\n"
+                if it.get('nota'):
+                    mensaje += f"   📝 Nota: {it['nota']}\n"
+
+            total = Decimal(str(pedido["total"]))
+            descuento = subtotal_calculado - total
+            totopos_ganados = 1 # ASIGNACIÓN DE TOTOPOS: 1 pedido = 1 totopo
+
+            mensaje += f"\n*Subtotal:* ${subtotal_calculado:.2f}"
+            if descuento > 0:
+                mensaje += f"\n*Descuento:* ${descuento:.2f}"
+            mensaje += f"\n*Total a pagar: ${total:.2f}*\n"
+            
+            # Integración del mensaje de lealtad
+            if totopos_ganados > 0:
+                mensaje += f"\n🎁 *¡Con esta compra sumas {totopos_ganados} totopo a tu cuenta!* 🌮✨\n"
+
+            # Enlace personalizado al perfil del cliente
+            mensaje += "\nConsulta tus puntos y recompensas aquí:\n"
+            mensaje += f"👉 https://www.senorchilaquil.com/mi-perfil/{telefono_limpio}\n"
+
             conn.commit()
             
             flash("Número de WhatsApp actualizado correctamente.", "success")
             
+            # 5. Redirigir directamente a WhatsApp
+            return redirect(wa_me_link(telefono_limpio, mensaje))
+            
     except Exception as e:
         print(f"Error al actualizar WhatsApp: {e}")
         flash("Hubo un error al guardar el número en la base de datos.", "error")
+        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
     finally:
         conn.close()
-
-    return redirect(url_for("ver_pedido", pedido_id=pedido_id))
-
 # =========================================================
 # ================== CERRAR PEDIDO =========================
 # =========================================================
