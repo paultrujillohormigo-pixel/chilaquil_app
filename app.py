@@ -1056,6 +1056,9 @@ def actualizar_whatsapp_pedido(pedido_id):
                 flash("Pedido no encontrado o ya está cerrado.", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
+            # Iniciar transacción explícita por seguridad
+            conn.begin()
+
             # 2. Actualizamos el número en la base de datos
             cursor.execute("""
                 UPDATE pedidos
@@ -1063,11 +1066,11 @@ def actualizar_whatsapp_pedido(pedido_id):
                 WHERE id = %s
             """, (telefono_limpio, pedido_id))
             
-            # 3. Consultar los artículos del pedido y sus modificadores para el mensaje
+            # 3. SOLUCIONADO: Se cambió 'items_pedido' por la tabla correcta 'pedido_items'
             cursor.execute("""
                 SELECT i.cantidad, i.precio_unitario, p.nombre, 
                        i.proteina, s.nombre AS salsa, i.sin, i.nota
-                FROM items_pedido i
+                FROM pedido_items i
                 JOIN productos p ON i.producto_id = p.id
                 LEFT JOIN salsas s ON i.salsa_id = s.id
                 WHERE i.pedido_id = %s
@@ -1111,6 +1114,7 @@ def actualizar_whatsapp_pedido(pedido_id):
             mensaje += "\nConsulta tus puntos y recompensas aquí:\n"
             mensaje += f"👉 https://www.senorchilaquil.com/mi-perfil/{telefono_limpio}\n"
 
+            # Confirmar cambios en la base de datos de manera limpia
             conn.commit()
             
             flash("Número de WhatsApp actualizado correctamente.", "success")
@@ -1119,6 +1123,11 @@ def actualizar_whatsapp_pedido(pedido_id):
             return redirect(wa_me_link(telefono_limpio, mensaje))
             
     except Exception as e:
+        # En caso de error, deshacer transacciones pendientes para no bloquear la base de datos
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         print(f"Error al actualizar WhatsApp: {e}")
         flash("Hubo un error al guardar el número en la base de datos.", "error")
         return redirect(url_for("ver_pedido", pedido_id=pedido_id))
