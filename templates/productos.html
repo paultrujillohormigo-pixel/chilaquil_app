@@ -3,7 +3,7 @@
 
 <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
     
-    <h2 style="color: #b32417; margin-bottom: 20px;">🛒 Gestión de Productos</h2>
+    <h2 style="color: #b32417; margin-bottom: 20px;">🛒 Gestión de Productos y Menú</h2>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -15,7 +15,7 @@
       {% endif %}
     {% endwith %}
 
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 30px;">
         
         <div class="card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); height: fit-content;">
             <h3 style="margin-top: 0; color: #333;">✨ Agregar Nuevo Producto</h3>
@@ -37,7 +37,7 @@
                 </div>
 
                 <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vincular a Platillo (Receta/Costo Automático)</label>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vincular a Platillo (Receta base)</label>
                     <select name="platillo_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
                         <option value="">-- Sin platillo (Ingresar costo manual) --</option>
                         {% for platillo in platillos %}
@@ -68,7 +68,8 @@
                         <th style="padding: 12px;">Costo</th>
                         <th style="padding: 12px;">Precio</th>
                         <th style="padding: 12px;">Platillo Vinculado</th>
-                        <th style="padding: 12px; text-align: center;">Acciones</th>
+                        <th style="padding: 12px; text-align: center;">Receta</th>
+                        <th style="padding: 12px; text-align: center;">Quitar</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,20 +78,27 @@
                         <td style="padding: 12px; font-weight: bold;">{{ p.nombre }}</td>
                         <td style="padding: 12px;"><span style="background: #f3f3f3; padding: 4px 8px; border-radius: 6px; font-size: 12px;">{{ p.categoria }}</span></td>
                         <td style="padding: 12px; color: #666;">{{ p.costo | money }}</td>
-                        
-                        <td style="padding: 12px; font-weight: bold; color: #b32417;">
-                            {{ p.precio | money }}
-                        </td>
+                        <td style="padding: 12px; font-weight: bold; color: #b32417;">{{ p.precio | money }}</td>
 
                         <td style="padding: 12px;">
-                            <form method="post" action="{{ url_for('productos_set_platillo', producto_id=p.id) }}" style="display: flex; gap: 5px; align-items: center;">
-                                <select name="platillo_id" onchange="this.form.submit()" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                            <form method="post" action="{{ url_for('productos_set_platillo', producto_id=p.id) }}" style="margin: 0;">
+                                <select name="platillo_id" onchange="this.form.submit()" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; max-width: 160px;">
                                     <option value="">-- Ninguno --</option>
                                     {% for platillo in platillos %}
                                         <option value="{{ platillo.id }}" {% if p.platillo_id == platillo.id %}selected{% endif %}>{{ platillo.nombre }}</option>
                                     {% endfor %}
                                 </select>
                             </form>
+                        </td>
+
+                        <td style="padding: 12px; text-align: center;">
+                            {% if p.platillo_id %}
+                              <a href="{{ url_for('costeo.ver_receta', platillo_id=p.platillo_id) }}" style="display: inline-flex; align-items: center; gap: 5px; background: #0056b3; color: white; text-decoration: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s;">
+                                🍳 Editar Receta
+                              </a>
+                            {% else %}
+                              <span style="color: #999; font-size: 12px; font-style: italic;">Sin platillo</span>
+                            {% endif %}
                         </td>
 
                         <td style="padding: 12px; text-align: center;">
@@ -103,7 +111,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" style="padding: 20px; text-align: center; color: #999;">No hay productos registrados o activos.</td>
+                        <td colspan="7" style="padding: 20px; text-align: center; color: #999;">No hay productos registrados o activos.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
