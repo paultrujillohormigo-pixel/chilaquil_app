@@ -5,22 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú del Restaurante</title>
     
-    <!-- Estilos CSS para darle una apariencia profesional y centrada -->
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f8f9fa; /* Color de fondo gris muy claro */
+            background-color: #f8f9fa; 
             text-align: center;
         }
         .contenedor {
-            max-width: 900px; /* Ancho máximo de la página */
-            margin: 0 auto; /* Centrar el contenedor */
-            background-color: #ffffff; /* Fondo blanco para el contenido */
+            max-width: 900px; 
+            margin: 0 auto; 
+            background-color: #ffffff; 
             padding: 30px;
-            border-radius: 10px; /* Bordes redondeados */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Sombra sutil */
+            border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
         }
         h1 {
             color: #333333;
@@ -30,11 +29,10 @@
             color: #666666;
             margin-bottom: 30px;
         }
-        /* Estilos del botón de descarga */
         .boton-descarga {
             display: inline-block;
             padding: 12px 25px;
-            background-color: #d9534f; /* Color rojo/naranja tipo restaurante */
+            background-color: #d9534f; 
             color: white;
             text-decoration: none;
             border-radius: 5px;
@@ -44,13 +42,12 @@
             transition: background-color 0.3s ease;
         }
         .boton-descarga:hover {
-            background-color: #c9302c; /* Color más oscuro al pasar el ratón */
+            background-color: #c9302c; 
         }
-        /* Estilos del iframe (visualizador) */
         .visor-pdf {
             width: 100%;
-            height: 70vh; /* Ocupa el 70% de la altura de la pantalla */
-            min-height: 600px; /* Altura mínima garantizada */
+            height: 70vh; 
+            min-height: 600px; 
             border: 1px solid #dddddd;
             border-radius: 5px;
         }
@@ -63,14 +60,14 @@
         <p class="descripcion">Explora nuestra selección de platillos y bebidas.</p>
 
         <!-- Botón muy útil para quienes nos visitan desde su teléfono celular -->
-        <a href="www.senorchilaquil.com/menu_mayo.pdf" target="_blank" class="boton-descarga">
+        <a href="{{ url_for('static', filename='menu.pdf') }}" target="_blank" class="boton-descarga">
             📄 Ver o Descargar Menú Completo
         </a>
 
         <!-- Visualizador del PDF para quienes nos visitan desde una computadora -->
-        <iframe src="TU_URL_DEL_PDF_AQUI.pdf" class="visor-pdf" title="Menú del Restaurante">
+        <iframe src="{{ url_for('static', filename='menu.pdf') }}" class="visor-pdf" title="Menú del Restaurante">
             <p>Tu navegador no puede mostrar el menú directamente. 
-            <a href="TU_URL_DEL_PDF_AQUI.pdf">Haz clic aquí para descargarlo.</a></p>
+            <a href="{{ url_for('static', filename='menu.pdf') }}">Haz clic aquí para descargarlo.</a></p>
         </iframe>
     </div>
 
