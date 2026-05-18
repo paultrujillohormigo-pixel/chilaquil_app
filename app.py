@@ -22,6 +22,21 @@ def index():
 def menu():
     return render_template('menu.html')
 
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+# Esta es la función que necesitas agregar
+@app.route('/carta')
+def mostrar_carta():
+    # render_template buscará automáticamente el archivo dentro de la carpeta "templates"
+    return render_template('carta.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
 
 # =========================================================
 # ================== Raw Data ===================
