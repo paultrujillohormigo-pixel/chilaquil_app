@@ -22,22 +22,22 @@ def index():
 def menu():
     return render_template('menu.html')
 
-from flask import Flask, render_template
-
-app = Flask(__name__)
-
 @app.route('/carta')
 def mostrar_carta():
     # En lugar de abrir el HTML, enviamos directamente el PDF a pantalla completa
     return send_from_directory(app.static_folder, 'carta.pdf')
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
 @app.route('/ver-pdf')
 def ver_pdf():
     # Esto fuerza a la aplicación a buscar y entregar el archivo PDF
     return send_from_directory(app.static_folder, 'menu_Mayo.pdf')
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
 
 
 # =========================================================
