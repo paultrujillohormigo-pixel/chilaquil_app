@@ -29,7 +29,7 @@ app = Flask(__name__)
 @app.route('/carta')
 def mostrar_carta():
     # En lugar de abrir el HTML, enviamos directamente el PDF a pantalla completa
-    return send_from_directory(app.static_folder, 'menu_Mayo.pdf')
+    return send_from_directory(app.static_folder, 'carta.pdf')
 
 if __name__ == '__main__':
     app.run(debug=True)
