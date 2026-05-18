@@ -1,65 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú del Restaurante</title>
-    
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f9fa; 
-            text-align: center;
-        }
-        .contenedor {
-            max-width: 900px; 
-            margin: 0 auto; 
-            background-color: #ffffff; 
-            padding: 30px;
-            border-radius: 10px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-        }
-        h1 {
-            color: #333333;
-            margin-bottom: 10px;
-        }
-        p.descripcion {
-            color: #666666;
-            margin-bottom: 30px;
-        }
-        .boton-descarga {
-            display: inline-block;
-            padding: 12px 25px;
-            background-color: #d9534f; 
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 25px;
-            transition: background-color 0.3s ease;
-        }
-        .boton-descarga:hover {
-            background-color: #c9302c; 
-        }
-        .visor-pdf {
-            width: 100%;
-            height: 70vh; 
-            min-height: 600px; 
-            border: 1px solid #dddddd;
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="contenedor">
-        <h1>Nuestro Menú</h1>
-        <p class="descripcion">Explora nuestra selección de platillos y bebidas.</p>
-
-        <!-- Botón muy útil para quienes nos visitan desde su teléfono celular -->
+<!-- Botón muy útil para quienes nos visitan desde su teléfono celular -->
         <a href="{{ url_for('static', filename='menu_Mayo.pdf') }}" target="_blank" class="boton-descarga">
             📄 Ver o Descargar Menú Completo
         </a>
@@ -69,7 +8,3 @@
             <p>Tu navegador no puede mostrar el menú directamente. 
             <a href="{{ url_for('static', filename='menu_Mayo.pdf') }}">Haz clic aquí para descargarlo.</a></p>
         </iframe>
-    </div>
-
-</body>
-</html>
