@@ -299,22 +299,31 @@
     </div>
 </div>
 
+
 <script>
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
 let menuChartObj, horasChartObj, diaSemanaChartObj, loyaltyChartObj;
 let currentMode = 'total';
 
-const dataVentasHora = {{ ventas_hora | tojson | default('[]') | safe }};
-const dataDiaSemana = {{ ventas_por_dia_semana | tojson | default('[]') | safe }};
+// ------------------------------------------------------------------
+// CORRECCIÓN AQUÍ: El filtro default() va ANTES del tojson
+// ------------------------------------------------------------------
+const dataVentasHora = {{ ventas_hora | default([]) | tojson | safe }};
+const dataDiaSemana = {{ ventas_por_dia_semana | default([]) | tojson | safe }};
 const dataMenuEng = {{ menu_engineering_data | default('[]') | safe }};
 
 // Datos para gráficas nuevas
-const ventasComp = {{ ventas_comparativas | tojson | default('{}') | safe }};
-const gastosComp = {{ gastos_comparativos | tojson | default('{}') | safe }};
-const histIngresos = {{ historico_ingresos | tojson | default('[]') | safe }};
-const histGastos = {{ historico_gastos | tojson | default('[]') | safe }};
-const loyaltyData = { leales: {{ loyalty_stats.ventas_loyalty | default(0) }}, casuales: {{ loyalty_stats.ventas_casual | default(0) }} };
+const ventasComp = {{ ventas_comparativas | default({}) | tojson | safe }};
+const gastosComp = {{ gastos_comparativas | default({}) | tojson | safe }};
+const histIngresos = {{ historico_ingresos | default([]) | tojson | safe }};
+const histGastos = {{ historico_gastos | default([]) | tojson | safe }};
+
+const loyaltyData = { 
+    leales: {{ loyalty_stats.ventas_loyalty | default(0) if loyalty_stats else 0 }}, 
+    casuales: {{ loyalty_stats.ventas_casual | default(0) if loyalty_stats else 0 }} 
+};
+// ------------------------------------------------------------------
 
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
