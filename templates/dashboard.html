@@ -18,15 +18,29 @@
             <h3>Dashboard</h3>
             
             <p class="filter-label">SELECCIONAR MES</p>
-            <div class="meses-flex">
-                {% if meses_disponibles %}
-                    {% for m in meses_disponibles %}
-                        <a href="/dashboard?mes={{ m }}" class="mes-link {% if m == mes %}active{% endif %}">
-                            {{ m }}
-                        </a>
-                    {% endfor %}
-                {% endif %}
-            </div>
+            <p class="filter-label">SELECCIONAR MESES</p>
+            <form method="GET" action="/dashboard" id="filterForm">
+                <div class="meses-flex">
+                    {% if meses_disponibles %}
+                        {% for m in meses_disponibles %}
+                            <!-- Convertimos el enlace en un Checkbox oculto con etiqueta clickeable -->
+                            <label class="mes-label">
+                                <input type="checkbox" name="mes" value="{{ m }}" 
+                                       {% if m in meses_seleccionados %}checked{% endif %}
+                                       style="display: none;"
+                                       onchange="toggleActive(this)">
+                                <span class="mes-link {% if m in meses_seleccionados %}active{% endif %}">
+                                    {{ m }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <!-- Botones de acción -->
+                <button type="submit" class="btn-aplicar">Aplicar Filtros</button>
+                <a href="/dashboard" class="btn-reset">Limpiar Filtros</a>
+            </form>
             <a href="/dashboard" class="btn-reset">Limpiar Filtros</a>
         </div>
     </aside>
@@ -250,9 +264,23 @@ new Chart(document.getElementById('diaSemanaChart').getContext('2d'), {
         }
     }
 });
+
+
+    // Esta función cambia el color del botón visualmente al hacerle clic
+function toggleActive(checkbox) {
+    if (checkbox.checked) {
+        checkbox.nextElementSibling.classList.add('active');
+    } else {
+        checkbox.nextElementSibling.classList.remove('active');
+    }
+}
 </script>
 
 <style>
+
+
+
+    
 :root {
     --side-width: 260px;
     --primary: #111827;
@@ -264,6 +292,23 @@ body { background: var(--bg); font-family: 'Inter', system-ui, sans-serif; color
 
 .dashboard-container { display: flex; width: 100%; }
 
+
+/* Nuevos estilos para los filtros múltiples */
+.mes-label { cursor: pointer; display: inline-block; }
+.btn-aplicar {
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px;
+    background: #10b981; /* Verde acorde a tus KPIs */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-aplicar:hover { background: #059669; }
+    
 /* SIDEBAR RESPONSIVO */
 .sidebar {
     width: var(--side-width);
