@@ -1485,7 +1485,7 @@ def compras():
 # =========================================================
 
 import json
-
+from decimal import Decimal
 
 @app.route("/dashboard")
 def dashboard():
@@ -1579,7 +1579,7 @@ def dashboard():
             ventas_hora_raw = cursor.fetchall()
             ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"])} for v in ventas_hora_raw]
 
-            # 6. VENTAS POR DÍA DE LA SEMANA
+            # 6. VENTAS POR DÍA DE LA SEMANA (Promedios)
             cursor.execute(f"""
                 SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio
                 FROM (
@@ -1617,6 +1617,19 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
+            # --- NUEVO: CÁLCULO DE PROMEDIOS REALES DIARIOS ---
+            dias_totales = len(ventas_dia)
+            avg_pedidos = sum(v["pedidos"] for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
+            avg_total = sum(float(v["total"] or 0) for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
+            avg_neto = sum(float(v["neto"] or 0) for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
+
+            promedios_dia_reales = {
+                "avg_pedidos": round(avg_pedidos, 1),
+                "avg_total": float(avg_total),
+                "avg_neto": float(avg_neto)
+            }
+            # ----------------------------------------------------
+
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
@@ -1634,20 +1647,19 @@ def dashboard():
         total_costos=float(total_costos),
         utilidad=float(utilidad),
         margen=round(float(margen_gral), 2),
-        gross_margin_pct=round(float(gross_margin_pct), 1), # <-- CAMBIADO AQUÍ
+        gross_margin_pct=round(float(gross_margin_pct), 1),
         ingresos_json=json.dumps([float(i["total"]) for i in ingresos_rows]),
         costos_json=json.dumps([float(c["costo"]) for c in costos_rows]),
         labels_mes_json=json.dumps([i["mes"] for i in ingresos_rows]),
         costos_tipo=costos_tipo,
         menu_engineering_data=json.dumps(menu_engineering_data),
         ventas_hora=ventas_hora,
-        ventas_por_dia_semana=ventas_semana,
+        ventas_por_dia_semana=ventas_semana,  # <--- Los datos que usará tu nueva gráfica
         top_productos=top_productos,
         top_gastos=top_gastos,
         ventas_dia=ventas_dia,
-        promedios_dia={"avg_pedidos": 0, "avg_total": 0, "avg_neto": 0}
+        promedios_dia=promedios_dia_reales    # <--- La variable real inyectada
     )
-
 
 # =========================================================
 # ============ ELIMINAR ITEM / ELIMINAR PEDIDO =============
@@ -2073,6 +2085,9 @@ def api_platillo_costo(platillo_id):
             return jsonify({"platillo_id": platillo_id, "costo": float(costo)})
     finally:
         conn.close()
+
+
+
 
 
 @app.post("/platillos/<int:platillo_id>/proteina_qty")
