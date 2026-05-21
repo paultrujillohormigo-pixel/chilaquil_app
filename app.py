@@ -1595,7 +1595,16 @@ def dashboard():
                 ) t
                 GROUP BY dia_num, nombre ORDER BY dia_num
             """, params)
-            ventas_semana = cursor.fetchall()
+            
+            # NUEVO: Convertimos el Decimal a Float para que Javascript pueda leerlo
+            ventas_semana_raw = cursor.fetchall()
+            ventas_semana = [
+                {
+                    "nombre": v["nombre"], 
+                    "promedio": float(v["promedio"] or 0)
+                } 
+                for v in ventas_semana_raw
+            ]
 
             # 7. TABLAS DE APOYO
             top_productos = bcg_raw[:10]
