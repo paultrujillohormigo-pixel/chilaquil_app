@@ -1483,23 +1483,24 @@ def compras():
 # =========================================================
 # ============ DASHBOARD=============
 # =========================================================
-
 import json
 from decimal import Decimal
 
 @app.route("/dashboard")
 def dashboard():
-    mes = request.args.get("mes") # Formato YYYY-MM
+    # 1. Obtenemos una LISTA de los meses seleccionados (puede ser 0, 1 o varios)
+    meses_seleccionados = request.args.getlist("mes")
 
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Filtros dinámicos para las consultas
+            # 2. Filtros dinámicos usando la cláusula IN para soportar múltiples meses
             filtro = ""
             params = []
-            if mes:
-                filtro = "WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                params.append(mes)
+            if meses_seleccionados:
+                placeholders = ",".join(["%s"] * len(meses_seleccionados))
+                filtro = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') IN ({placeholders})"
+                params.extend(meses_seleccionados)
 
             # 1. INGRESOS TOTALES
             cursor.execute(f"""
@@ -1534,11 +1535,8 @@ def dashboard():
             """, params)
             costos_tipo = cursor.fetchall()
     
-            # Inicializamos el total de todos los gastos
             total_gastos = Decimal("0")
-             
             for ct in costos_tipo:
-                 # Sumamos TODOS los costos sin importar su tipo
                  total_gastos += Decimal(str(ct["total"] or 0))
              
             # Margen Bruto % = ((Total Ingresos - Total Gastos) / Total Ingresos) * 100
@@ -1579,7 +1577,7 @@ def dashboard():
             ventas_hora_raw = cursor.fetchall()
             ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"])} for v in ventas_hora_raw]
 
-            # 6. VENTAS POR DÍA DE LA SEMANA (Promedios)
+            # 6. VENTAS POR DÍA DE LA SEMANA (Convertido a Float para la gráfica)
             cursor.execute(f"""
                 SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio
                 FROM (
@@ -1595,9 +1593,9 @@ def dashboard():
                 ) t
                 GROUP BY dia_num, nombre ORDER BY dia_num
             """, params)
-            
-            # NUEVO: Convertimos el Decimal a Float para que Javascript pueda leerlo
             ventas_semana_raw = cursor.fetchall()
+            
+            # Formateamos y convertimos explícitamente a Float
             ventas_semana = [
                 {
                     "nombre": v["nombre"], 
@@ -1608,13 +1606,22 @@ def dashboard():
 
             # 7. TABLAS DE APOYO
             top_productos = bcg_raw[:10]
-            cursor.execute("""
-                SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado
-                FROM insumos_compras
-                WHERE (%s IS NULL OR DATE_FORMAT(fecha, '%%Y-%%m') = %s)
-                GROUP BY concepto, tipo_costo
-                ORDER BY total_gastado DESC LIMIT 10
-            """, (mes, mes))
+            
+            if meses_seleccionados:
+                cursor.execute(f"""
+                    SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado
+                    FROM insumos_compras
+                    WHERE DATE_FORMAT(fecha, '%%Y-%%m') IN ({placeholders})
+                    GROUP BY concepto, tipo_costo
+                    ORDER BY total_gastado DESC LIMIT 10
+                """, params)
+            else:
+                cursor.execute("""
+                    SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado
+                    FROM insumos_compras
+                    GROUP BY concepto, tipo_costo
+                    ORDER BY total_gastado DESC LIMIT 10
+                """)
             top_gastos = cursor.fetchall()
 
             # 8. DETALLE DIARIO
@@ -1626,7 +1633,7 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
-            # --- NUEVO: CÁLCULO DE PROMEDIOS REALES DIARIOS ---
+            # --- CÁLCULO DE PROMEDIOS REALES DIARIOS ---
             dias_totales = len(ventas_dia)
             avg_pedidos = sum(v["pedidos"] for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
             avg_total = sum(float(v["total"] or 0) for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
@@ -1637,8 +1644,8 @@ def dashboard():
                 "avg_total": float(avg_total),
                 "avg_neto": float(avg_neto)
             }
-            # ----------------------------------------------------
 
+            # --- MESES DISPONIBLES ---
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
@@ -1650,7 +1657,7 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        mes=mes,
+        meses_seleccionados=meses_seleccionados,  # <--- Usando la lista de meses
         meses_disponibles=meses_disponibles,
         total_ingresos=float(total_ingresos),
         total_costos=float(total_costos),
@@ -1663,11 +1670,11 @@ def dashboard():
         costos_tipo=costos_tipo,
         menu_engineering_data=json.dumps(menu_engineering_data),
         ventas_hora=ventas_hora,
-        ventas_por_dia_semana=ventas_semana,  # <--- Los datos que usará tu nueva gráfica
+        ventas_por_dia_semana=ventas_semana, 
         top_productos=top_productos,
         top_gastos=top_gastos,
         ventas_dia=ventas_dia,
-        promedios_dia=promedios_dia_reales    # <--- La variable real inyectada
+        promedios_dia=promedios_dia_reales
     )
 
 # =========================================================
