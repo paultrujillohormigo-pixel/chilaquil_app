@@ -1502,6 +1502,11 @@ def dashboard():
                 filtro = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') IN ({placeholders})"
                 params.extend(meses_seleccionados)
 
+            # --- NUEVO: Obtener cantidad real de DÍAS con ventas para promedios exactos
+            cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro}", params)
+            dias_row = cursor.fetchone()
+            dias_totales = int(dias_row["dias"]) if dias_row and dias_row["dias"] else 1
+
             # 1. INGRESOS TOTALES
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
@@ -1514,6 +1519,10 @@ def dashboard():
             ingresos_rows = cursor.fetchall()
             total_ingresos = sum(Decimal(str(i["total"] or 0)) for i in ingresos_rows)
 
+            # --- NUEVO: Meses reales para el cálculo de promedios mensuales
+            meses_con_venta = len(ingresos_rows) if ingresos_rows else 1
+            promedio_ingresos = float(total_ingresos) / meses_con_venta
+
             # 2. COSTOS TOTALES (COMPRAS)
             cursor.execute(f"""
                 SELECT DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
@@ -1525,6 +1534,7 @@ def dashboard():
             """, params)
             costos_rows = cursor.fetchall()
             total_costos = sum(Decimal(str(c["costo"] or 0)) for c in costos_rows)
+            promedio_costos = float(total_costos) / meses_con_venta  # NUEVO
 
             # 3. COSTOS POR TIPO Y CÁLCULO DE GROSS MARGIN (TOTAL DE GASTOS)
             cursor.execute(f"""
@@ -1558,12 +1568,19 @@ def dashboard():
             """, params)
             bcg_raw = cursor.fetchall()
 
+            # --- NUEVO: Promedios en los Top Productos y en el BCG
+            for item in bcg_raw:
+                item["cantidad_promedio"] = float(item["cantidad"] or 0) / dias_totales
+                item["ingreso_promedio"] = float(item["ingreso_total"] or 0) / dias_totales
+
             menu_engineering_data = []
             for item in bcg_raw:
                 menu_engineering_data.append({
                     "nombre": item["nombre"],
                     "x": float(item["cantidad"]), 
-                    "y": float(item["margen_unitario"])
+                    "x_promedio": float(item["cantidad"] or 0) / dias_totales,  # NUEVO
+                    "y": float(item["margen_unitario"]),
+                    "y_promedio": float(item["margen_unitario"])  # Margen por unidad no cambia en promedios
                 })
 
             # 5. HORAS PICO
@@ -1575,11 +1592,20 @@ def dashboard():
                 ORDER BY hora_num
             """, params)
             ventas_hora_raw = cursor.fetchall()
-            ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"])} for v in ventas_hora_raw]
+            
+            # --- NUEVO: Se agregó 'promedio' para el frontend
+            ventas_hora = [{
+                "hora": f"{v['hora_num']}:00", 
+                "total": float(v["total_dinero"] or 0),
+                "promedio": float(v["total_dinero"] or 0) / dias_totales
+            } for v in ventas_hora_raw]
 
             # 6. VENTAS POR DÍA DE LA SEMANA (Convertido a Float para la gráfica)
+            # --- NUEVO: Se agregó 'SUM' para tener el 'total' general además del promedio
             cursor.execute(f"""
-                SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio
+                SELECT dia_num, nombre, 
+                       ROUND(AVG(total_del_dia), 2) AS promedio,
+                       SUM(total_del_dia) AS total
                 FROM (
                     SELECT DAYOFWEEK(fecha) AS dia_num,
                            CASE DAYOFWEEK(fecha) 
@@ -1599,7 +1625,8 @@ def dashboard():
             ventas_semana = [
                 {
                     "nombre": v["nombre"], 
-                    "promedio": float(v["promedio"] or 0)
+                    "promedio": float(v["promedio"] or 0),
+                    "total": float(v["total"] or 0)  # NUEVO
                 } 
                 for v in ventas_semana_raw
             ]
@@ -1624,6 +1651,10 @@ def dashboard():
                 """)
             top_gastos = cursor.fetchall()
 
+            # --- NUEVO: Promedio en los top gastos
+            for g in top_gastos:
+                g["promedio_gastado"] = float(g["total_gastado"] or 0) / meses_con_venta
+
             # 8. DETALLE DIARIO
             cursor.execute(f"""
                 SELECT DATE(fecha) AS dia, DAYNAME(fecha) AS dia_semana,
@@ -1633,8 +1664,14 @@ def dashboard():
             """, params)
             ventas_dia = cursor.fetchall()
 
-            # --- CÁLCULO DE PROMEDIOS REALES DIARIOS ---
-            dias_totales = len(ventas_dia)
+            # --- NUEVO: En la vista de promedios para un día específico, mostrará el TICKET PROMEDIO
+            for v in ventas_dia:
+                peds = int(v["pedidos"] or 1)
+                v["pedidos_promedio"] = peds
+                v["total_promedio"] = float(v["total"] or 0) / peds
+                v["neto_promedio"] = float(v["neto"] or 0) / peds
+
+            # --- CÁLCULO DE PROMEDIOS REALES DIARIOS GLOBALES ---
             avg_pedidos = sum(v["pedidos"] for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
             avg_total = sum(float(v["total"] or 0) for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
             avg_neto = sum(float(v["neto"] or 0) for v in ventas_dia) / dias_totales if dias_totales > 0 else 0
@@ -1650,6 +1687,7 @@ def dashboard():
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
             utilidad = total_ingresos - total_costos
+            promedio_utilidad = float(utilidad) / meses_con_venta  # NUEVO
             margen_gral = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
 
     finally:
@@ -1657,11 +1695,14 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        meses_seleccionados=meses_seleccionados,  # <--- Usando la lista de meses
+        meses_seleccionados=meses_seleccionados, 
         meses_disponibles=meses_disponibles,
         total_ingresos=float(total_ingresos),
+        promedio_ingresos=promedio_ingresos,  # NUEVO
         total_costos=float(total_costos),
+        promedio_costos=promedio_costos,      # NUEVO
         utilidad=float(utilidad),
+        promedio_utilidad=promedio_utilidad,  # NUEVO
         margen=round(float(margen_gral), 2),
         gross_margin_pct=round(float(gross_margin_pct), 1),
         ingresos_json=json.dumps([float(i["total"]) for i in ingresos_rows]),
