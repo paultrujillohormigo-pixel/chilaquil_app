@@ -149,6 +149,18 @@
                 </div>
             </div>
 
+            <h3 class="section-title">Impacto de Contenido Orgánico</h3>
+            <div class="responsive-grid" style="grid-template-columns: 1fr;">
+                <div class="card chart-card">
+                    <h4>Ventas vs Alcance Orgánico e Interacciones</h4>
+                    <div class="canvas-holder">
+                        <canvas id="organicReachChart"></canvas>
+                    </div>
+                    <p class="chart-footer">Descubre si tus Reels/Fotos gratuitas generan picos de ventas</p>
+                </div>
+            </div>
+
+            
             <h3 class="section-title">Comparativas Mensuales (Día a Día)</h3>
             <div class="responsive-grid">
                 <div class="card chart-card">
@@ -359,7 +371,7 @@ const ventasComp = {{ ventas_comparativas | default({}) | tojson | safe }};
 const gastosComp = {{ gastos_comparativas | default({}) | tojson | safe }};
 const histIngresos = {{ historico_ingresos | default([]) | tojson | safe }};
 const histGastos = {{ historico_gastos | default([]) | tojson | safe }};
-
+const dataOrgVsVentas = {{ org_vs_ventas | default([]) | tojson | safe }};
 // Datos Marketing Ads
 const dataAdsVsVentas = {{ ads_vs_ventas | default([]) | tojson | safe }};
 
@@ -436,7 +448,7 @@ function initCharts() {
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: (v) => fmt.format(v) } }, x: { title: {display: true, text: 'Día del mes'}} } }
     });
-
+    
     new Chart(document.getElementById('compGastosChart').getContext('2d'), {
         type: 'line',
         data: {
@@ -552,6 +564,64 @@ function initCharts() {
                 } 
             }
         });
+        // 9. Gráfica de Orgánico vs Ventas
+        if(dataOrgVsVentas.length > 0) {
+            new Chart(document.getElementById('organicReachChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: dataOrgVsVentas.map(d => d.fecha),
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: 'Alcance Orgánico',
+                            data: dataOrgVsVentas.map(d => d.alcance_org),
+                            borderColor: '#10b981', // Verde esmeralda
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            yAxisID: 'y_social'
+                        },
+                        {
+                            type: 'line',
+                            label: 'Interacciones (Likes, Comments...)',
+                            data: dataOrgVsVentas.map(d => d.interacciones_org),
+                            borderColor: '#f59e0b', // Naranja
+                            backgroundColor: '#f59e0b',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            yAxisID: 'y_social'
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Ingresos Ventas ($)',
+                            data: dataOrgVsVentas.map(d => d.ventas_reales),
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)', // Azul
+                            borderRadius: 4,
+                            yAxisID: 'y_ventas'
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { grid: { display: false } },
+                        y_ventas: { 
+                            type: 'linear', 
+                            position: 'left',
+                            title: { display: true, text: 'Ventas ($)' },
+                            ticks: { callback: (v) => fmt.format(v) } 
+                        },
+                        y_social: { 
+                            type: 'linear', 
+                            position: 'right',
+                            title: { display: true, text: 'Alcance / Interacciones' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    } 
+                }
+        });
+    }
     }
 }
 
