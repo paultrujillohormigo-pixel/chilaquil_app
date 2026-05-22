@@ -1131,10 +1131,6 @@ def compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
-# =========================================================
-# ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
-# =========================================================
-
 def get_previous_month(ym_str):
     try:
         dt = datetime.strptime(ym_str, "%Y-%m")
@@ -1224,7 +1220,6 @@ def dashboard():
                 var_ingresos = calc_var(float(total_ingresos), float(prev_ingresos))
                 var_costos = calc_var(float(total_costos), float(prev_costos))
                 var_utilidad = calc_var(float(utilidad), float(prev_utilidad))
-
 
             # === ANÁLISIS DE LEALTAD Y CLIENTES ===
             filtro_tx_p = filtro_pedidos.replace("fecha", "p.fecha")
@@ -1371,27 +1366,43 @@ def dashboard():
             # =======================================================
             filtro_ads = filtro_pedidos.replace("fecha", "dia")
             
-            # Gasto total
-            cursor.execute(f"SELECT SUM(importe_gastado) AS total_ads FROM ads_instagram_performance {filtro_ads}", params)
-            total_gasto_ads = Decimal(str(cursor.fetchone()["total_ads"] or 0))
+            # Gasto total, alcance e impresiones
+            cursor.execute(f"""
+                SELECT 
+                    SUM(importe_gastado) AS total_ads,
+                    SUM(alcance) AS total_alcance,
+                    SUM(impresiones) AS total_impresiones
+                FROM ads_instagram_performance {filtro_ads}
+            """, params)
+            ads_totals = cursor.fetchone()
+            
+            total_gasto_ads = Decimal(str(ads_totals["total_ads"] or 0)) if ads_totals["total_ads"] else Decimal(0)
+            total_alcance = int(ads_totals["total_alcance"] or 0)
+            total_impresiones = int(ads_totals["total_impresiones"] or 0)
             
             # CAC y ROAS
             cac_global = float(total_gasto_ads) / total_pedidos_gral if total_pedidos_gral > 0 else 0
             roas_global = float(total_ingresos) / float(total_gasto_ads) if total_gasto_ads > 0 else 0
             
-            # Gráfica combinada diaria (Ventas vs Ads) en el mes seleccionado
+            # Gráficas combinadas diarias (Ventas, Ads, Alcance, Impresiones)
             cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params)
             ventas_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
             
-            cursor.execute(f"SELECT dia as f, SUM(importe_gastado) as total FROM ads_instagram_performance {filtro_ads} GROUP BY dia", params)
-            ads_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
+            cursor.execute(f"""
+                SELECT dia as f, SUM(importe_gastado) as total_gasto, SUM(alcance) as alcance, SUM(impresiones) as impresiones 
+                FROM ads_instagram_performance {filtro_ads} 
+                GROUP BY dia
+            """, params)
+            ads_dict = {str(r["f"]): r for r in cursor.fetchall()}
             
             todas_las_fechas = sorted(list(set(ventas_dict.keys()).union(set(ads_dict.keys()))))
             ads_vs_ventas = [
                 {
                     "fecha": f, 
                     "ventas_reales": ventas_dict.get(f, 0.0), 
-                    "gasto_ads": ads_dict.get(f, 0.0)
+                    "gasto_ads": float(ads_dict.get(f, {}).get("total_gasto", 0)),
+                    "alcance": int(ads_dict.get(f, {}).get("alcance", 0)),
+                    "impresiones": int(ads_dict.get(f, {}).get("impresiones", 0))
                 } 
                 for f in todas_las_fechas
             ]
@@ -1424,6 +1435,8 @@ def dashboard():
         historico_ingresos=historico_ingresos,
         historico_gastos=historico_gastos,
         total_gasto_ads=float(total_gasto_ads),
+        total_alcance=total_alcance,
+        total_impresiones=total_impresiones,
         cac_global=cac_global,
         roas_global=round(roas_global, 2),
         ads_vs_ventas=ads_vs_ventas
