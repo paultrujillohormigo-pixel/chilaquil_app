@@ -1406,7 +1406,34 @@ def dashboard():
                 } 
                 for f in todas_las_fechas
             ]
-
+            # =======================================================
+            # === DATOS ORGÁNICOS (INSTAGRAM) =======================
+            # =======================================================
+            filtro_org = filtro_pedidos.replace("fecha", "dia")
+            
+            cursor.execute(f"""
+                SELECT 
+                    dia as f, 
+                    SUM(alcance) as alcance, 
+                    SUM(impresiones) as impresiones,
+                    SUM(me_gusta + comentarios + compartidos + guardados) as interacciones
+                FROM organic_instagram_performance {filtro_org} 
+                GROUP BY dia
+            """, params)
+            org_dict = {str(r["f"]): r for r in cursor.fetchall()}
+            
+            # Reutilizamos "todas_las_fechas" que ya incluye ventas y ads, y agregamos orgánico
+            todas_las_fechas_extendidas = sorted(list(set(todas_las_fechas).union(set(org_dict.keys()))))
+            
+            org_vs_ventas = [
+                {
+                    "fecha": f, 
+                    "ventas_reales": ventas_dict.get(f, 0.0), 
+                    "alcance_org": int(org_dict.get(f, {}).get("alcance", 0)),
+                    "interacciones_org": int(org_dict.get(f, {}).get("interacciones", 0))
+                } 
+                for f in todas_las_fechas_extendidas
+            ]
     finally:
         conn.close()
 
