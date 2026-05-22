@@ -1409,28 +1409,33 @@ def dashboard():
             # =======================================================
             # === DATOS ORGÁNICOS (INSTAGRAM) =======================
             # =======================================================
-            filtro_org = filtro_pedidos.replace("fecha", "DATE(hora_publicacion)")
+            filtro_org = filtro_pedidos.replace("fecha", "hora_publicacion")
             
             cursor.execute(f"""
                 SELECT 
                     DATE(hora_publicacion) as f, 
-                    SUM(alcance) as alcance, 
-                    SUM(visualizaciones) as impresiones,
-                    SUM(me_gusta + comentarios + veces_compartido + veces_guardado) as interacciones
-                FROM organic_instagram_performance {filtro_org} 
+                    SUM(COALESCE(alcance, 0)) as alcance, 
+                    SUM(COALESCE(visualizaciones, 0)) as impresiones,
+                    SUM(COALESCE(me_gusta, 0) + COALESCE(comentarios, 0) + COALESCE(veces_compartido, 0) + COALESCE(veces_guardado, 0)) as interacciones
+                FROM organic_instagram_performance 
+                {filtro_org} 
                 GROUP BY DATE(hora_publicacion)
             """, params)
-            org_dict = {str(r["f"]): r for r in cursor.fetchall()}
+            org_rows = cursor.fetchall()
             
-            # Unimos las fechas de todos los mundos (Ventas + Ads + Orgánico)
+            # Filtramos para que solo tome fechas válidas y no choque con nulos
+            org_dict = {str(r["f"]): r for r in org_rows if r["f"] is not None}
+            
+            # Unimos las fechas de todos los mundos
             todas_las_fechas_extendidas = sorted(list(set(todas_las_fechas).union(set(org_dict.keys()))))
             
             org_vs_ventas = [
                 {
                     "fecha": f, 
                     "ventas_reales": ventas_dict.get(f, 0.0), 
-                    "alcance_org": int(org_dict.get(f, {}).get("alcance", 0)),
-                    "interacciones_org": int(org_dict.get(f, {}).get("interacciones", 0))
+                    # El "or 0" asegura que si la base de datos devuelve nulo, ponga un 0
+                    "alcance_org": int(org_dict.get(f, {}).get("alcance") or 0),
+                    "interacciones_org": int(org_dict.get(f, {}).get("interacciones") or 0)
                 } 
                 for f in todas_las_fechas_extendidas
             ]
