@@ -1383,7 +1383,7 @@ def dashboard():
             cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params)
             ventas_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
             
-            cursor.execute(f"SELECT dia as f, SUM(importe_gastado) as total FROM ads_instagram_performance {filtro_ads}", params)
+            cursor.execute(f"SELECT dia as f, SUM(importe_gastado) as total FROM ads_instagram_performance {filtro_ads} GROUP BY dia", params)
             ads_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
             
             todas_las_fechas = sorted(list(set(ventas_dict.keys()).union(set(ads_dict.keys()))))
