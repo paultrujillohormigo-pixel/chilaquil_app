@@ -13,7 +13,6 @@
 <div id="dashboard-wrapper" class="mode-totales">
     <div class="dashboard-container">
 
-        <!-- SIDEBAR DE FILTROS -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-inner">
                 <button class="close-btn" onclick="toggleSidebar()">✕ Cerrar</button>
@@ -45,7 +44,6 @@
 
         <main class="main-content">
 
-            <!-- CONTROLES SUPERIORES (TOTALES VS PROMEDIOS) -->
             <div class="header-actions">
                 <div class="view-toggle-container">
                     <button id="btn-total" class="view-btn active" onclick="toggleViewMode('total')">Totales</button>
@@ -53,7 +51,6 @@
                 </div>
             </div>
 
-            <!-- KPIs PRINCIPALES -->
             <div class="kpi-wrapper">
                 <div class="kpi-box green">
                     <small class="view-total">Ventas Netas</small>
@@ -92,13 +89,43 @@
                 </div>
                 
                 <div class="kpi-box orange">
-                    <small>Margen Bruto (Gross Margin)</small>
+                    <small>Margen Bruto</small>
                     <p>{{ gross_margin_pct }}%</p>
                     <div class="trend neutral">Salud del Negocio</div>
                 </div>
+
+                <div class="kpi-box purple">
+                    <small class="view-total">Inversión Instagram</small>
+                    <small class="view-promedio">Gasto Publicitario Diario</small>
+                    <p class="view-total">{{ total_gasto_ads | money }}</p>
+                    <p class="view-promedio">{{ (total_gasto_ads / dias_totales) | round(2) | money }}</p>
+                </div>
+
+                <div class="kpi-box pink">
+                    <small>Costo de Adquisición (CAC)</small>
+                    <p>{{ cac_global | money }}</p>
+                    <div class="trend neutral">Gasto Ads / Num. Pedidos</div>
+                </div>
+
+                <div class="kpi-box cyan">
+                    <small>ROAS (Retorno Inversión)</small>
+                    <p>{{ roas_global }}x</p>
+                    <div class="trend {{ 'up' if roas_global > 3 else 'down' }}">
+                        {{ 'Rentable' if roas_global > 3 else 'Revisar campañas' }}
+                    </div>
+                </div>
             </div>
 
-            <!-- COMPARATIVAS MENSUALES (LÍNEAS DÍA A DÍA) -->
+            <h3 class="section-title">Impacto de Marketing en Ventas</h3>
+            <div class="responsive-grid" style="grid-template-columns: 1fr;">
+                <div class="card chart-card">
+                    <h4>Ingresos por Ventas vs Inversión en Instagram (Día a Día)</h4>
+                    <div class="canvas-holder">
+                        <canvas id="adsVsVentasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <h3 class="section-title">Comparativas Mensuales (Día a Día)</h3>
             <div class="responsive-grid">
                 <div class="card chart-card">
@@ -115,7 +142,6 @@
                 </div>
             </div>
 
-            <!-- TENDENCIA HISTÓRICA (DESDE DÍA 1) -->
             <h3 class="section-title">Crecimiento Histórico (Global)</h3>
             <div class="responsive-grid">
                 <div class="card chart-card">
@@ -132,7 +158,6 @@
                 </div>
             </div>
 
-            <!-- COMPORTAMIENTO Y LEALTAD -->
             <h3 class="section-title">Comportamiento y Lealtad</h3>
             <div class="responsive-grid" style="grid-template-columns: 1fr 2fr;">
                 <div class="card chart-card">
@@ -181,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- GRÁFICAS DE OPERACIÓN -->
             <h3 class="section-title">Análisis Operativo</h3>
             <div class="responsive-grid">
                 <div class="card chart-card">
@@ -199,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- TABLAS DE TOP 10 -->
             <div class="responsive-grid">
                 <div class="card table-card">
                     <h4>Top 10 Productos Más Vendidos</h4>
@@ -256,7 +279,6 @@
                 </div>
             </div>
 
-            <!-- LISTA DE ÚLTIMOS PEDIDOS -->
             <h3 class="section-title">Últimos Pedidos (En este periodo)</h3>
             <div class="card table-card full-width">
                 <div class="scrollable-table">
@@ -299,31 +321,29 @@
     </div>
 </div>
 
-
 <script>
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
 let menuChartObj, horasChartObj, diaSemanaChartObj, loyaltyChartObj;
 let currentMode = 'total';
 
-// ------------------------------------------------------------------
-// CORRECCIÓN AQUÍ: El filtro default() va ANTES del tojson
-// ------------------------------------------------------------------
 const dataVentasHora = {{ ventas_hora | default([]) | tojson | safe }};
 const dataDiaSemana = {{ ventas_por_dia_semana | default([]) | tojson | safe }};
 const dataMenuEng = {{ menu_engineering_data | default('[]') | safe }};
 
-// Datos para gráficas nuevas
+// Datos para gráficas
 const ventasComp = {{ ventas_comparativas | default({}) | tojson | safe }};
 const gastosComp = {{ gastos_comparativas | default({}) | tojson | safe }};
 const histIngresos = {{ historico_ingresos | default([]) | tojson | safe }};
 const histGastos = {{ historico_gastos | default([]) | tojson | safe }};
 
+// Datos Marketing Ads
+const dataAdsVsVentas = {{ ads_vs_ventas | default([]) | tojson | safe }};
+
 const loyaltyData = { 
     leales: {{ loyalty_stats.ventas_loyalty | default(0) if loyalty_stats else 0 }}, 
     casuales: {{ loyalty_stats.ventas_casual | default(0) if loyalty_stats else 0 }} 
 };
-// ------------------------------------------------------------------
 
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -424,6 +444,56 @@ function initCharts() {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales: { y: { ticks: { callback: (v) => fmt.format(v) } } }, elements: { point: { radius: 0, hitRadius: 10 } } }
     });
+
+    // 7. Gráfica Ads vs Ventas
+    if(dataAdsVsVentas.length > 0) {
+        new Chart(document.getElementById('adsVsVentasChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: dataAdsVsVentas.map(d => d.fecha),
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Gasto Instagram ($)',
+                        data: dataAdsVsVentas.map(d => d.gasto_ads),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: '#8b5cf6',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y_ads'
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Ingresos Ventas ($)',
+                        data: dataAdsVsVentas.map(d => d.ventas_reales),
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        borderRadius: 4,
+                        yAxisID: 'y_ventas'
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { grid: { display: false } },
+                    y_ventas: { 
+                        type: 'linear', 
+                        position: 'left',
+                        title: { display: true, text: 'Ventas ($)' },
+                        ticks: { callback: (v) => fmt.format(v) } 
+                    },
+                    y_ads: { 
+                        type: 'linear', 
+                        position: 'right',
+                        title: { display: true, text: 'Gasto Ads ($)' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: (v) => fmt.format(v) } 
+                    }
+                } 
+            }
+        });
+    }
 }
 
 // Control Toggle View
@@ -437,7 +507,6 @@ function toggleViewMode(mode) {
     wrapper.classList.remove('mode-totales', 'mode-promedios');
     wrapper.classList.add(mode === 'total' ? 'mode-totales' : 'mode-promedios');
 
-    // Actualizar datos de gráficas que cambian con el Toggle
     menuChartObj.data.datasets[0].data = dataMenuEng.map(d => ({
         x: currentMode === 'total' ? d.x : (d.x_promedio || d.x),
         y: currentMode === 'total' ? d.y : (d.y_promedio || d.y),
@@ -494,7 +563,15 @@ body { background: var(--bg); font-family: 'Inter', system-ui, sans-serif; color
 .kpi-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 6px solid #ccc; position: relative; }
 .kpi-box p { font-size: 1.6rem; font-weight: bold; margin-top: 8px; color: #111827; }
 .kpi-box small { color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; font-size: 0.75rem; }
-.green { border-color: #10b981; } .red { border-color: #ef4444; } .blue { border-color: #3b82f6; } .orange { border-color: #f59e0b; }
+
+/* Colores de las tarjetas */
+.green { border-color: #10b981; } 
+.red { border-color: #ef4444; } 
+.blue { border-color: #3b82f6; } 
+.orange { border-color: #f59e0b; }
+.purple { border-color: #8b5cf6; }
+.pink { border-color: #ec4899; }
+.cyan { border-color: #06b6d4; }
 
 .trend { display: inline-block; margin-top: 10px; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
 .trend.up { background: #d1fae5; color: #065f46; }
