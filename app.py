@@ -1466,7 +1466,7 @@ def dashboard():
         total_impresiones=total_impresiones,
         cac_global=cac_global,
         roas_global=round(roas_global, 2),
-        ads_vs_ventas=ads_vs_ventas
+        ads_vs_ventas=ads_vs_ventas,
         org_vs_ventas=org_vs_ventas
     )
 
