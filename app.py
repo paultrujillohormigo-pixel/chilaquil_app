@@ -1409,20 +1409,20 @@ def dashboard():
             # =======================================================
             # === DATOS ORGÁNICOS (INSTAGRAM) =======================
             # =======================================================
-            filtro_org = filtro_pedidos.replace("fecha", "dia")
+            filtro_org = filtro_pedidos.replace("fecha", "DATE(hora_publicacion)")
             
             cursor.execute(f"""
                 SELECT 
-                    dia as f, 
+                    DATE(hora_publicacion) as f, 
                     SUM(alcance) as alcance, 
-                    SUM(impresiones) as impresiones,
-                    SUM(me_gusta + comentarios + compartidos + guardados) as interacciones
+                    SUM(visualizaciones) as impresiones,
+                    SUM(me_gusta + comentarios + veces_compartido + veces_guardado) as interacciones
                 FROM organic_instagram_performance {filtro_org} 
-                GROUP BY dia
+                GROUP BY DATE(hora_publicacion)
             """, params)
             org_dict = {str(r["f"]): r for r in cursor.fetchall()}
             
-            # Reutilizamos "todas_las_fechas" que ya incluye ventas y ads, y agregamos orgánico
+            # Unimos las fechas de todos los mundos (Ventas + Ads + Orgánico)
             todas_las_fechas_extendidas = sorted(list(set(todas_las_fechas).union(set(org_dict.keys()))))
             
             org_vs_ventas = [
