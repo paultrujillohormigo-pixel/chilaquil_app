@@ -1131,6 +1131,10 @@ def compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
+# =========================================================
+# ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
+# =========================================================
+
 def get_previous_month(ym_str):
     try:
         dt = datetime.strptime(ym_str, "%Y-%m")
@@ -1222,9 +1226,8 @@ def dashboard():
                 var_utilidad = calc_var(float(utilidad), float(prev_utilidad))
 
 
-            # === ANÁLISIS DE LEALTAD Y CLIENTES (Con filtro por mes ajustado) ===
+            # === ANÁLISIS DE LEALTAD Y CLIENTES ===
             filtro_tx_p = filtro_pedidos.replace("fecha", "p.fecha")
-            # Necesitamos cambiar WHERE por AND si lo juntamos
             if filtro_tx_p.startswith("WHERE"):
                 filtro_tx_p = "AND " + filtro_tx_p[5:]
 
@@ -1273,7 +1276,7 @@ def dashboard():
                 c["ticket_promedio"] = float(c["gastado"]) / float(c["visitas"]) if c["visitas"] > 0 else 0
                 top_clientes.append(c)
 
-            # === COMPARATIVAS DÍA A DÍA POR MES SELECCIONADO (Para las gráficas de línea) ===
+            # === COMPARATIVAS DÍA A DÍA POR MES SELECCIONADO ===
             cursor.execute(f"""
                 SELECT DAY(fecha) as dia_num, DATE_FORMAT(fecha, '%%Y-%%m') as mes, SUM(total) as total
                 FROM pedidos
@@ -1300,7 +1303,7 @@ def dashboard():
                 if mes not in gastos_comparativas: gastos_comparativas[mes] = {}
                 gastos_comparativas[mes][r["dia_num"]] = float(r["total"] or 0)
 
-            # === HISTÓRICOS GLOBALES CONTINUOS (Ignoran el filtro mensual) ===
+            # === HISTÓRICOS GLOBALES CONTINUOS ===
             cursor.execute("""
                 SELECT DATE(fecha) as f, SUM(total) as total 
                 FROM pedidos 
@@ -1363,6 +1366,36 @@ def dashboard():
             cursor.execute(f"SELECT id, DATE_FORMAT(fecha, '%%Y-%%m-%%d %%H:%%i') as fecha, origen, mesero, estado, total FROM pedidos {filtro_pedidos} ORDER BY fecha DESC LIMIT 15", params)
             ultimos_pedidos = cursor.fetchall()
 
+            # =======================================================
+            # === DATOS DE MARKETING (INSTAGRAM ADS) ================
+            # =======================================================
+            filtro_ads = filtro_pedidos.replace("fecha", "dia")
+            
+            # Gasto total
+            cursor.execute(f"SELECT SUM(importe_gastado) AS total_ads FROM ads_instagram_performance {filtro_ads}", params)
+            total_gasto_ads = Decimal(str(cursor.fetchone()["total_ads"] or 0))
+            
+            # CAC y ROAS
+            cac_global = float(total_gasto_ads) / total_pedidos_gral if total_pedidos_gral > 0 else 0
+            roas_global = float(total_ingresos) / float(total_gasto_ads) if total_gasto_ads > 0 else 0
+            
+            # Gráfica combinada diaria (Ventas vs Ads) en el mes seleccionado
+            cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params)
+            ventas_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
+            
+            cursor.execute(f"SELECT dia as f, SUM(importe_gastado) as total FROM ads_instagram_performance {filtro_ads}", params)
+            ads_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
+            
+            todas_las_fechas = sorted(list(set(ventas_dict.keys()).union(set(ads_dict.keys()))))
+            ads_vs_ventas = [
+                {
+                    "fecha": f, 
+                    "ventas_reales": ventas_dict.get(f, 0.0), 
+                    "gasto_ads": ads_dict.get(f, 0.0)
+                } 
+                for f in todas_las_fechas
+            ]
+
     finally:
         conn.close()
 
@@ -1389,7 +1422,11 @@ def dashboard():
         ventas_comparativas=ventas_comparativas,
         gastos_comparativas=gastos_comparativas,
         historico_ingresos=historico_ingresos,
-        historico_gastos=historico_gastos
+        historico_gastos=historico_gastos,
+        total_gasto_ads=float(total_gasto_ads),
+        cac_global=cac_global,
+        roas_global=round(roas_global, 2),
+        ads_vs_ventas=ads_vs_ventas
     )
 
 # =========================================================
