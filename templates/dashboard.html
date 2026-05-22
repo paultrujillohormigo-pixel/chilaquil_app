@@ -114,6 +114,18 @@
                         {{ 'Rentable' if roas_global > 3 else 'Revisar campañas' }}
                     </div>
                 </div>
+
+                <div class="kpi-box" style="border-color: #f59e0b;">
+                    <small>Visualizaciones (Impresiones)</small>
+                    <p>{{ "{:,}".format(total_impresiones) }}</p>
+                    <div class="trend neutral">Veces que se vio tu anuncio</div>
+                </div>
+
+                <div class="kpi-box" style="border-color: #3b82f6;">
+                    <small>Personas Alcanzadas</small>
+                    <p>{{ "{:,}".format(total_alcance) }}</p>
+                    <div class="trend neutral">Cuentas únicas que te vieron</div>
+                </div>
             </div>
 
             <h3 class="section-title">Impacto de Marketing en Ventas</h3>
@@ -123,6 +135,17 @@
                     <div class="canvas-holder">
                         <canvas id="adsVsVentasChart"></canvas>
                     </div>
+                </div>
+            </div>
+
+            <h3 class="section-title">Rendimiento de Anuncios (Top of Funnel)</h3>
+            <div class="responsive-grid" style="grid-template-columns: 1fr;">
+                <div class="card chart-card">
+                    <h4>Alcance vs Impresiones por Día</h4>
+                    <div class="canvas-holder">
+                        <canvas id="adsReachChart"></canvas>
+                    </div>
+                    <p class="chart-footer">Compara a cuántas personas llegas vs cuántas veces ven el anuncio</p>
                 </div>
             </div>
 
@@ -490,6 +513,42 @@ function initCharts() {
                         grid: { drawOnChartArea: false },
                         ticks: { callback: (v) => fmt.format(v) } 
                     }
+                } 
+            }
+        });
+
+        // 8. Gráfica de Alcance vs Impresiones
+        new Chart(document.getElementById('adsReachChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: dataAdsVsVentas.map(d => d.fecha),
+                datasets: [
+                    {
+                        label: 'Impresiones (Visualizaciones)',
+                        data: dataAdsVsVentas.map(d => d.impresiones),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Alcance (Personas únicas)',
+                        data: dataAdsVsVentas.map(d => d.alcance),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { callback: (v) => new Intl.NumberFormat('es-MX').format(v) } 
+                    } 
                 } 
             }
         });
