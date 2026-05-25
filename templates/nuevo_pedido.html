@@ -849,6 +849,7 @@ function guardarYEnviarWhatsApp() {
     const item = carrito[uid];
     mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})\n`;
     
+    // Espacios añadidos para la indentación requerida
     if(item.custom.proteina) mensaje += `   🥩 ${item.custom.proteina}\n`;
     if(item.custom.salsa) mensaje += `   🌶️ ${item.custom.salsa}\n`;
     if(item.custom.sin.length > 0) mensaje += `   🚫 Sin ${item.custom.sin.join(', ')}\n`;
@@ -862,23 +863,23 @@ function guardarYEnviarWhatsApp() {
   // ASIGNACIÓN DE TOTOPOS: 1 pedido = 1 totopo
   const totoposGanados = 1; 
 
-  mensaje += `\n*Subtotal:* ${subtotal}`;
+  // Ajuste de totales sin negritas y con el salto de línea correcto
+  mensaje += `\nSubtotal: ${subtotal}`;
   if (descuentoTotal > 0) {
-    mensaje += `\n*Descuento:* ${descuento}`;
+    mensaje += `\nDescuento: ${descuento}`;
   }
-  mensaje += `\n*Total a pagar: ${total}*\n`;
+  mensaje += `\nTotal a pagar: ${total}\n`;
   
-  // Integración del mensaje de lealtad (Totopo único)
+  // Integración del mensaje de lealtad sin negritas
   if (totoposGanados > 0) {
-    mensaje += `\n🎁 *¡Con esta compra sumas ${totoposGanados} totopo a tu cuenta!* 🌮✨\n`;
+    mensaje += `\n🎁 ¡Con esta compra sumas ${totoposGanados} totopo a tu cuenta! 🌮✨\n`;
   }
 
-  // ✅ NUEVO: Enlace personalizado al perfil del cliente
-  // Asumimos el dominio principal
+  // Enlace personalizado al perfil del cliente
   mensaje += `\nConsulta tus puntos y recompensas aquí:\n`;
-  mensaje += `👉 https://www.senorchilaquil.com/mi-perfil/${numeros}\n`;
+  mensaje += `👉 https://www.senorchilaquil.com/mi-perfil/${numeros}\n\n`;
 
-  mensaje += "\n¡Gracias por tu preferencia! 🍔🍕";
+  mensaje += "¡Gracias por tu preferencia! 🍔🍕";
 
   // 3. Crear el enlace de WhatsApp y abrirlo
   const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeros}&text=${encodeURIComponent(mensaje)}`;
