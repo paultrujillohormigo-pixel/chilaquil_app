@@ -1131,6 +1131,11 @@ def compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
+from datetime import datetime, timedelta
+from decimal import Decimal
+import json
+import pymysql
+
 def get_previous_month(ym_str):
     try:
         dt = datetime.strptime(ym_str, "%Y-%m")
@@ -1146,61 +1151,121 @@ def calc_var(current, prev):
 
 @app.route("/dashboard")
 def dashboard():
+    # 1. Capturar todos los filtros del GET (HTML)
     meses_seleccionados = request.args.getlist("mes")
+    fecha_inicio_seleccionada = request.args.get("fecha_inicio", "")
+    fecha_fin_seleccionada = request.args.get("fecha_fin", "")
+    dias_seleccionados = request.args.getlist("dia_semana")
+    origen_seleccionado = request.args.get("origen", "")
+
     conn = get_connection()
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 1. Filtros y Meses Previos (Para comparar)
-            filtro_pedidos = ""
-            filtro_compras = ""
-            params = []
-            
-            filtro_prev_pedidos = ""
-            filtro_prev_compras = ""
-            params_prev = []
-            
+            # Obtener meses disponibles para el selector
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disp_raw = cursor.fetchall()
             meses_disponibles = [m["mes"] for m in meses_disp_raw]
             
-            # Lógica para construir filtros dinámicamente
+            # Listas para construir el WHERE dinámico
+            conds_general = []
+            params_general = []
+            
+            # --- FILTRO 1: Meses o Default ---
             if meses_seleccionados:
                 placeholders = ",".join(["%s"] * len(meses_seleccionados))
-                filtro_pedidos = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') IN ({placeholders})"
-                filtro_compras = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') IN ({placeholders})"
-                params.extend(meses_seleccionados)
-                
-                if len(meses_seleccionados) == 1:
-                    prev_m = get_previous_month(meses_seleccionados[0])
-                    if prev_m:
-                        filtro_prev_pedidos = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                        filtro_prev_compras = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                        params_prev.append(prev_m)
-            else:
-                # Default: tomar el mes más reciente
+                conds_general.append(f"DATE_FORMAT({{campo_fecha}}, '%%Y-%%m') IN ({placeholders})")
+                params_general.extend(meses_seleccionados)
+            elif not fecha_inicio_seleccionada and not fecha_fin_seleccionada:
+                # Default: tomar el mes más reciente si no se seleccionó ni mes ni fechas específicas
                 if meses_disponibles:
                     last_m = meses_disponibles[0]
-                    filtro_pedidos = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                    filtro_compras = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                    params.append(last_m)
-                    
-                    prev_m = get_previous_month(last_m)
-                    if prev_m:
-                        filtro_prev_pedidos = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                        filtro_prev_compras = f"WHERE DATE_FORMAT(fecha, '%%Y-%%m') = %s"
-                        params_prev.append(prev_m)
+                    conds_general.append("DATE_FORMAT({campo_fecha}, '%%Y-%%m') = %s")
+                    params_general.append(last_m)
 
-            # Días reales trabajados en el periodo
-            cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params)
+            # --- FILTRO 2: Rango de Fechas ---
+            if fecha_inicio_seleccionada:
+                conds_general.append("DATE({campo_fecha}) >= %s")
+                params_general.append(fecha_inicio_seleccionada)
+            if fecha_fin_seleccionada:
+                conds_general.append("DATE({campo_fecha}) <= %s")
+                params_general.append(fecha_fin_seleccionada)
+                
+            # --- FILTRO 3: Días de la Semana ---
+            p_dias = ""
+            if dias_seleccionados:
+                mapa_dias = {'Domingo': 1, 'Lunes': 2, 'Martes': 3, 'Miércoles': 4, 'Jueves': 5, 'Viernes': 6, 'Sábado': 7}
+                dias_num = [str(mapa_dias[d]) for d in dias_seleccionados if d in mapa_dias]
+                if dias_num:
+                    p_dias = ",".join(dias_num)
+                    conds_general.append(f"DAYOFWEEK({{campo_fecha}}) IN ({p_dias})")
+                    
+            # --- FILTRO 4: Origen (Solo aplica a Pedidos) ---
+            conds_pedidos = list(conds_general)
+            params_pedidos = list(params_general)
+            
+            if origen_seleccionado:
+                conds_pedidos.append("{campo_origen} = %s")
+                params_pedidos.append(origen_seleccionado)
+                
+            # Función constructora para inyectar los campos correctos en el string
+            def build_where(conds, c_fecha, c_origen="origen"):
+                if not conds: return ""
+                return "WHERE " + " AND ".join([c.replace("{campo_fecha}", c_fecha).replace("{campo_origen}", c_origen) for c in conds])
+
+            # Filtros Finales para las consultas
+            filtro_pedidos = build_where(conds_pedidos, "fecha", "origen")
+            filtro_compras = build_where(conds_general, "fecha") # Insumos no tiene "origen"
+            filtro_ads = build_where(conds_general, "dia")
+            filtro_org = build_where(conds_general, "hora_publicacion")
+            
+            filtro_tx_p = build_where(conds_pedidos, "p.fecha", "p.origen")
+            if filtro_tx_p.startswith("WHERE"):
+                filtro_tx_p = "AND " + filtro_tx_p[5:] # Quitar el WHERE para usar dentro del JOIN
+                
+            filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
+            
+            # --- LÓGICA DE MES PREVIO (Para calcular Variaciones %) ---
+            filtro_prev_pedidos = ""
+            filtro_prev_compras = ""
+            params_prev_pedidos = []
+            params_prev_compras = []
+            
+            prev_m = None
+            if meses_seleccionados and len(meses_seleccionados) == 1 and not fecha_inicio_seleccionada and not fecha_fin_seleccionada:
+                prev_m = get_previous_month(meses_seleccionados[0])
+            elif not meses_seleccionados and not fecha_inicio_seleccionada and not fecha_fin_seleccionada and meses_disponibles:
+                prev_m = get_previous_month(meses_disponibles[0])
+                
+            if prev_m:
+                conds_prev = ["DATE_FORMAT({campo_fecha}, '%%Y-%%m') = %s"]
+                params_prev_base = [prev_m]
+                
+                if p_dias: # Mantenemos el filtro de días de semana para el mes previo
+                    conds_prev.append(f"DAYOFWEEK({{campo_fecha}}) IN ({p_dias})")
+                    
+                conds_prev_pedidos = list(conds_prev)
+                params_prev_pedidos = list(params_prev_base)
+                
+                if origen_seleccionado:
+                    conds_prev_pedidos.append("{campo_origen} = %s")
+                    params_prev_pedidos.append(origen_seleccionado)
+                    
+                filtro_prev_pedidos = build_where(conds_prev_pedidos, "fecha", "origen")
+                filtro_prev_compras = build_where(conds_prev, "fecha")
+                params_prev_compras = list(params_prev_base)
+
+
+            # Días reales trabajados en el periodo (Cuenta solo los días con ventas registradas)
+            cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             meses_con_venta = len(meses_seleccionados) if meses_seleccionados else 1
 
             # === CÁLCULOS PERIODO ACTUAL ===
-            cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params)
+            cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params_pedidos)
             total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
             
-            cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params)
+            cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_general)
             total_costos = Decimal(str(cursor.fetchone()["total"] or 0))
             
             utilidad = total_ingresos - total_costos
@@ -1209,10 +1274,10 @@ def dashboard():
             # === CÁLCULOS PERIODO ANTERIOR (Para variaciones) ===
             var_ingresos = var_costos = var_utilidad = 0
             if filtro_prev_pedidos:
-                cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_prev_pedidos}", params_prev)
+                cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_prev_pedidos}", params_prev_pedidos)
                 prev_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
                 
-                cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_prev_compras}", params_prev)
+                cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_prev_compras}", params_prev_compras)
                 prev_costos = Decimal(str(cursor.fetchone()["total"] or 0))
                 
                 prev_utilidad = prev_ingresos - prev_costos
@@ -1222,10 +1287,6 @@ def dashboard():
                 var_utilidad = calc_var(float(utilidad), float(prev_utilidad))
 
             # === ANÁLISIS DE LEALTAD Y CLIENTES ===
-            filtro_tx_p = filtro_pedidos.replace("fecha", "p.fecha")
-            if filtro_tx_p.startswith("WHERE"):
-                filtro_tx_p = "AND " + filtro_tx_p[5:]
-
             cursor.execute(f"""
                 SELECT 
                     COUNT(DISTINCT p.id) as pedidos_loyalty,
@@ -1233,7 +1294,7 @@ def dashboard():
                 FROM pedidos p
                 JOIN loyalty_tx tx ON p.id = tx.pedido_id
                 WHERE tx.reason = 'purchase' {filtro_tx_p}
-            """, params)
+            """, params_pedidos)
             loyalty_data = cursor.fetchone()
             
             ventas_loyalty = Decimal(str(loyalty_data["ventas_loyalty"] or 0))
@@ -1241,7 +1302,7 @@ def dashboard():
             
             ventas_casual = total_ingresos - ventas_loyalty
             
-            cursor.execute(f"SELECT COUNT(id) as total_pedidos FROM pedidos {filtro_pedidos}", params)
+            cursor.execute(f"SELECT COUNT(id) as total_pedidos FROM pedidos {filtro_pedidos}", params_pedidos)
             total_pedidos_gral = int(cursor.fetchone()["total_pedidos"] or 0)
             pedidos_casuales = total_pedidos_gral - pedidos_loyalty
 
@@ -1264,7 +1325,7 @@ def dashboard():
                 WHERE tx.reason = 'purchase' {filtro_tx_p}
                 GROUP BY c.id
                 ORDER BY gastado DESC LIMIT 5
-            """, params)
+            """, params_pedidos)
             top_clientes_raw = cursor.fetchall()
             top_clientes = []
             for c in top_clientes_raw:
@@ -1277,7 +1338,7 @@ def dashboard():
                 FROM pedidos
                 {filtro_pedidos}
                 GROUP BY mes, dia_num
-            """, params)
+            """, params_pedidos)
             ventas_comp_raw = cursor.fetchall()
             ventas_comparativas = {}
             for r in ventas_comp_raw:
@@ -1290,7 +1351,7 @@ def dashboard():
                 FROM insumos_compras
                 {filtro_compras}
                 GROUP BY mes, dia_num
-            """, params)
+            """, params_general)
             gastos_comp_raw = cursor.fetchall()
             gastos_comparativas = {}
             for r in gastos_comp_raw:
@@ -1298,7 +1359,7 @@ def dashboard():
                 if mes not in gastos_comparativas: gastos_comparativas[mes] = {}
                 gastos_comparativas[mes][r["dia_num"]] = float(r["total"] or 0)
 
-            # === HISTÓRICOS GLOBALES CONTINUOS ===
+            # === HISTÓRICOS GLOBALES CONTINUOS === (Se mantienen completos por definición)
             cursor.execute("""
                 SELECT DATE(fecha) as f, SUM(total) as total 
                 FROM pedidos 
@@ -1314,7 +1375,6 @@ def dashboard():
             historico_gastos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
             # === INGENIERÍA DE MENÚ ===
-            filtro_bcg = filtro_pedidos.replace("fecha", "pe.fecha")
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
@@ -1326,7 +1386,7 @@ def dashboard():
                 {filtro_bcg}
                 GROUP BY p.id, p.nombre, p.costo
                 ORDER BY ingreso_total DESC
-            """, params)
+            """, params_pedidos)
             bcg_raw = cursor.fetchall()
             
             for item in bcg_raw:
@@ -1336,7 +1396,7 @@ def dashboard():
             menu_engineering_data = [{"nombre": i["nombre"], "x": float(i["cantidad"]), "x_promedio": float(i["cantidad"] or 0)/dias_totales, "y": float(i["margen_unitario"]), "y_promedio": float(i["margen_unitario"])} for i in bcg_raw]
 
             # === HORAS Y DÍAS DE LA SEMANA ===
-            cursor.execute(f"SELECT HOUR(fecha) AS hora_num, COUNT(*) AS total_pedidos, SUM(total) AS total_dinero FROM pedidos {filtro_pedidos} GROUP BY HOUR(fecha) ORDER BY hora_num", params)
+            cursor.execute(f"SELECT HOUR(fecha) AS hora_num, COUNT(*) AS total_pedidos, SUM(total) AS total_dinero FROM pedidos {filtro_pedidos} GROUP BY HOUR(fecha) ORDER BY hora_num", params_pedidos)
             ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"] or 0), "promedio": float(v["total_dinero"] or 0) / dias_totales} for v in cursor.fetchall()]
 
             cursor.execute(f"""
@@ -1348,32 +1408,29 @@ def dashboard():
                     FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha), dia_num, nombre
                 ) t
                 GROUP BY dia_num, nombre ORDER BY dia_num
-            """, params)
+            """, params_pedidos)
             ventas_semana = [{"nombre": v["nombre"], "promedio": float(v["promedio"] or 0), "total": float(v["total"] or 0)} for v in cursor.fetchall()]
 
             # === TABLAS DE APOYO Y ÚLTIMOS PEDIDOS ===
             top_productos = bcg_raw[:10]
-            cursor.execute(f"SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado FROM insumos_compras {filtro_compras} GROUP BY concepto, tipo_costo ORDER BY total_gastado DESC LIMIT 10", params)
+            cursor.execute(f"SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado FROM insumos_compras {filtro_compras} GROUP BY concepto, tipo_costo ORDER BY total_gastado DESC LIMIT 10", params_general)
             top_gastos = cursor.fetchall()
             for g in top_gastos: 
                 g["promedio_gastado"] = float(g["total_gastado"] or 0) / meses_con_venta
 
-            cursor.execute(f"SELECT id, DATE_FORMAT(fecha, '%%Y-%%m-%%d %%H:%%i') as fecha, origen, mesero, estado, total FROM pedidos {filtro_pedidos} ORDER BY fecha DESC LIMIT 15", params)
+            cursor.execute(f"SELECT id, DATE_FORMAT(fecha, '%%Y-%%m-%%d %%H:%%i') as fecha, origen, mesero, estado, total FROM pedidos {filtro_pedidos} ORDER BY fecha DESC LIMIT 15", params_pedidos)
             ultimos_pedidos = cursor.fetchall()
 
             # =======================================================
             # === DATOS DE MARKETING (INSTAGRAM ADS) ================
             # =======================================================
-            filtro_ads = filtro_pedidos.replace("fecha", "dia")
-            
-            # Gasto total, alcance e impresiones
             cursor.execute(f"""
                 SELECT 
                     SUM(importe_gastado) AS total_ads,
                     SUM(alcance) AS total_alcance,
                     SUM(impresiones) AS total_impresiones
                 FROM ads_instagram_performance {filtro_ads}
-            """, params)
+            """, params_general)
             ads_totals = cursor.fetchone()
             
             total_gasto_ads = Decimal(str(ads_totals["total_ads"] or 0)) if ads_totals["total_ads"] else Decimal(0)
@@ -1385,14 +1442,14 @@ def dashboard():
             roas_global = float(total_ingresos) / float(total_gasto_ads) if total_gasto_ads > 0 else 0
             
             # Gráficas combinadas diarias (Ventas, Ads, Alcance, Impresiones)
-            cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params)
+            cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params_pedidos)
             ventas_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
             
             cursor.execute(f"""
                 SELECT dia as f, SUM(importe_gastado) as total_gasto, SUM(alcance) as alcance, SUM(impresiones) as impresiones 
                 FROM ads_instagram_performance {filtro_ads} 
                 GROUP BY dia
-            """, params)
+            """, params_general)
             ads_dict = {str(r["f"]): r for r in cursor.fetchall()}
             
             todas_las_fechas = sorted(list(set(ventas_dict.keys()).union(set(ads_dict.keys()))))
@@ -1400,17 +1457,16 @@ def dashboard():
                 {
                     "fecha": f, 
                     "ventas_reales": ventas_dict.get(f, 0.0), 
-                    "gasto_ads": float(ads_dict.get(f, {}).get("total_gasto", 0)),
-                    "alcance": int(ads_dict.get(f, {}).get("alcance", 0)),
-                    "impresiones": int(ads_dict.get(f, {}).get("impresiones", 0))
+                    "gasto_ads": float(ads_dict.get(f, {}).get("total_gasto", 0) if ads_dict.get(f) else 0),
+                    "alcance": int(ads_dict.get(f, {}).get("alcance", 0) if ads_dict.get(f) else 0),
+                    "impresiones": int(ads_dict.get(f, {}).get("impresiones", 0) if ads_dict.get(f) else 0)
                 } 
                 for f in todas_las_fechas
             ]
+            
             # =======================================================
             # === DATOS ORGÁNICOS (INSTAGRAM) =======================
             # =======================================================
-            filtro_org = filtro_pedidos.replace("fecha", "hora_publicacion")
-            
             cursor.execute(f"""
                 SELECT 
                     DATE(hora_publicacion) as f, 
@@ -1420,20 +1476,17 @@ def dashboard():
                 FROM organic_instagram_performance 
                 {filtro_org} 
                 GROUP BY DATE(hora_publicacion)
-            """, params)
+            """, params_general)
             org_rows = cursor.fetchall()
             
             # Filtramos para que solo tome fechas válidas y no choque con nulos
             org_dict = {str(r["f"]): r for r in org_rows if r["f"] is not None}
-            
-            # Unimos las fechas de todos los mundos
             todas_las_fechas_extendidas = sorted(list(set(todas_las_fechas).union(set(org_dict.keys()))))
             
             org_vs_ventas = [
                 {
                     "fecha": f, 
                     "ventas_reales": ventas_dict.get(f, 0.0), 
-                    # El "or 0" asegura que si la base de datos devuelve nulo, ponga un 0
                     "alcance_org": int(org_dict.get(f, {}).get("alcance") or 0),
                     "interacciones_org": int(org_dict.get(f, {}).get("interacciones") or 0)
                 } 
@@ -1442,6 +1495,7 @@ def dashboard():
     finally:
         conn.close()
 
+    # Retornamos todo inyectando los filtros nuevos al final para que el HTML guarde su estado seleccionado
     return render_template(
         "dashboard.html",
         meses_seleccionados=meses_seleccionados, 
@@ -1472,7 +1526,12 @@ def dashboard():
         cac_global=cac_global,
         roas_global=round(roas_global, 2),
         ads_vs_ventas=ads_vs_ventas,
-        org_vs_ventas=org_vs_ventas
+        org_vs_ventas=org_vs_ventas,
+        # Nuevos filtros conservados para el front-end
+        fecha_inicio_seleccionada=fecha_inicio_seleccionada,
+        fecha_fin_seleccionada=fecha_fin_seleccionada,
+        dias_seleccionados=dias_seleccionados,
+        origen_seleccionado=origen_seleccionado
     )
 
 # =========================================================
