@@ -416,15 +416,15 @@ const loyaltyData = {
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-// Colores específicos para los días de la semana
+// Colores específicos para los días de la semana (cubriendo nombres completos y abreviados)
 const colorMapaDias = {
-    'Dom': '#ef4444',   // Rojo
-    'Lun': '#3b82f6',   // Azul
-    'Mar': '#10b981',   // Verde esmeralda
-    'Mie': '#f59e0b',   // Naranja/Amarillo
-    'Jue': '#8b5cf6',   // Morado
-    'Vie': '#ec4899',   // Rosa
-    'Sab': '#06b6d4'    // Cyan
+    'Dom': '#ef4444', 'Domingo': '#ef4444',     // Rojo
+    'Lun': '#3b82f6', 'Lunes': '#3b82f6',       // Azul
+    'Mar': '#10b981', 'Martes': '#10b981',      // Verde esmeralda
+    'Mie': '#f59e0b', 'Miércoles': '#f59e0b',   // Naranja/Amarillo
+    'Jue': '#8b5cf6', 'Jueves': '#8b5cf6',      // Morado
+    'Vie': '#ec4899', 'Viernes': '#ec4899',     // Rosa
+    'Sab': '#06b6d4', 'Sábado': '#06b6d4'       // Cyan
 };
 
 // ==========================================
@@ -773,6 +773,7 @@ function toggleActive(checkbox) {
 
 window.onload = () => { initCharts(); };
 </script>
+
 
 <style>
 :root { --side-width: 260px; --primary: #111827; --bg: #f3f4f6; }
