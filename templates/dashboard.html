@@ -18,8 +18,9 @@
                 <button class="close-btn" onclick="toggleSidebar()">✕ Cerrar</button>
                 <h3>Dashboard</h3>
                 
-                <p class="filter-label">SELECCIONAR MES(ES)</p>
                 <form method="GET" action="/dashboard" id="filterForm">
+                    
+                    <p class="filter-label">SELECCIONAR MES(ES)</p>
                     <div class="meses-flex">
                         {% if meses_disponibles %}
                             {% for m in meses_disponibles %}
@@ -35,8 +36,40 @@
                             {% endfor %}
                         {% endif %}
                     </div>
+
+                    <p class="filter-label" style="margin-top: 20px;">RANGO DE FECHAS</p>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <input type="date" name="fecha_inicio" value="{{ fecha_inicio_seleccionada }}" class="filter-input" title="Fecha inicio">
+                        <input type="date" name="fecha_fin" value="{{ fecha_fin_seleccionada }}" class="filter-input" title="Fecha fin">
+                    </div>
+
+                    <p class="filter-label" style="margin-top: 20px;">DÍAS DE LA SEMANA</p>
+                    <div class="meses-flex">
+                        {% set dias_semana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
+                        {% for d in dias_semana %}
+                            <label class="mes-label">
+                                <input type="checkbox" name="dia_semana" value="{{ d }}" 
+                                       {% if d in dias_seleccionados %}checked{% endif %}
+                                       style="display: none;"
+                                       onchange="toggleActive(this)">
+                                <span class="mes-link {% if d in dias_seleccionados %}active{% endif %}">
+                                    {{ d[:3] }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+
+                    <p class="filter-label" style="margin-top: 20px;">ORIGEN DEL PEDIDO</p>
+                    <div style="margin-top: 8px;">
+                        <select name="origen" class="filter-input">
+                            <option value="">Todos los orígenes</option>
+                            <option value="local" {% if origen_seleccionado == 'local' %}selected{% endif %}>Local / Comedor</option>
+                            <option value="uber" {% if origen_seleccionado == 'uber' %}selected{% endif %}>Uber Eats</option>
+                            <option value="whatsapp" {% if origen_seleccionado == 'whatsapp' %}selected{% endif %}>WhatsApp / Teléfono</option>
+                        </select>
+                    </div>
                     
-                    <button type="submit" class="btn-aplicar">Aplicar Filtros</button>
+                    <button type="submit" class="btn-aplicar" style="margin-top: 25px;">Aplicar Filtros</button>
                     <a href="/dashboard" class="btn-reset">Limpiar Filtros</a>
                 </form>
             </div>
@@ -749,6 +782,11 @@ body { background: var(--bg); font-family: 'Inter', system-ui, sans-serif; color
 .mes-link.active { background: #3b82f6; color: white; font-weight: bold; }
 .btn-aplicar { width: 100%; margin-top: 20px; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
 .btn-reset { display: block; margin-top: 20px; text-align: center; color: #9ca3af; text-decoration: underline; font-size: 0.8rem; }
+
+/* INPUTS DE FILTROS NUEVOS */
+.filter-input { background: #374151; color: #d1d5db; border: 1px solid #4b5563; padding: 8px; border-radius: 6px; width: 100%; font-size: 0.85rem; font-family: inherit; }
+.filter-input:focus { outline: none; border-color: #3b82f6; }
+.filter-input::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
 
 /* KPIs & TRENDS */
 .kpi-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
