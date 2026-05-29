@@ -389,6 +389,7 @@
     </div>
 </div>
 
+
 <script>
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
@@ -416,16 +417,26 @@ const loyaltyData = {
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-// Colores específicos para los días de la semana (cubriendo nombres completos y abreviados)
-const colorMapaDias = {
-    'Dom': '#ef4444', 'Domingo': '#ef4444',     // Rojo
-    'Lun': '#3b82f6', 'Lunes': '#3b82f6',       // Azul
-    'Mar': '#10b981', 'Martes': '#10b981',      // Verde esmeralda
-    'Mie': '#f59e0b', 'Miércoles': '#f59e0b',   // Naranja/Amarillo
-    'Jue': '#8b5cf6', 'Jueves': '#8b5cf6',      // Morado
-    'Vie': '#ec4899', 'Viernes': '#ec4899',     // Rosa
-    'Sab': '#06b6d4', 'Sábado': '#06b6d4'       // Cyan
-};
+// ==========================================
+// FUNCIÓN A PRUEBA DE BALAS PARA COLORES DE DÍAS
+// ==========================================
+function getColorForDay(dayName) {
+    if (!dayName) return 'rgba(16, 185, 129, 0.7)'; // Default Verde
+    
+    // Normalizamos: pasamos a minúsculas y quitamos acentos
+    let normal = dayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    
+    // Buscamos cómo empieza la palabra
+    if (normal.startsWith('dom')) return '#ef4444'; // Rojo
+    if (normal.startsWith('lun')) return '#3b82f6'; // Azul
+    if (normal.startsWith('mar')) return '#10b981'; // Verde esmeralda
+    if (normal.startsWith('mie')) return '#f59e0b'; // Naranja
+    if (normal.startsWith('jue')) return '#8b5cf6'; // Morado
+    if (normal.startsWith('vie')) return '#ec4899'; // Rosa
+    if (normal.startsWith('sab')) return '#06b6d4'; // Cyan
+    
+    return 'rgba(16, 185, 129, 0.7)'; // Default
+}
 
 // ==========================================
 // FUNCIÓN PARA DETECTAR EL ÚLTIMO VIERNES
@@ -447,10 +458,8 @@ function isLastFriday(dateString) {
     return nextWeek.getMonth() !== month;
 }
 
-// Colores para el resalte (Naranja brillante contrastante)
 const highlightPoint = '#f97316'; 
 const highlightBar = 'rgba(249, 115, 22, 0.8)'; 
-// ==========================================
 
 function initCharts() {
     // 1. Matriz BCG
@@ -481,7 +490,7 @@ function initCharts() {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: (v) => fmt.format(v) } } } }
     });
 
-    // 3. Día de la Semana (ACTUALIZADO CON COLORES)
+    // 3. Día de la Semana (CON NUEVA FUNCIÓN DE COLORES)
     diaSemanaChartObj = new Chart(document.getElementById('diaSemanaChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -489,7 +498,7 @@ function initCharts() {
             datasets: [{ 
                 label: 'Ventas ($)', 
                 data: dataDiaSemana.map(d => d.total || d.promedio), 
-                backgroundColor: dataDiaSemana.map(d => colorMapaDias[d.nombre] || 'rgba(16, 185, 129, 0.7)'), 
+                backgroundColor: dataDiaSemana.map(d => getColorForDay(d.nombre)), 
                 borderRadius: 4 
             }]
         },
@@ -763,6 +772,8 @@ function toggleViewMode(mode) {
     horasChartObj.update();
 
     diaSemanaChartObj.data.datasets[0].data = dataDiaSemana.map(d => currentMode === 'total' ? (d.total || 0) : (d.promedio || 0));
+    // Refrescamos también los colores al cambiar de modo
+    diaSemanaChartObj.data.datasets[0].backgroundColor = dataDiaSemana.map(d => getColorForDay(d.nombre));
     diaSemanaChartObj.update();
 }
 
@@ -773,7 +784,6 @@ function toggleActive(checkbox) {
 
 window.onload = () => { initCharts(); };
 </script>
-
 
 <style>
 :root { --side-width: 260px; --primary: #111827; --bg: #f3f4f6; }
