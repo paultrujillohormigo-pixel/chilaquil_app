@@ -416,26 +416,33 @@ const loyaltyData = {
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+// Colores específicos para los días de la semana
+const colorMapaDias = {
+    'Dom': '#ef4444',   // Rojo
+    'Lun': '#3b82f6',   // Azul
+    'Mar': '#10b981',   // Verde esmeralda
+    'Mie': '#f59e0b',   // Naranja/Amarillo
+    'Jue': '#8b5cf6',   // Morado
+    'Vie': '#ec4899',   // Rosa
+    'Sab': '#06b6d4'    // Cyan
+};
+
 // ==========================================
 // FUNCIÓN PARA DETECTAR EL ÚLTIMO VIERNES
 // ==========================================
 function isLastFriday(dateString) {
     if (!dateString) return false;
-    // Limpiamos la hora en caso de que venga en formato YYYY-MM-DD HH:MM:SS
     const dateOnly = dateString.split(' ')[0]; 
     const parts = dateOnly.split('-');
     if (parts.length !== 3) return false;
     
     const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // Meses en JS son de 0 a 11
+    const month = parseInt(parts[1], 10) - 1; 
     const day = parseInt(parts[2], 10);
     
     const d = new Date(year, month, day);
-    
-    // 5 representa el Viernes en getDay()
     if (d.getDay() !== 5) return false;
     
-    // Sumamos 7 días; si cambia el mes, significa que es el último viernes
     const nextWeek = new Date(year, month, day + 7);
     return nextWeek.getMonth() !== month;
 }
@@ -474,19 +481,7 @@ function initCharts() {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: (v) => fmt.format(v) } } } }
     });
 
-    // 3. Día de la Semana
-    // 3. Día de la Semana
-    // Creamos un diccionario de colores fijos para cada día
-    const colorMapaDias = {
-        'Dom': 'rgba(239, 68, 68, 0.8)',   // Rojo
-        'Lun': 'rgba(59, 130, 246, 0.8)',  // Azul
-        'Mar': 'rgba(16, 185, 129, 0.8)',  // Verde
-        'Mie': 'rgba(245, 158, 11, 0.8)',  // Naranja
-        'Jue': 'rgba(139, 92, 246, 0.8)',  // Morado
-        'Vie': 'rgba(236, 72, 153, 0.8)',  // Rosa
-        'Sab': 'rgba(6, 182, 212, 0.8)'    // Cyan
-    };
-
+    // 3. Día de la Semana (ACTUALIZADO CON COLORES)
     diaSemanaChartObj = new Chart(document.getElementById('diaSemanaChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -494,7 +489,6 @@ function initCharts() {
             datasets: [{ 
                 label: 'Ventas ($)', 
                 data: dataDiaSemana.map(d => d.total || d.promedio), 
-                // Aquí aplicamos el color basado en el nombre del día
                 backgroundColor: dataDiaSemana.map(d => colorMapaDias[d.nombre] || 'rgba(16, 185, 129, 0.7)'), 
                 borderRadius: 4 
             }]
@@ -704,7 +698,7 @@ function initCharts() {
                     },
                     {
                         type: 'line',
-                        label: 'Interacciones (Likes, Comments...)',
+                        label: 'Interacciones',
                         data: dataOrgVsVentas.map(d => d.interacciones_org),
                         borderColor: '#f59e0b', 
                         backgroundColor: '#f59e0b',
