@@ -484,6 +484,16 @@ function nombreSalsaPorId(id){
 
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
+  
+  // 🔥 NUEVO: Autocompletar la hora local en el input al abrir la página
+  const fechaInput = document.querySelector('input[name="fecha"]');
+  if (fechaInput && !fechaInput.value) {
+    const now = new Date();
+    // Ajuste al timezone local para generar el formato YYYY-MM-DDTHH:MM
+    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    fechaInput.value = localNow.toISOString().slice(0, 16);
+  }
+
   toggleUberBox();
   document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
