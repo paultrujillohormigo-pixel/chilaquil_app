@@ -383,6 +383,35 @@ const loyaltyData = {
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+// ==========================================
+// FUNCIÓN PARA DETECTAR EL ÚLTIMO VIERNES
+// ==========================================
+function isLastFriday(dateString) {
+    if (!dateString) return false;
+    // Limpiamos la hora en caso de que venga en formato YYYY-MM-DD HH:MM:SS
+    const dateOnly = dateString.split(' ')[0]; 
+    const parts = dateOnly.split('-');
+    if (parts.length !== 3) return false;
+    
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Meses en JS son de 0 a 11
+    const day = parseInt(parts[2], 10);
+    
+    const d = new Date(year, month, day);
+    
+    // 5 representa el Viernes en getDay()
+    if (d.getDay() !== 5) return false;
+    
+    // Sumamos 7 días; si cambia el mes, significa que es el último viernes
+    const nextWeek = new Date(year, month, day + 7);
+    return nextWeek.getMonth() !== month;
+}
+
+// Colores para el resalte (Naranja brillante contrastante)
+const highlightPoint = '#f97316'; 
+const highlightBar = 'rgba(249, 115, 22, 0.8)'; 
+// ==========================================
+
 function initCharts() {
     // 1. Matriz BCG
     menuChartObj = new Chart(document.getElementById('menuEngineeringChart').getContext('2d'), {
@@ -466,7 +495,18 @@ function initCharts() {
         type: 'line',
         data: {
             labels: histIngresos.map(d => d.fecha),
-            datasets: [{ label: 'Ingresos Históricos ($)', data: histIngresos.map(d => d.total), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.1 }]
+            datasets: [{ 
+                label: 'Ingresos Históricos ($)', 
+                data: histIngresos.map(d => d.total), 
+                borderColor: '#10b981', 
+                backgroundColor: 'rgba(16,185,129,0.1)', 
+                fill: true, 
+                tension: 0.1,
+                pointBackgroundColor: histIngresos.map(d => isLastFriday(d.fecha) ? highlightPoint : '#10b981'),
+                pointBorderColor: histIngresos.map(d => isLastFriday(d.fecha) ? '#fff' : 'transparent'),
+                pointRadius: histIngresos.map(d => isLastFriday(d.fecha) ? 6 : 0),
+                pointHoverRadius: histIngresos.map(d => isLastFriday(d.fecha) ? 8 : 4)
+            }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales: { y: { ticks: { callback: (v) => fmt.format(v) } } }, elements: { point: { radius: 0, hitRadius: 10 } } }
     });
@@ -475,7 +515,18 @@ function initCharts() {
         type: 'line',
         data: {
             labels: histGastos.map(d => d.fecha),
-            datasets: [{ label: 'Gastos Históricos ($)', data: histGastos.map(d => d.total), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.1 }]
+            datasets: [{ 
+                label: 'Gastos Históricos ($)', 
+                data: histGastos.map(d => d.total), 
+                borderColor: '#ef4444', 
+                backgroundColor: 'rgba(239,68,68,0.1)', 
+                fill: true, 
+                tension: 0.1,
+                pointBackgroundColor: histGastos.map(d => isLastFriday(d.fecha) ? highlightPoint : '#ef4444'),
+                pointBorderColor: histGastos.map(d => isLastFriday(d.fecha) ? '#fff' : 'transparent'),
+                pointRadius: histGastos.map(d => isLastFriday(d.fecha) ? 6 : 0),
+                pointHoverRadius: histGastos.map(d => isLastFriday(d.fecha) ? 8 : 4)
+            }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales: { y: { ticks: { callback: (v) => fmt.format(v) } } }, elements: { point: { radius: 0, hitRadius: 10 } } }
     });
@@ -495,13 +546,16 @@ function initCharts() {
                         backgroundColor: '#8b5cf6',
                         borderWidth: 2,
                         tension: 0.3,
-                        yAxisID: 'y_ads'
+                        yAxisID: 'y_ads',
+                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#8b5cf6'),
+                        pointBorderColor: '#fff',
+                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
                     },
                     {
                         type: 'bar',
                         label: 'Ingresos Ventas ($)',
                         data: dataAdsVsVentas.map(d => d.ventas_reales),
-                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        backgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightBar : 'rgba(16, 185, 129, 0.7)'),
                         borderRadius: 4,
                         yAxisID: 'y_ventas'
                     }
@@ -541,7 +595,9 @@ function initCharts() {
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#f59e0b'),
+                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
                     },
                     {
                         label: 'Alcance (Personas únicas)',
@@ -549,7 +605,9 @@ function initCharts() {
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#3b82f6'),
+                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
                     }
                 ]
             },
@@ -564,64 +622,69 @@ function initCharts() {
                 } 
             }
         });
-        // 9. Gráfica de Orgánico vs Ventas
-        if(dataOrgVsVentas.length > 0) {
-            new Chart(document.getElementById('organicReachChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: dataOrgVsVentas.map(d => d.fecha),
-                    datasets: [
-                        {
-                            type: 'line',
-                            label: 'Alcance Orgánico',
-                            data: dataOrgVsVentas.map(d => d.alcance_org),
-                            borderColor: '#10b981', // Verde esmeralda
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            yAxisID: 'y_social'
-                        },
-                        {
-                            type: 'line',
-                            label: 'Interacciones (Likes, Comments...)',
-                            data: dataOrgVsVentas.map(d => d.interacciones_org),
-                            borderColor: '#f59e0b', // Naranja
-                            backgroundColor: '#f59e0b',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            yAxisID: 'y_social'
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Ingresos Ventas ($)',
-                            data: dataOrgVsVentas.map(d => d.ventas_reales),
-                            backgroundColor: 'rgba(59, 130, 246, 0.7)', // Azul
-                            borderRadius: 4,
-                            yAxisID: 'y_ventas'
-                        }
-                    ]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        x: { grid: { display: false } },
-                        y_ventas: { 
-                            type: 'linear', 
-                            position: 'left',
-                            title: { display: true, text: 'Ventas ($)' },
-                            ticks: { callback: (v) => fmt.format(v) } 
-                        },
-                        y_social: { 
-                            type: 'linear', 
-                            position: 'right',
-                            title: { display: true, text: 'Alcance / Interacciones' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    } 
-                }
-        });
     }
+    
+    // 9. Gráfica de Orgánico vs Ventas
+    if(dataOrgVsVentas.length > 0) {
+        new Chart(document.getElementById('organicReachChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: dataOrgVsVentas.map(d => d.fecha),
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Alcance Orgánico',
+                        data: dataOrgVsVentas.map(d => d.alcance_org),
+                        borderColor: '#10b981', 
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y_social',
+                        pointBackgroundColor: dataOrgVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#10b981'),
+                        pointRadius: dataOrgVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
+                    },
+                    {
+                        type: 'line',
+                        label: 'Interacciones (Likes, Comments...)',
+                        data: dataOrgVsVentas.map(d => d.interacciones_org),
+                        borderColor: '#f59e0b', 
+                        backgroundColor: '#f59e0b',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        yAxisID: 'y_social',
+                        pointBackgroundColor: dataOrgVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#f59e0b'),
+                        pointRadius: dataOrgVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Ingresos Ventas ($)',
+                        data: dataOrgVsVentas.map(d => d.ventas_reales),
+                        backgroundColor: dataOrgVsVentas.map(d => isLastFriday(d.fecha) ? highlightBar : 'rgba(59, 130, 246, 0.7)'),
+                        borderRadius: 4,
+                        yAxisID: 'y_ventas'
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { grid: { display: false } },
+                    y_ventas: { 
+                        type: 'linear', 
+                        position: 'left',
+                        title: { display: true, text: 'Ventas ($)' },
+                        ticks: { callback: (v) => fmt.format(v) } 
+                    },
+                    y_social: { 
+                        type: 'linear', 
+                        position: 'right',
+                        title: { display: true, text: 'Alcance / Interacciones' },
+                        grid: { drawOnChartArea: false }
+                    }
+                } 
+            }
+        });
     }
 }
 
