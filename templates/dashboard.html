@@ -226,6 +226,22 @@
                 </div>
             </div>
 
+            <h3 class="section-title">Desglose por Concepto (Ingresos vs Gastos)</h3>
+            <div class="responsive-grid">
+                <div class="card chart-card">
+                    <h4>Ingresos por Concepto</h4>
+                    <div class="canvas-holder">
+                        <canvas id="ingresosConceptoChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-card">
+                    <h4>Gastos por Concepto</h4>
+                    <div class="canvas-holder">
+                        <canvas id="gastosConceptoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <h3 class="section-title">Comportamiento y Lealtad</h3>
             <div class="responsive-grid" style="grid-template-columns: 1fr 2fr;">
                 <div class="card chart-card">
@@ -394,6 +410,7 @@
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
 let menuChartObj, horasChartObj, diaSemanaChartObj, loyaltyChartObj;
+let ingresosConceptoChartObj, gastosConceptoChartObj;
 let currentMode = 'total';
 
 const dataVentasHora = {{ ventas_hora | default([]) | tojson | safe }};
@@ -408,6 +425,10 @@ const histGastos = {{ historico_gastos | default([]) | tojson | safe }};
 const dataOrgVsVentas = {{ org_vs_ventas | default([]) | tojson | safe }};
 // Datos Marketing Ads
 const dataAdsVsVentas = {{ ads_vs_ventas | default([]) | tojson | safe }};
+
+// Datos Conceptos
+const dataIngresosConcepto = {{ ingresos_por_concepto | default([]) | tojson | safe }};
+const dataGastosConcepto = {{ gastos_por_concepto | default([]) | tojson | safe }};
 
 const loyaltyData = { 
     leales: {{ loyalty_stats.ventas_loyalty | default(0) if loyalty_stats else 0 }}, 
@@ -748,6 +769,51 @@ function initCharts() {
             }
         });
     }
+
+    // ==========================================
+    // NUEVAS GRÁFICAS: INGRESOS Y GASTOS POR CONCEPTO
+    // ==========================================
+    if(dataIngresosConcepto.length > 0) {
+        ingresosConceptoChartObj = new Chart(document.getElementById('ingresosConceptoChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: dataIngresosConcepto.map(d => d.concepto),
+                datasets: [{
+                    label: 'Ingresos ($)',
+                    data: dataIngresosConcepto.map(d => d.total),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)', // Verde
+                    borderRadius: 4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `Monto: ${fmt.format(c.raw)}` } } }, 
+                scales: { y: { ticks: { callback: (v) => fmt.format(v) } } } 
+            }
+        });
+    }
+
+    if(dataGastosConcepto.length > 0) {
+        gastosConceptoChartObj = new Chart(document.getElementById('gastosConceptoChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: dataGastosConcepto.map(d => d.concepto),
+                datasets: [{
+                    label: 'Gastos ($)',
+                    data: dataGastosConcepto.map(d => d.total),
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)', // Rojo
+                    borderRadius: 4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `Monto: ${fmt.format(c.raw)}` } } }, 
+                scales: { y: { ticks: { callback: (v) => fmt.format(v) } } } 
+            }
+        });
+    }
 }
 
 // Control Toggle View
@@ -775,6 +841,17 @@ function toggleViewMode(mode) {
     // Refrescamos también los colores al cambiar de modo
     diaSemanaChartObj.data.datasets[0].backgroundColor = dataDiaSemana.map(d => getColorForDay(d.nombre));
     diaSemanaChartObj.update();
+
+    // Actualizar Gráficas de Conceptos según el modo (Totales/Promedios)
+    if (ingresosConceptoChartObj) {
+        ingresosConceptoChartObj.data.datasets[0].data = dataIngresosConcepto.map(d => currentMode === 'total' ? (d.total || 0) : (d.promedio || 0));
+        ingresosConceptoChartObj.update();
+    }
+    
+    if (gastosConceptoChartObj) {
+        gastosConceptoChartObj.data.datasets[0].data = dataGastosConcepto.map(d => currentMode === 'total' ? (d.total || 0) : (d.promedio || 0));
+        gastosConceptoChartObj.update();
+    }
 }
 
 function toggleActive(checkbox) {
