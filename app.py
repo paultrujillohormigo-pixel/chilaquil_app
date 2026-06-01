@@ -1131,6 +1131,10 @@ def compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
+# =========================================================
+# ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
+# =========================================================
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 import json
@@ -1418,6 +1422,47 @@ def dashboard():
             for g in top_gastos: 
                 g["promedio_gastado"] = float(g["total_gastado"] or 0) / meses_con_venta
 
+            # =======================================================
+            # === NUEVO: DESGLOSE POR CONCEPTO (INGRESOS Y GASTOS) ==
+            # =======================================================
+            
+            # 1. Ingresos por Concepto (agrupados por 'categoria' de producto)
+            cursor.execute(f"""
+                SELECT COALESCE(p.categoria, 'Otros') AS concepto, SUM(pi.subtotal) AS total
+                FROM pedido_items pi
+                JOIN pedidos pe ON pe.id = pi.pedido_id
+                JOIN productos p ON p.id = pi.producto_id
+                {filtro_bcg}
+                GROUP BY p.categoria
+                ORDER BY total DESC
+            """, params_pedidos)
+            
+            ingresos_por_concepto = [
+                {
+                    "concepto": r["concepto"],
+                    "total": float(r["total"] or 0),
+                    "promedio": float(r["total"] or 0) / dias_totales
+                } for r in cursor.fetchall()
+            ]
+
+            # 2. Gastos por Concepto (agrupados por 'tipo_costo')
+            cursor.execute(f"""
+                SELECT COALESCE(tipo_costo, 'Otros') AS concepto, SUM(costo) AS total
+                FROM insumos_compras
+                {filtro_compras}
+                GROUP BY tipo_costo
+                ORDER BY total DESC
+            """, params_general)
+            
+            gastos_por_concepto = [
+                {
+                    "concepto": str(r["concepto"]).capitalize(),
+                    "total": float(r["total"] or 0),
+                    "promedio": float(r["total"] or 0) / dias_totales
+                } for r in cursor.fetchall()
+            ]
+
+            # ÚLTIMOS PEDIDOS
             cursor.execute(f"SELECT id, DATE_FORMAT(fecha, '%%Y-%%m-%%d %%H:%%i') as fecha, origen, mesero, estado, total FROM pedidos {filtro_pedidos} ORDER BY fecha DESC LIMIT 15", params_pedidos)
             ultimos_pedidos = cursor.fetchall()
 
@@ -1520,6 +1565,8 @@ def dashboard():
         gastos_comparativas=gastos_comparativas,
         historico_ingresos=historico_ingresos,
         historico_gastos=historico_gastos,
+        ingresos_por_concepto=ingresos_por_concepto, # NUEVA VARIABLE
+        gastos_por_concepto=gastos_por_concepto,     # NUEVA VARIABLE
         total_gasto_ads=float(total_gasto_ads),
         total_alcance=total_alcance,
         total_impresiones=total_impresiones,
@@ -1533,6 +1580,7 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
+
 
 # =========================================================
 # ============ ELIMINAR ITEM / ELIMINAR PEDIDO =============
