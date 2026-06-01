@@ -1131,10 +1131,6 @@ def compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
-# =========================================================
-# ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
-# =========================================================
-
 from datetime import datetime, timedelta
 from decimal import Decimal
 import json
@@ -1445,12 +1441,12 @@ def dashboard():
                 } for r in cursor.fetchall()
             ]
 
-            # 2. Gastos por Concepto (agrupados por 'tipo_costo')
+            # 2. Gastos por Concepto (agrupados por 'concepto')
             cursor.execute(f"""
-                SELECT COALESCE(tipo_costo, 'Otros') AS concepto, SUM(costo) AS total
+                SELECT COALESCE(concepto, 'Otros') AS concepto, SUM(costo) AS total
                 FROM insumos_compras
                 {filtro_compras}
-                GROUP BY tipo_costo
+                GROUP BY concepto
                 ORDER BY total DESC
             """, params_general)
             
