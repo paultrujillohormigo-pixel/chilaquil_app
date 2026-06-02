@@ -17,9 +17,9 @@
             <div class="sidebar-inner">
                 <button class="close-btn" onclick="toggleSidebar()">✕ Cerrar</button>
                 <h3>Dashboard</h3>
-                
+
                 <form method="GET" action="/dashboard" id="filterForm">
-                    
+
                     <p class="filter-label">SELECCIONAR MES(ES)</p>
                     <div class="meses-flex">
                         {% if meses_disponibles %}
@@ -68,7 +68,7 @@
                             <option value="whatsapp" {% if origen_seleccionado == 'whatsapp' %}selected{% endif %}>WhatsApp / Teléfono</option>
                         </select>
                     </div>
-                    
+
                     <button type="submit" class="btn-aplicar" style="margin-top: 25px;">Aplicar Filtros</button>
                     <a href="/dashboard" class="btn-reset">Limpiar Filtros</a>
                 </form>
@@ -96,7 +96,7 @@
                         </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="kpi-box red">
                     <small class="view-total">Gastos Totales</small>
                     <small class="view-promedio">Gastos (Promedio Diario)</small>
@@ -108,7 +108,7 @@
                         </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="kpi-box blue">
                     <small class="view-total">Utilidad Neta</small>
                     <small class="view-promedio">Utilidad (Promedio Diaria)</small>
@@ -120,7 +120,7 @@
                         </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="kpi-box orange">
                     <small>Margen Bruto</small>
                     <p>{{ gross_margin_pct }}%</p>
@@ -171,6 +171,17 @@
                 </div>
             </div>
 
+            <h3 class="section-title">Rendimiento de Anuncios (Top of Funnel)</h3>
+            <div class="responsive-grid" style="grid-template-columns: 1fr;">
+                <div class="card chart-card">
+                    <h4>Alcance vs Impresiones por Día</h4>
+                    <div class="canvas-holder">
+                        <canvas id="adsReachChart"></canvas>
+                    </div>
+                    <p class="chart-footer">Compara a cuántas personas llegas vs cuántas veces ven el anuncio</p>
+                </div>
+            </div>
+
             <h3 class="section-title">Impacto de Contenido Orgánico</h3>
             <div class="responsive-grid" style="grid-template-columns: 1fr;">
                 <div class="card chart-card">
@@ -182,7 +193,7 @@
                 </div>
             </div>
 
-            
+
             <h3 class="section-title">Comparativas Mensuales (Día a Día)</h3>
             <div class="responsive-grid">
                 <div class="card chart-card">
@@ -432,10 +443,10 @@ const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899
 // ==========================================
 function getColorForDay(dayName) {
     if (!dayName) return 'rgba(16, 185, 129, 0.7)'; // Default Verde
-    
+
     // Normalizamos: pasamos a minúsculas y quitamos acentos
     let normal = dayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    
+
     // Buscamos cómo empieza la palabra
     if (normal.startsWith('dom')) return '#ef4444'; // Rojo
     if (normal.startsWith('lun')) return '#3b82f6'; // Azul
@@ -444,7 +455,7 @@ function getColorForDay(dayName) {
     if (normal.startsWith('jue')) return '#8b5cf6'; // Morado
     if (normal.startsWith('vie')) return '#ec4899'; // Rosa
     if (normal.startsWith('sab')) return '#06b6d4'; // Cyan
-    
+
     return 'rgba(16, 185, 129, 0.7)'; // Default
 }
 
@@ -456,14 +467,14 @@ function isLastFriday(dateString) {
     const dateOnly = dateString.split(' ')[0]; 
     const parts = dateOnly.split('-');
     if (parts.length !== 3) return false;
-    
+
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; 
     const day = parseInt(parts[2], 10);
-    
+
     const d = new Date(year, month, day);
     if (d.getDay() !== 5) return false;
-    
+
     const nextWeek = new Date(year, month, day + 7);
     return nextWeek.getMonth() !== month;
 }
@@ -537,7 +548,7 @@ function initCharts() {
 
     // 5. Comparativas Mensuales (Día a Día)
     const diasDelMes = Array.from({length: 31}, (_, i) => i + 1);
-    
+
     new Chart(document.getElementById('compIngresosChart').getContext('2d'), {
         type: 'line',
         data: {
@@ -549,7 +560,7 @@ function initCharts() {
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: (v) => fmt.format(v) } }, x: { title: {display: true, text: 'Día del mes'}} } }
     });
-    
+
     new Chart(document.getElementById('compGastosChart').getContext('2d'), {
         type: 'line',
         data: {
@@ -655,7 +666,47 @@ function initCharts() {
             }
         });
 
-        
+        // 8. Gráfica de Alcance vs Impresiones
+        new Chart(document.getElementById('adsReachChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: dataAdsVsVentas.map(d => d.fecha),
+                datasets: [
+                    {
+                        label: 'Impresiones (Visualizaciones)',
+                        data: dataAdsVsVentas.map(d => d.impresiones),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#f59e0b'),
+                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
+                    },
+                    {
+                        label: 'Alcance (Personas únicas)',
+                        data: dataAdsVsVentas.map(d => d.alcance),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#3b82f6'),
+                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { callback: (v) => new Intl.NumberFormat('es-MX').format(v) } 
+                    } 
+                } 
+            }
+        });
+    }
+
     // 9. Gráfica de Orgánico vs Ventas
     if(dataOrgVsVentas.length > 0) {
         new Chart(document.getElementById('organicReachChart').getContext('2d'), {
@@ -796,7 +847,7 @@ function toggleViewMode(mode) {
         ingresosConceptoChartObj.data.datasets[0].data = dataIngresosConcepto.map(d => currentMode === 'total' ? (d.total || 0) : (d.promedio || 0));
         ingresosConceptoChartObj.update();
     }
-    
+
     if (gastosConceptoChartObj) {
         gastosConceptoChartObj.data.datasets[0].data = dataGastosConcepto.map(d => currentMode === 'total' ? (d.total || 0) : (d.promedio || 0));
         gastosConceptoChartObj.update();
