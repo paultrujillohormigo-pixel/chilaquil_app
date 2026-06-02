@@ -655,47 +655,7 @@ function initCharts() {
             }
         });
 
-        // 8. Gráfica de Alcance vs Impresiones
-        new Chart(document.getElementById('adsReachChart').getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: dataAdsVsVentas.map(d => d.fecha),
-                datasets: [
-                    {
-                        label: 'Impresiones (Visualizaciones)',
-                        data: dataAdsVsVentas.map(d => d.impresiones),
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#f59e0b'),
-                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
-                    },
-                    {
-                        label: 'Alcance (Personas únicas)',
-                        data: dataAdsVsVentas.map(d => d.alcance),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? highlightPoint : '#3b82f6'),
-                        pointRadius: dataAdsVsVentas.map(d => isLastFriday(d.fecha) ? 6 : 3)
-                    }
-                ]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    y: { 
-                        beginAtZero: true,
-                        ticks: { callback: (v) => new Intl.NumberFormat('es-MX').format(v) } 
-                    } 
-                } 
-            }
-        });
-    }
-    
+        
     // 9. Gráfica de Orgánico vs Ventas
     if(dataOrgVsVentas.length > 0) {
         new Chart(document.getElementById('organicReachChart').getContext('2d'), {
