@@ -59,9 +59,14 @@
     </div>
 
     <div class="section" id="otroWrap" style="display:none;">
-      <input type="text" id="otroTexto" placeholder="Escribe el concepto...">
+      <input type="text" id="otroTexto" list="conceptosHistoricos" placeholder="Escribe el concepto...">
+      
+      <datalist id="conceptosHistoricos">
+        {% for concepto in conceptos_historicos %}
+          <option value="{{ concepto }}"></option>
+        {% endfor %}
+      </datalist>
     </div>
-
     <div class="section" id="textoFields">
       <input type="number" name="cantidad" id="cantidadTxt" placeholder="Cantidad">
       <input type="text" name="unidad" id="unidadTxt" placeholder="Unidad">
@@ -163,12 +168,11 @@ input,select{
   border-radius:10px;border:1px solid #ddd;
 }
 
-/* BOTÓN CORREGIDO */
 .cta {
   position: static;
   width: 100%;
   padding: 16px;
-  background: #b32417; /* Tu color de marca */
+  background: #b32417; 
   color: #fff;
   font-size: 18px;
   border: none;
@@ -191,7 +195,7 @@ input,select{
 
 @media(min-width:768px){
   .form { padding-bottom: 20px; }
-  .cta:hover { background: #8e1c12; } /* Efecto al pasar el mouse en PC */
+  .cta:hover { background: #8e1c12; } 
 }
 
 .section{margin-bottom:12px;}
