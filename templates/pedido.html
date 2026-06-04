@@ -253,35 +253,48 @@
 <div class="pos-header">
   <div>
     <h2 class="m-0" style="color: #64748b; font-size: 1.1rem; font-weight: 600;">🧾 Pedido #{{ pedido.id }}</h2>
-    <div class="total-display mt-1">{{ pedido.total | money }}</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 4px;">Total Actual</div>
+    <div class="total-display mt-1" id="totalFinalGlobal">{{ pedido.total | money }}</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 4px;">Total a Pagar</div>
   </div>
 
-  <div class="pos-card" style="padding: 16px; min-width: 260px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Cliente / WhatsApp</span>
-      {% if pedido.estado == 'abierto' %}
-        <button class="btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border:none; color: var(--pos-primary);" onclick="PosApp.toggleWaEdit()">✏️ Editar</button>
-      {% endif %}
-    </div>
-
-    <div id="waDisplayBadge">
-      {% if pedido.telefono_whatsapp %}
-        <div class="wa-badge">✅ {{ pedido.telefono_whatsapp }}</div>
-      {% else %}
-        <div class="wa-badge empty">⚠️ No registrado</div>
-      {% endif %}
-    </div>
-
+  <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+    
     {% if pedido.estado == 'abierto' %}
-    <form id="waEditMode" style="display:none;" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
-      <div class="wa-input-group">
-        <input type="tel" name="telefono_whatsapp" class="wa-input" placeholder="Ej. 449..." value="{{ pedido.telefono_whatsapp or '' }}">
-        <button type="submit" class="btn-primary" style="padding: 0 16px; border-radius: 8px;">OK</button>
+    <div class="pos-card" style="padding: 16px; min-width: 180px;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Descuento ($)</span>
       </div>
-      <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Necesario para ganar totopos.</div>
-    </form>
+      <input type="number" id="inputDescuentoGlobal" class="wa-input" style="width: 100%; margin-top:0; padding: 8px 12px;" step="0.01" min="0" value="{{ pedido.descuento or 0 }}" oninput="PosApp.actualizarDescuento()">
+      <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Aplica al cerrar/guardar</div>
+    </div>
     {% endif %}
+
+    <div class="pos-card" style="padding: 16px; min-width: 260px;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Cliente / WhatsApp</span>
+        {% if pedido.estado == 'abierto' %}
+          <button class="btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border:none; color: var(--pos-primary);" onclick="PosApp.toggleWaEdit()">✏️ Editar</button>
+        {% endif %}
+      </div>
+
+      <div id="waDisplayBadge">
+        {% if pedido.telefono_whatsapp %}
+          <div class="wa-badge">✅ {{ pedido.telefono_whatsapp }}</div>
+        {% else %}
+          <div class="wa-badge empty">⚠️ No registrado</div>
+        {% endif %}
+      </div>
+
+      {% if pedido.estado == 'abierto' %}
+      <form id="waEditMode" style="display:none;" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
+        <div class="wa-input-group">
+          <input type="tel" name="telefono_whatsapp" class="wa-input" placeholder="Ej. 449..." value="{{ pedido.telefono_whatsapp or '' }}">
+          <button type="submit" class="btn-primary" style="padding: 0 16px; border-radius: 8px;">OK</button>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Necesario para ganar totopos.</div>
+      </form>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -296,12 +309,14 @@
     </button>
 
     <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
+      <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
       <button type="submit" class="btn-pos btn-outline" onclick="return confirm('¿Cerrar sin enviar WhatsApp?')">
         🔒 Cerrar (Sin enviar)
       </button>
     </form>
 
     <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" style="margin: 0;">
+      <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
       <button type="submit" class="btn-pos btn-wa" onclick="return PosApp.confirmarCierreWa('{{ pedido.telefono_whatsapp or '' }}')">
         📲 Cerrar y Mandar WhatsApp
       </button>
@@ -408,6 +423,8 @@
       </div>
 
       <form method="post" id="newItemsForm" action="{{ url_for('ver_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
+        <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
+        
         <div id="cartContainer" style="max-height: 400px; overflow-y: auto; padding: 16px;">
           <div id="emptyCartMsg" class="text-center" style="color: #94a3b8; padding: 20px 0;">Selecciona productos del catálogo para agregarlos aquí.</div>
           <div id="cartItemsList" style="display: flex; flex-direction: column; gap: 16px;"></div>
@@ -510,8 +527,20 @@ const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capucci
 const PosApp = {
   cart: {},
   activeItem: null,
+  
+  // 🔥 BASE DEL SUBTOTAL: Sumamos el total actual guardado con el descuento que ya tenía para calcular limpio.
+  subtotalBaseServer: {{ (pedido.subtotal) if pedido.subtotal else (pedido.total + (pedido.descuento or 0)) }},
 
   init() {
+    this.renderCart();
+  },
+
+  // 🔥 NUEVA FUNCIÓN: Se ejecuta cuando cambias el número en la caja de Descuento
+  actualizarDescuento() {
+    const val = parseFloat(document.getElementById('inputDescuentoGlobal').value) || 0;
+    // Pasa el valor a todos los forms (Cerrar, Cerrar WhatsApp y Guardar Cambios)
+    document.querySelectorAll('.hidden-descuento').forEach(el => el.value = val);
+    // Vuelve a calcular el Total Grand
     this.renderCart();
   },
 
@@ -646,12 +675,12 @@ const PosApp = {
     
     let html = '';
     let hidden = '';
-    let total = 0;
+    let totalExtra = 0;
     let count = 0;
 
     Object.entries(this.cart).forEach(([uid, item]) => {
       const sub = item.precio * item.qty;
-      total += sub;
+      totalExtra += sub;
       count += item.qty;
       const c = item.custom;
 
@@ -695,8 +724,14 @@ const PosApp = {
 
     container.innerHTML = html;
     hiddenCont.innerHTML = hidden;
-    document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
+    document.getElementById('cartTotal').innerText = `$${totalExtra.toFixed(2)}`;
     badge.innerText = count;
+
+    // 🔥 CÁLCULO DEL GRAN TOTAL GLOBAL (Productos guardados + Productos en carrito derecho - Descuento introducido)
+    const descuentoElement = document.getElementById('inputDescuentoGlobal');
+    const descuentoActual = descuentoElement ? (parseFloat(descuentoElement.value) || 0) : 0;
+    const granTotalGlobal = Math.max(0, this.subtotalBaseServer + totalExtra - descuentoActual);
+    document.getElementById('totalFinalGlobal').innerText = '$' + granTotalGlobal.toFixed(2);
 
     if (count > 0) {
       emptyMsg.style.display = 'none';
@@ -720,7 +755,6 @@ const PosApp = {
       .catch(err => alert("Error cargando ticket"));
   },
 
-  /* NUEVO: Lógica restaurada para Vista Cocina */
   abrirVistaCocina() {
     const body = document.getElementById("cocinaBody");
     const entries = Object.values(this.cart);
