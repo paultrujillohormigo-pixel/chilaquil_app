@@ -1042,6 +1042,10 @@ def productos_set_platillo(producto_id):
 # ================== COMPRAS ===============================
 # =========================================================
 
+# =========================================================
+# ================== COMPRAS ===============================
+# =========================================================
+
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
     conn = get_connection()
@@ -1053,6 +1057,11 @@ def compras():
             cursor.execute("SELECT id, nombre, unidad_base FROM insumos WHERE activo = 1 ORDER BY nombre")
             insumos = cursor.fetchall()
 
+            # --- Autoconfiguración para ocultar conceptos sin borrar data ---
+            if not table_has_column(cursor, "insumos_compras", "oculto"):
+                cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
+                conn.commit()
+
             # --- Extraemos los conceptos "Otros" que has guardado antes ---
             cursor.execute("""
                 SELECT DISTINCT concepto 
@@ -1060,6 +1069,7 @@ def compras():
                 WHERE (insumo_id IS NULL OR es_insumo = 0)
                   AND concepto IS NOT NULL 
                   AND concepto != '' 
+                  AND oculto = 0
                 ORDER BY concepto
             """)
             conceptos_otros = [row["concepto"] for row in cursor.fetchall()]
@@ -1162,26 +1172,30 @@ def eliminar_concepto_compras():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # Eliminamos las compras que tengan exactamente este nombre 
-            # y que NO estén ligadas al inventario de stock
+            if not table_has_column(cursor, "insumos_compras", "oculto"):
+                cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
+            
+            # Solo OCULTA la tarjeta en la interfaz, mantiene el historial financiero.
             cursor.execute("""
-                DELETE FROM insumos_compras 
+                UPDATE insumos_compras 
+                SET oculto = 1
                 WHERE concepto = %s 
                   AND (insumo_id IS NULL OR es_insumo = 0)
             """, (concepto,))
             conn.commit()
             
-            flash(f"El concepto '{concepto}' y sus registros fueron eliminados.", "success")
+            flash(f"El concepto '{concepto}' se ocultó de tu panel (tu historial financiero sigue intacto).", "success")
     except Exception as e:
         try:
             conn.rollback()
         except:
             pass
-        flash(f"Hubo un error al eliminar el concepto: {e}", "error")
+        flash(f"Hubo un error al ocultar el concepto: {e}", "error")
     finally:
         conn.close()
         
     return redirect(url_for("compras"))
+
 
 @app.route("/compras/eliminar_insumo", methods=["POST"])
 def eliminar_insumo_compras():
@@ -1194,7 +1208,7 @@ def eliminar_insumo_compras():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # En lugar de borrarlo (lo que rompería el historial), lo desactivamos
+            # Desactiva el insumo sin borrar dependencias de la receta
             cursor.execute("UPDATE insumos SET activo = 0 WHERE id = %s", (int(insumo_id),))
             conn.commit()
             
