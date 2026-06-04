@@ -37,7 +37,6 @@
     <div class="section">
       <div class="cards" id="insumoCards">
 
-        <!-- 1. Fichas de Insumos -->
         {% for ins in insumos %}
         <div class="card-option" style="position: relative;"
              data-id="{{ ins.id }}"
@@ -46,21 +45,31 @@
           <strong>{{ ins.nombre }}</strong>
           <span>{{ ins.unidad_base }}</span>
 
-          <!-- Botón de basura para Insumos -->
-          <form action="{{ url_for('eliminar_insumo_compras') }}" method="POST" style="position: absolute; top: 5px; right: 5px;">
-            <input type="hidden" name="insumo_id" value="{{ ins.id }}">
-            <button type="submit" 
-                    onclick="event.stopPropagation(); return confirm('¿Estás seguro de eliminar el insumo \'{{ ins.nombre }}\'?\n\nEsto lo ocultará de tu lista de opciones para que no lo selecciones por error.');" 
-                    style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
-                    title="Desactivar insumo">
-              🗑️
-            </button>
-          </form>
-
+          <button type="button" 
+                  onclick="event.stopPropagation(); if(confirm('¿Estás seguro de eliminar el insumo \'{{ ins.nombre }}\'?\n\nEsto lo ocultará de tu lista de opciones para que no lo selecciones por error.')) { qs('delInsumoId').value='{{ ins.id }}'; qs('delInsumoForm').submit(); }" 
+                  style="position: absolute; top: 5px; right: 5px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
+                  title="Desactivar insumo">
+            🗑️
+          </button>
         </div>
         {% endfor %}
 
-        
+        {% for concepto in conceptos_otros %}
+        <div class="card-option" style="position: relative;"
+             data-id="" 
+             data-unidad=""
+             data-nombre="{{ concepto }}">
+          <strong>{{ concepto }}</strong>
+          <span>Gasto</span>
+
+          <button type="button" 
+                  onclick="event.stopPropagation(); if(confirm('⚠️ CUIDADO: ¿Estás seguro de eliminar el concepto \'{{ concepto }}\'?\n\nEsto borrará TODAS las compras registradas bajo este nombre en tu base de datos.\n\nÚsalo solo para borrar errores de dedo o pruebas.')) { qs('delConceptoVal').value='{{ concepto }}'; qs('delConceptoForm').submit(); }" 
+                  style="position: absolute; top: 5px; right: 5px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
+                  title="Eliminar concepto y sus compras">
+            🗑️
+          </button>
+        </div>
+        {% endfor %}
 
         <div class="card-option otro" id="cardOtro">
           <strong>+ Nuevo</strong>
@@ -91,7 +100,6 @@
     <button type="submit" class="cta">Guardar compra</button>
 
   </form>
-
   <div class="section card">
     <h3>Últimas compras</h3>
 
@@ -122,6 +130,14 @@
   </div>
 
 </div>
+
+<form id="delInsumoForm" action="{{ url_for('eliminar_insumo_compras') }}" method="POST" style="display:none;">
+  <input type="hidden" name="insumo_id" id="delInsumoId">
+</form>
+
+<form id="delConceptoForm" action="{{ url_for('eliminar_concepto_compras') }}" method="POST" style="display:none;">
+  <input type="hidden" name="concepto" id="delConceptoVal">
+</form>
 
 <style>
 
@@ -244,7 +260,6 @@ function selectCard(card){
     qs("concepto").value = qs("otroTexto").value || "Otro";
     setTimeout(()=>qs("otroTexto").focus(),100);
   }else{
-    // Esta parte maneja tanto insumos como tarjetas de gastos históricos
     qs("esOtro").checked=false;
     qs("otroWrap").style.display="none";
     qs("insumoSelect").value=card.dataset.id;
