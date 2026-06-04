@@ -1151,6 +1151,40 @@ def compras():
     )
 
 
+@app.route("/compras/eliminar_concepto", methods=["POST"])
+def eliminar_concepto_compras():
+    concepto = request.form.get("concepto")
+    
+    if not concepto:
+        flash("Concepto no válido.", "error")
+        return redirect(url_for("compras"))
+        
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Eliminamos las compras que tengan exactamente este nombre 
+            # y que NO estén ligadas al inventario de stock
+            cursor.execute("""
+                DELETE FROM insumos_compras 
+                WHERE concepto = %s 
+                  AND (insumo_id IS NULL OR es_insumo = 0)
+            """, (concepto,))
+            conn.commit()
+            
+            flash(f"El concepto '{concepto}' y sus registros fueron eliminados.", "success")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        flash(f"Hubo un error al eliminar el concepto: {e}", "error")
+    finally:
+        conn.close()
+        
+    return redirect(url_for("compras"))
+
+
+
 # =========================================================
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
