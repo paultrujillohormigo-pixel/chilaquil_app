@@ -1183,7 +1183,32 @@ def eliminar_concepto_compras():
         
     return redirect(url_for("compras"))
 
-
+@app.route("/compras/eliminar_insumo", methods=["POST"])
+def eliminar_insumo_compras():
+    insumo_id = request.form.get("insumo_id")
+    
+    if not insumo_id or not str(insumo_id).isdigit():
+        flash("ID de insumo no válido.", "error")
+        return redirect(url_for("compras"))
+        
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # En lugar de borrarlo (lo que rompería el historial), lo desactivamos
+            cursor.execute("UPDATE insumos SET activo = 0 WHERE id = %s", (int(insumo_id),))
+            conn.commit()
+            
+            flash("Insumo eliminado de la lista exitosamente.", "success")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        flash(f"Hubo un error al eliminar el insumo: {e}", "error")
+    finally:
+        conn.close()
+        
+    return redirect(url_for("compras"))
 
 # =========================================================
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
