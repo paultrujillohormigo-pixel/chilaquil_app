@@ -1042,6 +1042,10 @@ def productos_set_platillo(producto_id):
 # ================== COMPRAS ===============================
 # =========================================================
 
+# =========================================================
+# ================== COMPRAS ===============================
+# =========================================================
+
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
     conn = get_connection()
@@ -1049,12 +1053,30 @@ def compras():
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Obtenemos los insumos activos
             cursor.execute("SELECT id, nombre, unidad_base FROM insumos WHERE activo = 1 ORDER BY nombre")
             insumos = cursor.fetchall()
 
+            # --- NUEVO: Obtenemos los conceptos históricos únicos ---
+            cursor.execute("""
+                SELECT DISTINCT concepto 
+                FROM insumos_compras 
+                WHERE concepto IS NOT NULL AND concepto != '' 
+                ORDER BY concepto
+            """)
+            # Extraemos solo los valores de texto en una lista plana
+            conceptos_historicos = [row["concepto"] for row in cursor.fetchall()]
+            # --------------------------------------------------------
+
             def render_with_data():
                 cursor.execute("SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo FROM insumos_compras ORDER BY fecha DESC LIMIT 200")
-                return render_template("compras.html", compras=cursor.fetchall(), insumos=insumos, form_data=request.form)
+                return render_template(
+                    "compras.html", 
+                    compras=cursor.fetchall(), 
+                    insumos=insumos, 
+                    conceptos_historicos=conceptos_historicos, # <-- Agregado aquí
+                    form_data=request.form
+                )
 
             if request.method == "POST":
                 cantidad_txt = (request.form.get("cantidad") or "").strip()
@@ -1124,8 +1146,14 @@ def compras():
     finally:
         conn.close()
 
-    return render_template("compras.html", compras=compras_rows, insumos=insumos, form_data={})
-
+    # --- NUEVO: También lo pasamos al render_template final ---
+    return render_template(
+        "compras.html", 
+        compras=compras_rows, 
+        insumos=insumos, 
+        conceptos_historicos=conceptos_historicos, # <-- Agregado aquí
+        form_data={}
+    )
 
 # =========================================================
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
