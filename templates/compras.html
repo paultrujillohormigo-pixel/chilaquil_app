@@ -37,32 +37,22 @@
     <div class="section">
       <div class="cards" id="insumoCards">
 
+        <!-- 1. Fichas de Insumos -->
         {% for ins in insumos %}
-        <div class="card-option"
+        <div class="card-option" style="position: relative;"
              data-id="{{ ins.id }}"
              data-unidad="{{ ins.unidad_base }}"
              data-nombre="{{ ins.nombre }}">
           <strong>{{ ins.nombre }}</strong>
           <span>{{ ins.unidad_base }}</span>
-        </div>
-        {% endfor %}
 
-        <!-- 2. Fichas de Gastos Frecuentes (Históricos) -->
-        {% for concepto in conceptos_otros %}
-        <div class="card-option" style="position: relative;"
-             data-id="" 
-             data-unidad=""
-             data-nombre="{{ concepto }}">
-          <strong>{{ concepto }}</strong>
-          <span>Gasto</span>
-
-          <!-- Botón de basura -->
-          <form action="{{ url_for('eliminar_concepto_compras') }}" method="POST" style="position: absolute; top: 5px; right: 5px;">
-            <input type="hidden" name="concepto" value="{{ concepto }}">
+          <!-- Botón de basura para Insumos -->
+          <form action="{{ url_for('eliminar_insumo_compras') }}" method="POST" style="position: absolute; top: 5px; right: 5px;">
+            <input type="hidden" name="insumo_id" value="{{ ins.id }}">
             <button type="submit" 
-                    onclick="event.stopPropagation(); return confirm('⚠️ CUIDADO: ¿Estás seguro de eliminar el concepto \'{{ concepto }}\'?\n\nEsto borrará TODAS las compras registradas bajo este nombre en tu base de datos y afectará los totales de tu Dashboard.\n\nÚsalo solo para borrar errores de dedo o pruebas.');" 
+                    onclick="event.stopPropagation(); return confirm('¿Estás seguro de eliminar el insumo \'{{ ins.nombre }}\'?\n\nEsto lo ocultará de tu lista de opciones para que no lo selecciones por error.');" 
                     style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
-                    title="Eliminar concepto y sus compras">
+                    title="Desactivar insumo">
               🗑️
             </button>
           </form>
