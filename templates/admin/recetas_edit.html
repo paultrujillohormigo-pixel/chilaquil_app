@@ -119,12 +119,14 @@
               value="{{ i.id }}"
               data-nombre="{{ i.nombre }}"
               data-unidad="{{ i.unidad_base }}"
-              data-merma="{{ i.merma_pct }}"
+              data-merma="{{ i.merma_pct or 0 }}"
+              data-costo="{{ i.ultimo_costo if i.ultimo_costo is not none else 0 }}"
             >
               {{ i.nombre }} ({{ i.unidad_base }})
             </option>
           {% endfor %}
         </select>
+        <div id="costoReferencia" style="font-size: 12px; margin-top: 6px; color: #4a5568;"></div>
       </div>
 
       <div>
@@ -139,7 +141,7 @@
 
       <div class="add-actions">
         <label class="chk" style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-          <input id="addUsarManual" type="checkbox" checked>
+          <input id="addUsarManual" type="checkbox">
           <span>Forzar costo manual</span>
         </label>
 
@@ -282,6 +284,26 @@
     if (tr) tr.remove();
   }
 
+  // --- Muestra el costo base al seleccionar un insumo ---
+  document.getElementById('addInsumo').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const ref = document.getElementById('costoReferencia');
+    
+    if (!this.value) {
+      ref.innerHTML = '';
+      return;
+    }
+
+    const costo = parseFloat(opt.getAttribute('data-costo')) || 0;
+    const unidad = opt.getAttribute('data-unidad') || '';
+
+    if (costo > 0) {
+      ref.innerHTML = `🛒 Última compra: <b>$${costo.toFixed(4)}</b> / ${unidad}`;
+    } else {
+      ref.innerHTML = `<span style="color:#b32417; font-weight:bold;">⚠️ Sin historial de compras.</span> Usa costo manual.`;
+    }
+  });
+
   function agregarInsumo() {
     const sel = document.getElementById('addInsumo');
     const cant = document.getElementById('addCantidad');
@@ -293,41 +315,62 @@
 
     if (!insumoId) { alert('Por favor, selecciona un insumo de la lista.'); return; }
 
-    const cantidad = (cant.value || '').trim();
-    if (!cantidad || Number(cantidad) <= 0) { alert('Ingresa una cantidad válida mayor a cero.'); return; }
+    const cantidadStr = (cant.value || '').trim();
+    const cantidadVal = parseFloat(cantidadStr);
+    if (!cantidadStr || isNaN(cantidadVal) || cantidadVal <= 0) { 
+        alert('Ingresa una cantidad válida mayor a cero.'); 
+        return; 
+    }
 
-    // Validación de duplicados en la tabla
     const exists = Array.from(document.querySelectorAll('input[name="insumo_id[]"]'))
       .some(i => i.value === insumoId);
     if (exists) { alert('Este insumo ya se encuentra agregado en la receta actual.'); return; }
 
     const nombre = opt.getAttribute('data-nombre') || 'Insumo';
     const unidad = opt.getAttribute('data-unidad') || '';
-    const merma = opt.getAttribute('data-merma') || '';
+    const mermaVal = parseFloat(opt.getAttribute('data-merma')) || 0;
+    const ultimoCosto = parseFloat(opt.getAttribute('data-costo')) || 0;
 
-    const precioManual = (pm.value || '').trim();
+    const precioManualStr = (pm.value || '').trim();
+    const precioManualVal = parseFloat(precioManualStr);
     const usarManual = um.checked ? '1' : '0';
+
+    // --- Lógica de cálculo en vivo ---
+    let costoAplicado = 0;
+    if (usarManual === '1' && !isNaN(precioManualVal)) {
+        costoAplicado = precioManualVal;
+    } else {
+        costoAplicado = ultimoCosto;
+    }
+
+    // Fórmula idéntica a tu backend: cantidad * (1 + merma) * costo
+    const cantidadConMerma = cantidadVal * (1 + (mermaVal / 100));
+    const subtotal = costoAplicado > 0 ? (cantidadConMerma * costoAplicado).toFixed(2) : null;
+    
+    // Textos para la tabla
+    const textCosto = costoAplicado > 0 ? `$${costoAplicado.toFixed(4)}` : `<span class="warn-text">⚠️ 0.00</span>`;
+    const textSubtotal = subtotal !== null ? `$${subtotal}` : `—`;
 
     const body = document.getElementById('recetaBody');
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #eee';
 
-    // Inserción limpia respetando exactamente las 8 columnas manuales configuradas
     tr.innerHTML = `
       <td>
         <input type="hidden" name="insumo_id[]" value="${escapeAttr(insumoId)}">
         <b>${escapeHtml(nombre)}</b>
-        ${merma && merma !== '0.00' ? `<div class="muted" style="font-size:11px; color:#777;">Merma vinculada: ${escapeHtml(merma)}%</div>` : ``}
+        ${mermaVal > 0 ? `<div class="muted" style="font-size:11px; color:#777;">Merma vinculada: ${mermaVal}%</div>` : ``}
+        ${costoAplicado === 0 ? `<div class="warn-text">⚠️ Sin precio de costo registrado.</div>` : ``}
       </td>
 
       <td>
-        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidad)}" class="inp-sm">
+        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidadStr)}" class="inp-sm">
       </td>
 
       <td style="color:#666;">${escapeHtml(unidad)}</td>
 
       <td>
-        <input type="number" step="0.0001" name="precio_manual[]" value="${escapeAttr(precioManual)}"
+        <input type="number" step="0.0001" name="precio_manual[]" value="${escapeAttr(precioManualStr)}"
                placeholder="$/${escapeHtml(unidad)}" class="inp-sm">
       </td>
 
@@ -336,8 +379,8 @@
         <input type="checkbox" ${usarManual === '1' ? 'checked' : ''} onchange="this.previousElementSibling.value = this.checked ? '1' : '0';">
       </td>
 
-      <td style="font-weight:600; color:#333;">—</td>
-      <td style="font-weight:700; color:#b32417;">—</td>
+      <td style="font-weight:600; color:#333;">${textCosto}</td>
+      <td style="font-weight:700; color:#b32417;">${textSubtotal}</td>
 
       <td style="text-align:center;">
         <button type="button" class="btn btn-danger" onclick="quitarFila(this)" title="Quitar ingrediente">🗑️</button>
@@ -346,10 +389,10 @@
 
     body.appendChild(tr);
 
-    // Limpieza de campos de captura de interfaz
     cant.value = '';
     pm.value = '';
     sel.value = '';
+    document.getElementById('costoReferencia').innerHTML = ''; // Limpiamos el texto
   }
 
   function escapeHtml(s) {
