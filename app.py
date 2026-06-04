@@ -1042,9 +1042,6 @@ def productos_set_platillo(producto_id):
 # ================== COMPRAS ===============================
 # =========================================================
 
-# =========================================================
-# ================== COMPRAS ===============================
-# =========================================================
 
 @app.route("/compras", methods=["GET", "POST"])
 def compras():
@@ -1057,16 +1054,16 @@ def compras():
             cursor.execute("SELECT id, nombre, unidad_base FROM insumos WHERE activo = 1 ORDER BY nombre")
             insumos = cursor.fetchall()
 
-            # --- NUEVO: Obtenemos los conceptos históricos únicos ---
+            # --- NUEVO: Extraemos los conceptos "Otros" que has guardado antes ---
             cursor.execute("""
                 SELECT DISTINCT concepto 
                 FROM insumos_compras 
-                WHERE concepto IS NOT NULL AND concepto != '' 
+                WHERE (insumo_id IS NULL OR es_insumo = 0)
+                  AND concepto IS NOT NULL 
+                  AND concepto != '' 
                 ORDER BY concepto
             """)
-            # Extraemos solo los valores de texto en una lista plana
-            conceptos_historicos = [row["concepto"] for row in cursor.fetchall()]
-            # --------------------------------------------------------
+            conceptos_otros = [row["concepto"] for row in cursor.fetchall()]
 
             def render_with_data():
                 cursor.execute("SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo FROM insumos_compras ORDER BY fecha DESC LIMIT 200")
@@ -1074,86 +1071,15 @@ def compras():
                     "compras.html", 
                     compras=cursor.fetchall(), 
                     insumos=insumos, 
-                    conceptos_historicos=conceptos_historicos, # <-- Agregado aquí
+                    conceptos_otros=conceptos_otros, # <-- Pasamos la nueva variable
                     form_data=request.form
                 )
 
-            if request.method == "POST":
-                cantidad_txt = (request.form.get("cantidad") or "").strip()
-                unidad_txt = (request.form.get("unidad") or "").strip()
-                sumar_stock = (request.form.get("es_insumo") == "1")
+            # ... resto de tu código de POST ...
 
-                if sumar_stock:
-                    if not cantidad_txt: cantidad_txt = (request.form.get("cantidad_base") or "").strip()
-                    if not unidad_txt: unidad_txt = (request.form.get("unidad_base") or "").strip()
 
-                if not request.form.get("fecha"): flash("Fecha requerida.", "error"); return render_with_data()
-                if not (request.form.get("lugar") or "").strip(): flash("Lugar requerido.", "error"); return render_with_data()
-                if not (request.form.get("concepto") or "").strip(): flash("Concepto requerido.", "error"); return render_with_data()
 
-                costo_dec = parse_decimal_mx(request.form.get("costo"))
-                if costo_dec is None or costo_dec < 0: flash("Costo total inválido.", "error"); return render_with_data()
 
-                cantidad_dec = parse_decimal_mx(cantidad_txt)
-                if cantidad_dec is None or cantidad_dec <= 0: flash("Cantidad inválida.", "error"); return render_with_data()
-
-                if not unidad_txt: flash("Unidad requerida.", "error"); return render_with_data()
-
-                insumo_id_val = request.form.get("insumo_id") or None
-                cantidad_base_val = request.form.get("cantidad_base") or None
-                unidad_base_val = request.form.get("unidad_base") or None
-                costo_unitario_val = request.form.get("costo_unitario") or None
-                cant_base_dec = None
-
-                if sumar_stock:
-                    if not (insumo_id_val or "").strip().isdigit():
-                        flash("Para sumar stock debes seleccionar un insumo válido.", "error")
-                        return render_with_data()
-                    cant_base_dec = parse_decimal_mx(cantidad_base_val)
-                    if cant_base_dec is None or cant_base_dec <= 0:
-                        flash("Cantidad base inválida (> 0).", "error")
-                        return render_with_data()
-                    cu_dec = parse_decimal_mx(costo_unitario_val)
-                    costo_unitario_val = str(cu_dec) if cu_dec is not None else None
-                    cantidad_txt = str(cant_base_dec)
-                    cantidad_base_val = str(cant_base_dec)
-                else:
-                    cantidad_txt = str(cantidad_dec)
-
-                cursor.execute("""
-                    INSERT INTO insumos_compras
-                    (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota, insumo_id, cantidad_base, unidad_base, costo_unitario, es_insumo)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                """, (
-                    request.form["fecha"], request.form["lugar"], cantidad_txt, unidad_txt, request.form["concepto"], str(costo_dec), request.form["tipo_costo"],
-                    request.form.get("nota", ""), int(insumo_id_val) if (insumo_id_val and str(insumo_id_val).isdigit()) else None,
-                    cantidad_base_val, unidad_base_val, costo_unitario_val, 1 if sumar_stock else 0,
-                ))
-
-                compra_id = cursor.lastrowid
-                if sumar_stock and insumo_id_val and cant_base_dec is not None:
-                    cursor.execute("""
-                        INSERT IGNORE INTO inventario_movimientos (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
-                        VALUES (%s, %s, 'entrada_compra', 'insumos_compras', %s, %s)
-                    """, (int(insumo_id_val), str(cant_base_dec), compra_id, f"Entrada por compra #{compra_id}"))
-
-                conn.commit()
-                flash("Compra registrada correctamente", "success")
-                return redirect(url_for("compras"))
-
-            cursor.execute("SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo FROM insumos_compras ORDER BY fecha DESC LIMIT 200")
-            compras_rows = cursor.fetchall()
-    finally:
-        conn.close()
-
-    # --- NUEVO: También lo pasamos al render_template final ---
-    return render_template(
-        "compras.html", 
-        compras=compras_rows, 
-        insumos=insumos, 
-        conceptos_historicos=conceptos_historicos, # <-- Agregado aquí
-        form_data={}
-    )
 
 # =========================================================
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
