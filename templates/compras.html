@@ -63,9 +63,9 @@
           <span>Gasto</span>
 
           <button type="button" 
-                  onclick="event.stopPropagation(); if(confirm('⚠️ CUIDADO: ¿Estás seguro de eliminar el concepto \'{{ concepto }}\'?\n\nEsto borrará TODAS las compras registradas bajo este nombre en tu base de datos.\n\nÚsalo solo para borrar errores de dedo o pruebas.')) { qs('delConceptoVal').value='{{ concepto }}'; qs('delConceptoForm').submit(); }" 
+                  onclick="event.stopPropagation(); if(confirm('¿Estás seguro de ocultar el concepto \'{{ concepto }}\'?\n\nDesaparecerá de esta lista rápida, pero todo el historial de tus compras y tus finanzas quedarán intactos.')) { qs('delConceptoVal').value='{{ concepto }}'; qs('delConceptoForm').submit(); }" 
                   style="position: absolute; top: 5px; right: 5px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
-                  title="Eliminar concepto y sus compras">
+                  title="Ocultar concepto">
             🗑️
           </button>
         </div>
@@ -100,6 +100,7 @@
     <button type="submit" class="cta">Guardar compra</button>
 
   </form>
+
   <div class="section card">
     <h3>Últimas compras</h3>
 
@@ -267,7 +268,7 @@ function selectCard(card){
     qs("unidadBase").value=card.dataset.unidad;
     qs("concepto").value=card.dataset.nombre;
     
-    // --- NUEVO: Si la tarjeta tiene un ID de inventario, marcamos "Sumar stock" automáticamente ---
+    // Auto-seleccionar "Sumar stock" si tiene ID de insumo
     if (card.dataset.id) {
         qs("esInsumo").checked = true;
     } else {
