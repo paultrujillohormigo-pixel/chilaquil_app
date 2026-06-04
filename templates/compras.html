@@ -47,15 +47,30 @@
         </div>
         {% endfor %}
 
+        <!-- 2. Fichas de Gastos Frecuentes (Históricos) -->
         {% for concepto in conceptos_otros %}
-        <div class="card-option"
+        <div class="card-option" style="position: relative;"
              data-id="" 
              data-unidad=""
              data-nombre="{{ concepto }}">
           <strong>{{ concepto }}</strong>
           <span>Gasto</span>
+
+          <!-- Botón de basura -->
+          <form action="{{ url_for('eliminar_concepto_compras') }}" method="POST" style="position: absolute; top: 5px; right: 5px;">
+            <input type="hidden" name="concepto" value="{{ concepto }}">
+            <button type="submit" 
+                    onclick="event.stopPropagation(); return confirm('⚠️ CUIDADO: ¿Estás seguro de eliminar el concepto \'{{ concepto }}\'?\n\nEsto borrará TODAS las compras registradas bajo este nombre en tu base de datos y afectará los totales de tu Dashboard.\n\nÚsalo solo para borrar errores de dedo o pruebas.');" 
+                    style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;"
+                    title="Eliminar concepto y sus compras">
+              🗑️
+            </button>
+          </form>
+
         </div>
         {% endfor %}
+
+        
 
         <div class="card-option otro" id="cardOtro">
           <strong>+ Nuevo</strong>
