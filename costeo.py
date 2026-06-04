@@ -53,12 +53,10 @@ def execute_many(sql, rows):
 # =========================
 @costeo_bp.get("/platillos")
 def platillos_index():
-    # incluye proteina_cantidad_base si existe
     try:
         platillos = query_all("SELECT id, nombre, precio_actual, proteina_cantidad_base FROM platillos ORDER BY nombre")
     except Exception:
         platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
-        # si no existe la columna aún, no tronamos el listado
     return render_template("admin/platillos_index.html", platillos=platillos)
 
 
@@ -146,14 +144,11 @@ def recetas_index():
 
 @costeo_bp.get("/recetas/<int:platillo_id>")
 def recetas_edit(platillo_id):
-    # ✅ ahora también traemos proteina_cantidad_base
     platillo = query_one("SELECT id, nombre, proteina_cantidad_base FROM platillos WHERE id=%s", (platillo_id,))
     if not platillo:
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
 
-    # Catálogo de insumos (con costo compras como referencia)
-    # MODIFICADO: Ahora extraemos `ultimo_costo` leyendo de v_insumo_costo_vigente para coincidir con tu BD
     insumos = query_all("""
         SELECT
           i.id,
@@ -167,7 +162,7 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """)
 
-    # Receta: costo usado = manual si aplica, si no compras.
+    # Receta: simplificada para usar solo compras reales
     receta = query_all("""
         SELECT
           r.id AS receta_id,
@@ -176,25 +171,9 @@ def recetas_edit(platillo_id):
           i.unidad_base,
           i.merma_pct,
           r.cantidad_base,
-
-          r.usa_precio_manual,
-          r.precio_manual,
-
-          cv.costo_unitario AS costo_unitario_compra,
-
-          CASE
-            WHEN r.usa_precio_manual=1 AND r.precio_manual IS NOT NULL THEN r.precio_manual
-            ELSE cv.costo_unitario
-          END AS costo_unitario_usado,
-
+          cv.costo_unitario AS costo_unitario_usado,
           ROUND(
-            r.cantidad_base
-            * (CASE
-                WHEN r.usa_precio_manual=1 AND r.precio_manual IS NOT NULL THEN r.precio_manual
-                ELSE cv.costo_unitario
-              END)
-            * (1 + (i.merma_pct/100)),
-            2
+            r.cantidad_base * cv.costo_unitario * (1 + (i.merma_pct/100)), 2
           ) AS subtotal
         FROM recetas r
         JOIN insumos i ON i.id = r.insumo_id
@@ -203,7 +182,6 @@ def recetas_edit(platillo_id):
         ORDER BY i.nombre
     """, (platillo_id,))
 
-    # Resúmenes:
     costeo = None
     costeo_compras = None
     try:
@@ -228,7 +206,6 @@ def recetas_edit(platillo_id):
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
 def recetas_save(platillo_id):
-    # ✅ NUEVO: proteína genérica por platillo
     prot_txt = (request.form.get("proteina_cantidad_base") or "").strip()
     prot_val = None
     if prot_txt:
@@ -241,13 +218,11 @@ def recetas_save(platillo_id):
 
     insumo_ids = request.form.getlist("insumo_id[]")
     cantidades = request.form.getlist("cantidad_base[]")
-    usar_manual_vals = request.form.getlist("usa_precio_manual[]")  # '0'/'1'
-    precios_manual = request.form.getlist("precio_manual[]")
 
     rows = []
     keep_insumo_ids = []
 
-    for insumo_id, cant, um, pm in zip(insumo_ids, cantidades, usar_manual_vals, precios_manual):
+    for insumo_id, cant in zip(insumo_ids, cantidades):
         if not insumo_id:
             continue
 
@@ -260,27 +235,14 @@ def recetas_save(platillo_id):
         if c <= 0:
             continue
 
-        usa_manual = 1 if str(um) == "1" else 0
-
-        precio_manual_val = None
-        if pm not in (None, "", " "):
-            try:
-                precio_manual_val = Decimal(pm)
-            except Exception:
-                precio_manual_val = None
-
-        # si marca manual pero no puso precio, desactívalo
-        if usa_manual == 1 and precio_manual_val is None:
-            usa_manual = 0
-
-        rows.append((platillo_id, insumo_id_int, c, usa_manual, precio_manual_val))
+        # Inyectamos 0 y None permanentemente para anular la configuración manual vieja en BD
+        rows.append((platillo_id, insumo_id_int, c, 0, None))
         keep_insumo_ids.append(insumo_id_int)
 
     if not rows:
         flash("No hay ingredientes válidos.", "warning")
         return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
-    # UPSERT por uq_receta_platillo_insumo
     execute_many("""
         INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual)
         VALUES (%s,%s,%s,%s,%s)
@@ -290,7 +252,6 @@ def recetas_save(platillo_id):
           precio_manual = VALUES(precio_manual)
     """, rows)
 
-    # Borra lo que ya no viene
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -300,7 +261,6 @@ def recetas_save(platillo_id):
                 (platillo_id, *keep_insumo_ids)
             )
 
-            # ✅ guarda también proteina_cantidad_base en platillos
             cursor.execute(
                 "UPDATE platillos SET proteina_cantidad_base=%s WHERE id=%s",
                 (prot_val, platillo_id)
@@ -310,7 +270,7 @@ def recetas_save(platillo_id):
     finally:
         conn.close()
 
-    flash("Receta guardada correctamente.", "success")
+    flash("Receta guardada correctamente con base en el historial de compras.", "success")
     return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
 
@@ -320,10 +280,11 @@ def recetas_save(platillo_id):
 @costeo_bp.get("/costeo")
 def costeo_index():
     try:
-        data = query_all("SELECT * FROM v_costeo_platillos ORDER BY platillo")
+        # Se cambia para mostrar siempre los dinámicos basados en compras
+        data = query_all("SELECT * FROM v_costeo_platillos_compras ORDER BY platillo")
     except Exception:
         data = []
-        flash("No se pudo cargar el costeo: falta crear v_costeo_platillos o falta costo vigente.", "error")
+        flash("No se pudo cargar el costeo dinámico: verifica tus compras.", "error")
 
     return render_template("admin/costeo_index.html", data=data)
 
@@ -347,14 +308,12 @@ def platillo_precio_update(platillo_id):
         with conn.cursor() as cursor:
             conn.begin()
 
-            # 1) Actualiza precio_actual en platillos (tu módulo de costeo)
             cursor.execute("""
                 UPDATE platillos
                 SET precio_actual = %s
                 WHERE id = %s
             """, (precio_pos, platillo_id))
 
-            # 2) Actualiza precio en productos (POS)
             cursor.execute("""
                 UPDATE productos
                 SET precio = %s
