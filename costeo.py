@@ -153,13 +153,14 @@ def recetas_edit(platillo_id):
         return redirect(url_for("costeo.recetas_index"))
 
     # Catálogo de insumos (con costo compras como referencia)
+    # MODIFICADO: Ahora extraemos `ultimo_costo` leyendo de v_insumo_costo_vigente para coincidir con tu BD
     insumos = query_all("""
         SELECT
           i.id,
           i.nombre,
           i.unidad_base,
           i.merma_pct,
-          cv.costo_unitario
+          cv.costo_unitario AS ultimo_costo
         FROM insumos i
         LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = i.id
         WHERE i.activo=1
