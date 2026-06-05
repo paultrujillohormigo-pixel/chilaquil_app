@@ -2199,6 +2199,51 @@ def platillo_set_proteina_qty(platillo_id):
     finally:
         conn.close()
 
+# =========================================================
+# ================== CAMPAÑAS DE RETENCIÓN ==================
+# =========================================================
+
+@app.route("/campanas")
+def campanas():
+    # Por defecto busca clientes que no han venido en 30 días
+    dias_str = request.args.get("dias", "30")
+    dias = int(dias_str) if dias_str.isdigit() else 30
+    
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Buscamos clientes cuya última compra supere X días
+            cursor.execute("""
+                SELECT 
+                    c.id, c.nombre, c.phone_e164, 
+                    a.totopos_balance,
+                    MAX(p.fecha) as ultima_compra,
+                    DATEDIFF(NOW(), MAX(p.fecha)) as dias_ausente
+                FROM loyalty_customers c
+                JOIN loyalty_tx tx ON c.id = tx.customer_id
+                JOIN pedidos p ON tx.pedido_id = p.id
+                LEFT JOIN loyalty_accounts a ON c.id = a.customer_id
+                WHERE tx.reason = 'purchase'
+                GROUP BY c.id
+                HAVING dias_ausente >= %s
+                ORDER BY dias_ausente DESC
+            """, (dias,))
+            clientes_inactivos = cursor.fetchall()
+    finally:
+        conn.close()
+
+    # Construimos el mensaje de WhatsApp personalizado para cada uno
+    for c in clientes_inactivos:
+        telefono = (c["phone_e164"] or "").replace("+", "")
+        nombre_completo = c["nombre"] or "amigo"
+        nombre = nombre_completo.split()[0] # Tomamos solo el primer nombre
+        
+        mensaje = f"¡Hola {nombre}! 👋 Te extrañamos en Señor Chilaquil.\n\nHace un rato que no nos visitas y queremos consentirte. 🌶️ En tu próximo pedido, muéstranos este mensaje y te regalamos un *Totopo extra* 🌮✨ a tu cuenta.\n\n¡Te esperamos pronto!"
+        msg_q = urllib.parse.quote(mensaje)
+        
+        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if telefono else None
+
+    return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
 
 # ================== RUN ==================
 if __name__ == "__main__":
