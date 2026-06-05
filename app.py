@@ -362,24 +362,58 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
 def pedidos_abiertos():
     conn = get_connection()
     try:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT id, fecha, origen, mesero, total
+        # Usamos DictCursor para asegurar que los datos se manden como diccionario al HTML
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            
+            # Verificamos si existe la columna mesa por si en un futuro la agregas
+            has_mesa = table_has_column(cursor, "pedidos", "mesa")
+            col_mesa = ", mesa" if has_mesa else ""
+
+            cursor.execute(f"""
+                SELECT id, fecha, origen, mesero, total {col_mesa}
                 FROM pedidos
                 WHERE estado = 'abierto'
                 ORDER BY fecha DESC
             """)
             pedidos = cursor.fetchall()
 
+            # Verificamos si la base de datos tiene la relación con salsas
+            has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
+
             for p in pedidos:
-                cursor.execute("""
-                    SELECT pr.nombre, pi.cantidad, pi.proteina, pi.sin, pi.nota
-                    FROM pedido_items pi
-                    JOIN productos pr ON pr.id = pi.producto_id
-                    WHERE pi.pedido_id = %s
-                    ORDER BY pi.id DESC
-                    LIMIT 4
-                """, (p["id"],))
+                if has_salsa_id:
+                    # Hacemos JOIN con 'salsas' para traer el nombre textual de la salsa
+                    # y renombramos 'sin' a 'modificadores' y 'nota' a 'notas' para el HTML
+                    cursor.execute("""
+                        SELECT 
+                            pr.nombre, 
+                            pi.cantidad, 
+                            pi.proteina, 
+                            pi.sin AS modificadores, 
+                            pi.nota AS notas,
+                            s.nombre AS salsa
+                        FROM pedido_items pi
+                        JOIN productos pr ON pr.id = pi.producto_id
+                        LEFT JOIN salsas s ON pi.salsa_id = s.id
+                        WHERE pi.pedido_id = %s
+                        ORDER BY pi.id ASC
+                    """, (p["id"],))
+                else:
+                    cursor.execute("""
+                        SELECT 
+                            pr.nombre, 
+                            pi.cantidad, 
+                            pi.proteina, 
+                            pi.sin AS modificadores, 
+                            pi.nota AS notas,
+                            NULL AS salsa
+                        FROM pedido_items pi
+                        JOIN productos pr ON pr.id = pi.producto_id
+                        WHERE pi.pedido_id = %s
+                        ORDER BY pi.id ASC
+                    """, (p["id"],))
+                
+                # Guardamos todos los items (quitamos el LIMIT 4 para ver el pedido completo)
                 p["items_preview"] = cursor.fetchall()
     finally:
         conn.close()
