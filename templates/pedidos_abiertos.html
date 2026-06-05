@@ -13,72 +13,98 @@
 <div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap:16px;">
 
     {% for p in pedidos %}
-    <div class="card">
+    <div class="card" style="border-top: 4px solid #b32417;">
 
         <strong>Pedido #{{ p.id }}</strong><br>
 
-        <small>
+        <small style="color: #666;">
             📅 {{ p.fecha }}
         </small><br><br>
 
         {% if p.mesa %}
-            Mesa: {{ p.mesa }}<br>
+            <span style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 13px;">
+                Mesa: <b>{{ p.mesa }}</b>
+            </span><br>
         {% endif %}
 
         Mesero: {{ p.mesero or '-' }}<br>
-        Total: <strong>{{ p.total | money }}</strong><br>
+        Total: <strong style="font-size: 16px; color: #25D366;">{{ p.total | money }}</strong><br>
 
         {% if p.items_preview %}
-        <div style="margin:8px 0; font-size:14px; color:#444;">
-            <strong>Items:</strong>
-            <ul style="padding-left:16px; margin:4px 0;">
+        <div style="margin:12px 0; font-size:14px; color:#333; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
+            <strong style="display:block; margin-bottom: 6px; color:#b32417;">Resumen de platillos:</strong>
+            <ul style="list-style-type: none; padding-left:0; margin:0;">
+                
                 {% for it in p.items_preview %}
-                <li>{{ it.cantidad }} × {{ it.nombre }}</li>
+                <li style="margin-bottom: 10px; border-bottom: 1px dashed #ddd; padding-bottom: 6px;">
+                    <strong>{{ it.cantidad }} × {{ it.nombre }}</strong>
+                    
+                    <div style="font-size: 12px; color: #555; padding-left: 14px; margin-top: 4px; line-height: 1.4;">
+                        {% if it.salsa %}
+                            <div><span style="color:#d97706;">🌶️</span> {{ it.salsa }}</div>
+                        {% endif %}
+                        
+                        {% if it.proteina %}
+                            <div><span style="color:#4b5563;">🥩</span> {{ it.proteina }}</div>
+                        {% endif %}
+                        
+                        {% if it.modificadores %}
+                            <div><span style="color:#4b5563;">⚙️</span> {{ it.modificadores }}</div>
+                        {% endif %}
+                        
+                        {% if it.extras %}
+                            <div><span style="color:#059669;">➕</span> {{ it.extras }}</div>
+                        {% endif %}
+                        
+                        {% if it.notas %}
+                            <div style="color: #b32417; font-weight: bold;">📝 Nota: {{ it.notas }}</div>
+                        {% endif %}
+                    </div>
+                </li>
                 {% endfor %}
+
             </ul>
         </div>
         {% endif %}
 
-        <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
-           class="btn btn-primary"
-           style="display:block; text-align:center; margin-bottom:6px;">
-            ➕ Entrar al pedido
-        </a>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 12px;">
+            <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
+               class="btn btn-primary"
+               style="text-align:center;">
+                ➕ Entrar al pedido
+            </a>
 
-        <form method="post"
-              action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}"
-              style="margin-bottom:6px;">
-            <button type="submit"
-                    class="btn btn-warning"
-                    style="width:100%;">
-                Cerrar pedido
-            </button>
-        </form>
+            <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}">
+                <button type="submit" class="btn btn-warning" style="width:100%;">
+                    ✅ Cerrar pedido
+                </button>
+            </form>
 
-        <form method="post"
-              action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}"
-              onsubmit="return confirm('¿Eliminar este pedido?')">
-            <button type="submit"
-                    class="btn btn-danger"
-                    style="width:100%;">
-                🗑️ Eliminar pedido
-            </button>
-        </form>
+            <form method="post" action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}" onsubmit="return confirm('¿Eliminar este pedido?')">
+                <button type="submit" class="btn btn-danger" style="width:100%; background: #fff5f5; color: #c53030; border-color: #feb2b2;">
+                    🗑️ Eliminar pedido
+                </button>
+            </form>
+        </div>
 
     </div>
     {% endfor %}
 
 </div>
 {% else %}
-<p>No hay pedidos abiertos.</p>
+<div style="text-align:center; padding: 40px; color:#888;">
+    <p style="font-size: 24px; margin-bottom: 10px;">🍽️</p>
+    <p>No hay pedidos abiertos en este momento.</p>
+</div>
 {% endif %}
 
 </div>
 
 <script>
+    // Recarga la página cada 3 minutos para mantener los pedidos actualizados
     setTimeout(function() {
         window.location.reload();
-    }, 180000); // 180,000 milisegundos = 3 minutos
+    }, 180000); 
 </script>
 
 {% endblock %}
