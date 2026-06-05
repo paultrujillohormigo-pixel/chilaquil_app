@@ -361,12 +361,14 @@
                     {% endfor %}
                   {% endif %}
                   {% if it.proteina %}
-                    <span class="pos-tag">🥩 {{ it.proteina }}</span>
+                    <!-- Aquí usamos el formato huevo si aplica, o como extra en la DB si ya está guardado -->
+                    <span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 {{ it.proteina }}</span>
                   {% endif %}
                   {% if it.sin %}
                     <span class="pos-tag pos-tag-warn">🚫 Sin {{ it.sin }}</span>
                   {% endif %}
                   {% if it.nota %}
+                    <!-- Las notas de los extras "👉 Para: Chilaquiles" aparecerán naturalmente aquí -->
                     <div class="pos-note mt-1">📝 {{ it.nota }}</div>
                   {% endif %}
                 </div>
@@ -402,7 +404,7 @@
       
       <div class="catalog-grid">
         {% for p in productos %}
-        <button type="button" class="product-btn" onclick='PosApp.seleccionarProducto({{ p.id }}, {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
+        <button type="button" class="product-btn js-add" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-categoria="{{ p.categoria or '' }}" onclick='PosApp.seleccionarProducto({{ p.id }}, {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
           <div class="product-name">{{ p.nombre }}</div>
           <div class="product-price">{{ p.precio | money }}</div>
         </button>
@@ -447,6 +449,7 @@
 
 </div>
 
+<!-- MODAL INTELIGENTE DE EXTRAS (NUEVO ESTILO) -->
 <div id="modalCustom" class="modal-overlay">
   <div class="modal-content">
     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -457,22 +460,29 @@
       <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCustom')">✕</button>
     </div>
 
+    <!-- 🥚 HUEVO DE CAJÓN (SIN COSTO) -->
     <div class="mt-4">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Preparación del Huevo (De cajón)</label>
+      <div id="mcProteinas" class="custom-grid"></div>
+    </div>
+
+    <!-- 🥩 EXTRAS (CON COSTO Y LÍNEA OCULTA) -->
+    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Proteínas Extra (Opcional)</label>
+      <div id="mcExtras" class="custom-grid"></div>
+    </div>
+
+    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Salsa <span style="text-transform:none; font-weight:normal;">(Opcional)</span></label>
       <div id="mcSalsas" class="custom-grid"></div>
     </div>
 
-    <div class="mt-4">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Proteína</label>
-      <div id="mcProteinas" class="custom-grid"></div>
-    </div>
-
-    <div class="mt-4">
+    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Quitar Ingredientes</label>
       <div id="mcSin" class="custom-grid"></div>
     </div>
 
-    <div class="mt-4">
+    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Notas Extra</label>
       <textarea id="mcNota" class="custom-note" placeholder="Ej. salsa aparte, sin dorar mucho..."></textarea>
     </div>
@@ -518,8 +528,15 @@
 const SALSAS_DB = {{ (salsas or [])|tojson }};
 const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
 
-// Opciones estáticas
-const LISTA_PROTEINAS = ["Pollo", "Arrachera", "Chorizo", "Cochinita", "Huevo", "Sin proteína"];
+// --- OPCIONES COMPARTIDAS CON "NUEVO PEDIDO" ---
+const OPCIONES_HUEVO = ["Sin proteina", "Con huevo estrellado", "Huevo revuelto", "Huevo bien cocido"];
+const OPCIONES_EXTRAS = [
+  { nombre: "Huevo", precio: 20 },
+  { nombre: "Arrachera", precio: 45 },
+  { nombre: "Pollo", precio: 30 },
+  { nombre: "Chicharron Prensado", precio: 65 }
+];
+
 const LISTA_SIN = ["Cebolla", "Crema", "Queso", "Aguacate"];
 const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
 const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
@@ -528,19 +545,16 @@ const PosApp = {
   cart: {},
   activeItem: null,
   
-  // 🔥 BASE DEL SUBTOTAL: Sumamos el total actual guardado con el descuento que ya tenía para calcular limpio.
+  // Sumamos el total actual guardado con el descuento para calcular limpio
   subtotalBaseServer: {{ (pedido.subtotal) if pedido.subtotal else (pedido.total + (pedido.descuento or 0)) }},
 
   init() {
     this.renderCart();
   },
 
-  // 🔥 NUEVA FUNCIÓN: Se ejecuta cuando cambias el número en la caja de Descuento
   actualizarDescuento() {
     const val = parseFloat(document.getElementById('inputDescuentoGlobal').value) || 0;
-    // Pasa el valor a todos los forms (Cerrar, Cerrar WhatsApp y Guardar Cambios)
     document.querySelectorAll('.hidden-descuento').forEach(el => el.value = val);
-    // Vuelve a calcular el Total Grand
     this.renderCart();
   },
 
@@ -568,9 +582,13 @@ const PosApp = {
     return String(str || "").replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
   },
 
+  normaliza(str) {
+    return (str || "").toString().trim().toLowerCase();
+  },
+
   requiereModificadores(nombre, categoria) {
-    const cat = String(categoria || "").toLowerCase();
-    const nom = String(nombre || "").toLowerCase();
+    const cat = this.normaliza(categoria);
+    const nom = this.normaliza(nombre);
     if (NO_MOD_CATEGORIAS.some(c => cat.includes(c))) return false;
     if (NO_MOD_KEYWORDS.some(k => nom.includes(k))) return false;
     return true;
@@ -581,15 +599,29 @@ const PosApp = {
     return match ? match.id : "";
   },
 
-  mapProteinaId(nombre) {
-    const match = PROTEINAS_DB.find(p => p.nombre.toLowerCase() === String(nombre).toLowerCase());
-    return match ? match.id : "";
+  // 🤖 Escanea el catálogo dinámicamente para enlazar el ID del Extra a la DB
+  encontrarProductoExtraId(nombreBuscar) {
+    const botones = document.querySelectorAll('.js-add');
+    const nomNorm = this.normaliza(nombreBuscar);
+    
+    for (let b of botones) {
+      const btnNorm = this.normaliza(b.dataset.nombre);
+      if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || this.normaliza(b.dataset.categoria).includes('extra'))) {
+        return b.dataset.id;
+      }
+    }
+    for (let b of botones) {
+      if (this.normaliza(b.dataset.nombre).includes(nomNorm)) {
+        return b.dataset.id;
+      }
+    }
+    return null;
   },
 
   seleccionarProducto(id, nombre, precio, categoria) {
     if (!this.requiereModificadores(nombre, categoria)) {
       const uid = this.generarUid();
-      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", proteina: "", proteina_id: "", sin: [], nota: "" } };
+      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", proteina: "Sin proteina", extras: [], sin: [], nota: "" } };
       this.renderCart();
       return;
     }
@@ -601,17 +633,24 @@ const PosApp = {
   abrirModalCustom() {
     document.getElementById('mcProductName').innerText = this.activeItem.nombre;
     
+    let htmlProt = '';
+    OPCIONES_HUEVO.forEach(p => {
+      let checked = (p === "Sin proteina") ? "checked" : "";
+      htmlProt += `<label class="custom-pill"><input type="radio" name="mc_prot" value="${this.escapeHtml(p)}" ${checked}><span>${this.escapeHtml(p)}</span></label>`;
+    });
+    document.getElementById('mcProteinas').innerHTML = htmlProt;
+
+    let htmlExt = '';
+    OPCIONES_EXTRAS.forEach(ext => {
+      htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${this.escapeHtml(ext.nombre)}"><span>${this.escapeHtml(ext.nombre)} (+$${ext.precio})</span></label>`;
+    });
+    document.getElementById('mcExtras').innerHTML = htmlExt;
+
     let htmlSalsas = `<label class="custom-pill"><input type="radio" name="mc_salsa" value="" checked><span>— Sin salsa</span></label>`;
     SALSAS_DB.forEach(s => {
       htmlSalsas += `<label class="custom-pill"><input type="radio" name="mc_salsa" value="${this.escapeHtml(s.nombre)}"><span>${this.escapeHtml(s.nombre)}</span></label>`;
     });
     document.getElementById('mcSalsas').innerHTML = htmlSalsas;
-
-    let htmlProt = '';
-    LISTA_PROTEINAS.forEach((p, i) => {
-      htmlProt += `<label class="custom-pill"><input type="radio" name="mc_prot" value="${this.escapeHtml(p)}" ${i===0?'checked':''}><span>${this.escapeHtml(p)}</span></label>`;
-    });
-    document.getElementById('mcProteinas').innerHTML = htmlProt;
 
     let htmlSin = '';
     LISTA_SIN.forEach(s => {
@@ -634,8 +673,10 @@ const PosApp = {
     const salsa_id = this.mapSalsaId(salsa);
 
     const protNode = document.querySelector('input[name="mc_prot"]:checked');
-    const proteina = protNode ? protNode.value : "";
-    const proteina_id = this.mapProteinaId(proteina);
+    const proteina = protNode ? protNode.value : "Sin proteina";
+
+    const extraNodes = document.querySelectorAll('.check-extra:checked');
+    const extras = Array.from(extraNodes).map(n => n.value);
 
     const sinNodes = document.querySelectorAll('input[name="mc_sin"]:checked');
     const sin = Array.from(sinNodes).map(n => n.value);
@@ -647,7 +688,7 @@ const PosApp = {
       nombre: this.activeItem.nombre,
       precio: this.activeItem.precio,
       qty: 1,
-      custom: { salsa, salsa_id, proteina, proteina_id, sin, nota }
+      custom: { salsa, salsa_id, proteina, extras, sin, nota }
     };
 
     this.cerrarModal('modalCustom');
@@ -679,16 +720,26 @@ const PosApp = {
     let count = 0;
 
     Object.entries(this.cart).forEach(([uid, item]) => {
-      const sub = item.precio * item.qty;
+      // 💸 Calculamos el precio total del item (Base + Extras)
+      let precioExtrasAcumulado = 0;
+      item.custom.extras.forEach(extName => {
+        const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
+        if(target) precioExtrasAcumulado += target.precio;
+      });
+
+      const precioVentaTotal = item.precio + precioExtrasAcumulado;
+      const sub = precioVentaTotal * item.qty;
       totalExtra += sub;
       count += item.qty;
       const c = item.custom;
 
+      // Generar Tags Visuales
       let meta = '';
-      if (c.salsa || c.proteina || c.sin.length || c.nota) {
+      if (c.salsa || (c.proteina && c.proteina !== "Sin proteina") || c.extras.length || c.sin.length || c.nota) {
         meta += `<div class="pos-modifiers mt-2">`;
+        if(c.proteina && c.proteina !== "Sin proteina") meta += `<span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 ${this.escapeHtml(c.proteina)}</span>`;
         if(c.salsa) meta += `<span class="pos-tag">🌶️ ${this.escapeHtml(c.salsa)}</span>`;
-        if(c.proteina) meta += `<span class="pos-tag">🥩 ${this.escapeHtml(c.proteina)}</span>`;
+        if(c.extras.length) meta += `<span class="pos-tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${this.escapeHtml(c.extras.join(', '))}</span>`;
         if(c.sin.length) meta += `<span class="pos-tag pos-tag-warn">🚫 Sin ${this.escapeHtml(c.sin.join(', '))}</span>`;
         if(c.nota) meta += `<div class="pos-note mt-1">📝 ${this.escapeHtml(c.nota)}</div>`;
         meta += `</div>`;
@@ -698,7 +749,7 @@ const PosApp = {
         <div style="border: 1px solid var(--pos-border); border-radius: 10px; padding: 12px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position:relative;">
           <button type="button" class="btn-danger-ghost" style="position:absolute; top:8px; right:8px; padding:4px;" onclick="PosApp.eliminarCart('${uid}')">✕</button>
           <div class="fw-bold" style="padding-right:24px;">${this.escapeHtml(item.nombre)}</div>
-          <div style="color: var(--pos-primary); font-weight:800; font-size:0.95rem; margin-top:2px;">$${sub.toFixed(2)}</div>
+          <div style="color: var(--pos-primary); font-weight:800; font-size:0.95rem; margin-top:2px;">$${precioVentaTotal.toFixed(2)}</div>
           ${meta}
           <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top:1px dashed var(--pos-border);">
             <div class="qty-ctrl">
@@ -706,20 +757,39 @@ const PosApp = {
               <div class="qty-val">${item.qty}</div>
               <button type="button" class="qty-btn" onclick="PosApp.modQty('${uid}', 1)">+</button>
             </div>
-            <span style="font-size:0.8rem; color:var(--pos-text-muted);">${item.qty} x $${item.precio.toFixed(2)}</span>
+            <span style="font-size:0.8rem; color:var(--pos-text-muted);">${item.qty} x $${precioVentaTotal.toFixed(2)}</span>
           </div>
         </div>
       `;
 
+      // 1. INPUT OCULTO: Platillo Base
       hidden += `
         <input type="hidden" name="producto_id[]" value="${item.id}">
         <input type="hidden" name="cantidad[]" value="${item.qty}">
         <input type="hidden" name="proteina[]" value="${this.escapeHtml(c.proteina)}">
-        <input type="hidden" name="proteina_id[]" value="${c.proteina_id}">
+        <input type="hidden" name="proteina_id[]" value="">
         <input type="hidden" name="salsa_id[]" value="${c.salsa_id}">
         <input type="hidden" name="sin[]" value="${this.escapeHtml(c.sin.join(','))}">
         <input type="hidden" name="nota[]" value="${this.escapeHtml(c.nota)}">
       `;
+
+      // 2. INPUTS OCULTOS: Un registro por cada Extra seleccionado para cobrarlo en DB
+      if (c.extras) {
+        c.extras.forEach(extName => {
+          const extraProdId = this.encontrarProductoExtraId(extName);
+          if (extraProdId) {
+            hidden += `
+              <input type="hidden" name="producto_id[]" value="${extraProdId}">
+              <input type="hidden" name="cantidad[]" value="${item.qty}">
+              <input type="hidden" name="proteina[]" value="">
+              <input type="hidden" name="proteina_id[]" value="">
+              <input type="hidden" name="salsa_id[]" value="">
+              <input type="hidden" name="sin[]" value="">
+              <input type="hidden" name="nota[]" value="👉 Para: ${this.escapeHtml(item.nombre)}">
+            `;
+          }
+        });
+      }
     });
 
     container.innerHTML = html;
@@ -727,7 +797,7 @@ const PosApp = {
     document.getElementById('cartTotal').innerText = `$${totalExtra.toFixed(2)}`;
     badge.innerText = count;
 
-    // 🔥 CÁLCULO DEL GRAN TOTAL GLOBAL (Productos guardados + Productos en carrito derecho - Descuento introducido)
+    // 🔥 CÁLCULO DEL GRAN TOTAL GLOBAL
     const descuentoElement = document.getElementById('inputDescuentoGlobal');
     const descuentoActual = descuentoElement ? (parseFloat(descuentoElement.value) || 0) : 0;
     const granTotalGlobal = Math.max(0, this.subtotalBaseServer + totalExtra - descuentoActual);
@@ -760,7 +830,7 @@ const PosApp = {
     const entries = Object.values(this.cart);
 
     if (!entries.length) {
-      body.innerHTML = "<div class='text-center p-4' style='color: var(--pos-text-muted);'>No hay productos nuevos en el carrito derecho para imprimir.</div>";
+      body.innerHTML = "<div class='text-center p-4' style='color: var(--pos-text-muted);'>No hay productos nuevos en el carrito para imprimir.</div>";
       document.getElementById('modalCocina').classList.add('active');
       return;
     }
@@ -774,9 +844,10 @@ const PosApp = {
             <div style="font-size:1.2rem; font-weight:900; background:white; padding:4px 12px; border:2px solid var(--pos-border); border-radius:8px;">x${it.qty}</div>
           </div>
           <div class="pos-modifiers mt-3">
-            <div><span class="pos-tag">SALSA: ${c.salsa ? this.escapeHtml(c.salsa) : '—'}</span></div>
-            <div><span class="pos-tag">PROT: ${c.proteina ? this.escapeHtml(c.proteina) : '—'}</span></div>
-            <div><span class="pos-tag ${c.sin && c.sin.length ? 'pos-tag-warn' : ''}">SIN: ${c.sin && c.sin.length ? this.escapeHtml(c.sin.join(", ")) : '—'}</span></div>
+            ${c.proteina && c.proteina !== "Sin proteina" ? `<div><span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 PROT: ${this.escapeHtml(c.proteina)}</span></div>` : ''}
+            ${c.salsa ? `<div><span class="pos-tag">🌶️ SALSA: ${this.escapeHtml(c.salsa)}</span></div>` : ''}
+            ${c.extras.length ? `<div><span class="pos-tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ EXTRA: ${this.escapeHtml(c.extras.join(', '))}</span></div>` : ''}
+            ${c.sin.length ? `<div><span class="pos-tag pos-tag-warn">🚫 SIN: ${this.escapeHtml(c.sin.join(", "))}</span></div>` : ''}
             ${c.nota ? `<div class="pos-note mt-2"><strong>NOTA:</strong> ${this.escapeHtml(c.nota)}</div>` : ''}
           </div>
         </div>
