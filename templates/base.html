@@ -6,7 +6,6 @@
 
   <title>Señor Chilaquil - Sistema Ventas</title>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
@@ -14,67 +13,107 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
 
   <style>
-    body { margin: 0; }
+    body { margin: 0; background-color: #f8fafc; }
 
-    .flash { padding: 8px; margin: 8px 12px; border-radius: 4px; }
-    .success { background: #c8e6c9; }
-    .error { background: #ffcdd2; }
+    .flash { padding: 12px 16px; margin: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; }
+    .success { background: #dcfce7; color: #065f46; border: 1px solid #a7f3d0; }
+    .error { background: #fee2e2; color: #9f1239; border: 1px solid #fecdd3; }
+    .warning { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
 
-    /* Navbar mínimo auto-contenido (para evitar que otro CSS lo deje invisible) */
-    .navbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:12px 16px;
-      background:#fff;
-      border-bottom:1px solid #e5e7eb;
-      position:relative;
-      z-index:1000;
+    /* Navbar Pro Automática */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #ffffff;
+      border-bottom: 2px solid #e2e8f0;
+      position: relative;
+      z-index: 1000;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    .brand{ font-weight:800; font-size:18px; color:#111827; text-decoration:none; }
-    .nav-links{ display:flex; gap:12px; align-items:center; }
+    
+    .brand { 
+      font-weight: 900; 
+      font-size: 20px; 
+      color: #b32417; 
+      text-decoration: none; 
+      letter-spacing: -0.5px;
+    }
+    
+    .nav-links { 
+      display: flex; 
+      gap: 6px; 
+      align-items: center; 
+      flex-wrap: wrap;
+    }
 
-    .nav-dd{ position:relative; }
-    .nav-dd-btn{
-      border:0;
-      background:transparent;
-      padding:10px 12px;
-      border-radius:8px;
-      font-weight:700;
-      color:#111827;
-      cursor:pointer;
+    .nav-dd { position: relative; }
+    
+    .nav-dd-btn {
+      border: 0;
+      background: transparent;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .nav-caret{ margin-left:6px; font-size:12px; display:inline-block; transform: translateY(-1px); }
+    .nav-dd-btn:hover { background: #f1f5f9; color: #b32417; }
+    .nav-dd.is-open .nav-dd-btn { background: #fee2e2; color: #b32417; }
 
-    .nav-dd-menu{
-      display:none;
-      position:absolute;
-      top:calc(100% + 8px);
-      left:0;
-      min-width:210px;
-      background:#fff;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      box-shadow:0 6px 16px rgba(0,0,0,.12);
-      padding:8px;
-      z-index:9999;
+    .nav-caret { margin-left: 4px; font-size: 10px; display: inline-block; transform: translateY(-1px); }
+
+    .nav-dd-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 220px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      padding: 8px;
+      z-index: 9999;
     }
 
-    .nav-dd.is-open > .nav-dd-menu{ display:block; }
-
-    .nav-dd-menu a{
-      display:block;
-      padding:10px;
-      border-radius:8px;
-      text-decoration:none;
-      font-weight:500;
-      color:#111827;
+    /* Evitar que los últimos menús se salgan de la pantalla a la derecha */
+    .nav-dd:nth-last-child(1) .nav-dd-menu,
+    .nav-dd:nth-last-child(2) .nav-dd-menu {
+      left: auto;
+      right: 0;
     }
-    .nav-dd-menu a:hover{ background:#f3f4f6; }
+
+    .nav-dd.is-open > .nav-dd-menu { display: block; animation: slideDown 0.2s ease-out; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .nav-dd-menu a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #1e293b;
+      transition: background 0.2s;
+    }
+    .nav-dd-menu a:hover { background: #f8fafc; color: #b32417; }
 
     @media (hover: hover) and (pointer: fine) {
-      .nav-dd:hover > .nav-dd-menu { display:block; }
+      .nav-dd:hover > .nav-dd-menu { display: block; }
+      .nav-dd:hover .nav-dd-btn { background: #fee2e2; color: #b32417; }
     }
   </style>
 </head>
@@ -83,18 +122,19 @@
 
   <nav class="navbar">
     <div class="nav-left">
-      <a class="brand" href="{{ url_for('index') }}">Señor Chilaquil</a>
+      <a class="brand" href="{{ url_for('index') }}">🌶️ Señor Chilaquil</a>
     </div>
 
     <div class="nav-links">
 
       <div class="nav-dd" role="navigation">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
-          POS <span class="nav-caret" aria-hidden="true">▾</span>
+          Ventas <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="nav-dd-menu" role="menu" aria-label="POS">
-          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">Nuevo pedido</a>
-          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">Pedidos abiertos</a>
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">🍔 Nuevo pedido</a>
+          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">📋 Pedidos abiertos</a>
+          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">🕒 Historial pedidos</a>
         </div>
       </div>
 
@@ -102,8 +142,9 @@
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Catálogos <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Catálogos">
-          <a role="menuitem" href="{{ url_for('productos') }}">Productos</a>
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('productos') }}">⚙️ Menú y Precios</a>
+          <a role="menuitem" href="{{ url_for('lista_clientes') }}">👥 Clientes y Totopos</a>
         </div>
       </div>
 
@@ -111,9 +152,21 @@
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Inventario <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Inventario">
-          <a role="menuitem" href="{{ url_for('ver_stock') }}">Stock actual</a>
-          <a role="menuitem" href="{{ url_for('compras') }}">Compras</a>
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('compras') }}">🛒 Gastos y Compras</a>
+          <a role="menuitem" href="{{ url_for('ver_stock') }}">📦 Stock actual</a>
+        </div>
+      </div>
+
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false">
+          Costeos <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('costeo.insumos_index') }}">🥑 Base Insumos</a>
+          <a role="menuitem" href="{{ url_for('costeo.platillos_index') }}">🌮 Base Platillos</a>
+          <a role="menuitem" href="{{ url_for('costeo.recetas_index') }}">🧾 Recetario Técnico</a>
+          <a role="menuitem" href="{{ url_for('costeo.costeo_index') }}">📈 Rentabilidad</a>
         </div>
       </div>
 
@@ -121,10 +174,19 @@
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Admin <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
-        <div class="nav-dd-menu" role="menu" aria-label="Admin">
-          <a role="menuitem" href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">Borrar pedidos</a>
-        
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('dashboard') }}">📊 Dashboard Finanzas</a>
+          <a role="menuitem" href="{{ url_for('raw_data') }}">🗄️ Base de datos</a>
+        </div>
+      </div>
+
+      <div class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false" style="color: #b32417; background: #fff1f2;">
+          Público <span class="nav-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dd-menu" role="menu">
+          <a role="menuitem" href="{{ url_for('menu') }}" target="_blank">📱 Menú Digital</a>
+          <a role="menuitem" href="{{ url_for('mi_perfil') }}" target="_blank">💳 App de Lealtad</a>
         </div>
       </div>
 
@@ -165,8 +227,7 @@
       if (b) b.setAttribute("aria-expanded", String(!isOpen));
     }
 
-    // En iOS: si usas pointerdown global para cerrar, a veces cierra instantáneo.
-    // Aquí cerramos con click fuera, pero ignorando clicks dentro del dropdown.
+    // Comportamiento de click para abrir/cerrar en móviles o al hacer click manual
     buttons.forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -177,13 +238,13 @@
       }, { passive: false });
     });
 
-    // Click fuera cierra
+    // Cerrar si se da click en cualquier otro lado
     document.addEventListener("click", (e) => {
-      // si click fue dentro de cualquier dropdown, no cierres
       if (e.target.closest && e.target.closest(".nav-dd")) return;
       closeAll();
     });
 
+    // Cerrar al presionar la tecla Escape
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeAll();
     });
