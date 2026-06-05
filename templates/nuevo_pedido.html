@@ -35,7 +35,6 @@
           <input type="text" name="mesero" placeholder="Nombre">
         </div>
 
-       <!-- Buscador de Clientes y WhatsApp -->
         <div style="position: relative; grid-column: 1 / -1;">
           <label>Buscar Cliente / WhatsApp</label>
           
@@ -46,13 +45,11 @@
             </button>
           </div>
           
-          <!-- Lista de resultados flotante (búsqueda en vivo) -->
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
           <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
 
-          <!-- Tarjeta de detalles del cliente seleccionado -->
           <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;"></strong>
@@ -139,7 +136,6 @@
           <tbody></tbody>
         </table>
 
-        <!-- Subtotal + Descuento + Total -->
         <div class="total-box" style="display:flex; flex-direction:column; gap:10px;">
 
           <div style="display:flex; justify-content:space-between; gap:10px;">
@@ -179,17 +175,13 @@
         <div id="inputsHidden"></div>
         <input type="hidden" name="descuento" id="descuentoHidden" value="0">
         
-        <!-- ✅ CAMPO OCULTO: Mandamos 1 totopo al backend por crear este pedido -->
         <input type="hidden" name="totopos_ganados" value="1">
 
-        <!-- Botones de Guardar y Enviar WhatsApp -->
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <!-- Botón que abre WhatsApp (con totopos) y luego guarda -->
           <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
             💬 Guardar y Enviar WhatsApp
           </button>
           
-          <!-- Botón de guardar normal (solo guarda en DB) -->
           <button type="submit" class="btn-guardar" style="padding: 12px;">
             💾 Solo Guardar
           </button>
@@ -203,7 +195,6 @@
 
 </form>
 
-<!-- ================== MODAL PERSONALIZACIÓN ================== -->
 <div id="customModal" class="modal">
   <div class="modal-box">
 
@@ -213,25 +204,30 @@
     <p class="hint" id="customProductoNombre" style="margin-top:-8px; font-weight:bold;"></p>
 
     <div class="custom-section">
-      <label><strong>Proteína</strong></label>
+      <label><strong>Preparación del Huevo (De cajón)</strong></label>
       <div id="proteinaRadios" class="custom-grid"></div>
     </div>
 
-    <div class="custom-section">
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px; margin-top: 12px;">
+      <label><strong>Proteínas Extra (Opcional)</strong></label>
+      <div id="extrasChecks" class="custom-grid"></div>
+    </div>
+
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
       <label><strong>Salsa</strong></label>
       <div id="salsaRadios" class="custom-grid"></div>
       <p class="hint" style="margin:6px 0 0;">Opcional (si no aplica, déjalo vacío).</p>
     </div>
 
-    <div class="custom-section">
-      <label><strong>Quitar / Extra</strong></label>
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
+      <label><strong>Quitar ingredientes</strong></label>
       <div id="sinChecks" class="custom-grid"></div>
       <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
     </div>
 
-    <div class="custom-section">
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
       <label><strong>Notas Adicionales</strong></label>
-      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. extra queso, salsa aparte, bien dorados, etc."></textarea>
+      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
     </div>
 
     <div class="modal-actions">
@@ -241,7 +237,6 @@
   </div>
 </div>
 
-<!-- ================== VISTA COCINA ================== -->
 <div id="cocinaModal" class="modal">
   <div class="modal-box">
 
@@ -259,7 +254,6 @@
   </div>
 </div>
 
-<!-- ================== ESTILOS ================== -->
 <style>
 html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 *, *::before, *::after{ box-sizing: border-box; }
@@ -397,7 +391,6 @@ body{ overflow-x:hidden; }
 
 .qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
 
-/* Estilos para el buscador dinámico */
 #lista_clientes div {
   padding: 12px;
   border-bottom: 1px solid #eee;
@@ -411,7 +404,6 @@ body{ overflow-x:hidden; }
 #lista_clientes strong {
   display: block;
 }
-
 </style>
 
 <script>
@@ -424,13 +416,19 @@ setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', setVH);
 
-/* ================== DATA (FIX JINJA) ================== */
-const PROTEINAS_DB = {{ proteinas|tojson|safe }};
-const SALSAS_DB    = {{ salsas|tojson|safe }};
+/* ================== DATA ================== */
+const SALSAS_DB = {{ salsas|tojson|safe }};
 
-const PROTEINA_NONE = { id: "", nombre: "Sin proteína" };
+// Opciones estáticas requeridas por el usuario
+const OPCIONES_HUEVO = ["Sin proteina", "Con huevo estrellado", "Huevo revuelto", "Huevo bien cocido"];
+const OPCIONES_EXTRAS = [
+  { nombre: "Huevo", precio: 20 },
+  { nombre: "Arrachera", precio: 45 },
+  { nombre: "Pollo", precio: 30 },
+  { nombre: "Chicharron Prensado", precio: 65 }
+];
+
 const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
-
 const NO_MOD_CATEGORIAS = ["bebidas", "extras", "extra", "complementos", "postres"];
 const NO_MOD_KEYWORDS = ["coca", "refresco", "agua", "café", "cafe", "chai", "capuccino", "capuchino", "jugo", "jarrito"];
 
@@ -465,15 +463,8 @@ function normaliza(str){
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
-
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
-}
-
-function nombreProteinaPorId(id){
-  if (!id) return "";
-  const x = PROTEINAS_DB.find(p => String(p.id) === String(id));
-  return x ? x.nombre : "";
 }
 
 function nombreSalsaPorId(id){
@@ -482,14 +473,30 @@ function nombreSalsaPorId(id){
   return x ? x.nombre : "";
 }
 
+// Escanea el catálogo dinámicamente para enlazar el ID del Extra y que el Backend calcule bien la cuenta
+function encontrarProductoExtraId(nombreBuscar) {
+  const botones = document.querySelectorAll('.js-add');
+  const nomNorm = normaliza(nombreBuscar);
+  
+  for (let b of botones) {
+    const btnNorm = normaliza(b.dataset.nombre);
+    if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || normaliza(b.dataset.categoria).includes('extra'))) {
+      return b.dataset.id;
+    }
+  }
+  for (let b of botones) {
+    if (normaliza(b.dataset.nombre).includes(nomNorm)) {
+      return b.dataset.id;
+    }
+  }
+  return null;
+}
+
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
-  
-  // 🔥 NUEVO: Autocompletar la hora local en el input al abrir la página
   const fechaInput = document.querySelector('input[name="fecha"]');
   if (fechaInput && !fechaInput.value) {
     const now = new Date();
-    // Ajuste al timezone local para generar el formato YYYY-MM-DDTHH:MM
     const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     fechaInput.value = localNow.toISOString().slice(0, 16);
   }
@@ -497,23 +504,15 @@ document.addEventListener("DOMContentLoaded", () => {
   toggleUberBox();
   document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
-  /* 🔥 CLICK EN PRODUCTOS */
   const grid = document.getElementById("productosGrid");
   if (grid){
     grid.addEventListener("click", (e) => {
       const btn = e.target.closest(".js-add");
       if (!btn) return;
-
-      const id = btn.dataset.id;
-      const nombre = btn.dataset.nombre;
-      const precio = btn.dataset.precio;
-      const categoria = btn.dataset.categoria || "";
-
-      agregarProducto(id, nombre, precio, categoria);
+      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || "");
     });
   }
 
-  /* 🔍 BUSCADOR CLIENTES EN VIVO */
   const inputBuscar = document.getElementById('buscador_cliente');
   const divResultados = document.getElementById('resultados_busqueda');
   const listaClientes = document.getElementById('lista_clientes');
@@ -521,7 +520,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (inputBuscar) {
     inputBuscar.addEventListener('keyup', function(e) {
       if (e.key === 'Enter') return; 
-
       let query = inputBuscar.value;
       if (query.length >= 3) {
         fetch(`/api/buscar_cliente?q=${query}`)
@@ -532,14 +530,12 @@ document.addEventListener("DOMContentLoaded", () => {
               divResultados.style.display = 'block';
               data.forEach(cliente => {
                 const item = document.createElement('div');
-                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164 || cliente.telefono || ''}</small>`;
-                
+                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164 || ''}</small>`;
                 item.onclick = function() {
-                  inputBuscar.value = cliente.phone_e164 || cliente.telefono || query;
+                  inputBuscar.value = cliente.phone_e164 || query;
                   divResultados.style.display = 'none';
                   mostrarDetallesCliente(cliente);
                 };
-                
                 listaClientes.appendChild(item);
               });
             } else {
@@ -553,19 +549,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.addEventListener('click', (e) => {
-    if (inputBuscar && e.target !== inputBuscar) {
-      divResultados.style.display = 'none';
-    }
+    if (inputBuscar && e.target !== inputBuscar) divResultados.style.display = 'none';
   });
 
-  /* 💸 DESCUENTO */
   const descInput = document.getElementById("descuentoInput");
   if (descInput){
     descInput.addEventListener("input", () => {
       descuentoTotal = clampMin0(descInput.value);
       renderCarrito();
     });
-
     descInput.addEventListener("blur", () => {
       descuentoTotal = clampMin0(descInput.value);
       descInput.value = descuentoTotal.toFixed(2);
@@ -578,53 +570,31 @@ document.addEventListener("DOMContentLoaded", () => {
 function buscarClienteManual() {
   const query = document.getElementById('buscador_cliente').value.trim();
   const divResultados = document.getElementById('resultados_busqueda');
-  
-  if (query.length < 3) {
-    alert("Por favor ingresa al menos 3 caracteres del nombre o el número.");
-    return;
-  }
-
+  if (query.length < 3) { alert("Ingresa al menos 3 caracteres."); return; }
   divResultados.style.display = 'none';
 
   fetch(`/api/buscar_cliente?q=${query}`)
     .then(r => r.json())
     .then(data => {
-      if (data && data.length > 0) {
-        mostrarDetallesCliente(data[0]);
-      } else {
-        alert("No se encontró ningún cliente registrado con esos datos.");
-        limpiarCliente(false); 
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Ocurrió un error al buscar el cliente.");
+      if (data && data.length > 0) mostrarDetallesCliente(data[0]);
+      else { alert("No se encontró el cliente."); limpiarCliente(false); }
     });
 }
 
 function mostrarDetallesCliente(cliente) {
   document.getElementById('detalle_nombre').innerText = cliente.nombre || 'Cliente sin nombre';
-  document.getElementById('detalle_tel').innerText = "📞 " + (cliente.phone_e164 || cliente.telefono || 'Sin teléfono');
-  
-  let extraInfo = "";
-  if(cliente.direccion) extraInfo += `📍 ${cliente.direccion}<br>`;
-  if(cliente.email) extraInfo += `📧 ${cliente.email}`;
-  
-  document.getElementById('detalle_extra').innerHTML = extraInfo;
+  document.getElementById('detalle_tel').innerText = "📞 " + (cliente.phone_e164 || 'Sin teléfono');
   document.getElementById('cliente_seleccionado_card').style.display = 'block';
 }
 
 function limpiarCliente(limpiarInput = true) {
-  if(limpiarInput) {
-    document.getElementById('buscador_cliente').value = '';
-  }
+  if(limpiarInput) document.getElementById('buscador_cliente').value = '';
   document.getElementById('cliente_seleccionado_card').style.display = 'none';
 }
 
 /* ================== CORE & CARRITO ================== */
-function agregarProducto(id, nombre, precio, categoria) {
+function agregarProducto(id, nombre, precio, category) {
   const uid = uidLinea(id);
-
   carrito[uid] = {
     producto_id: id,
     nombre: nombre,
@@ -632,11 +602,11 @@ function agregarProducto(id, nombre, precio, categoria) {
     cantidad: 1,
     isNew: true, 
     custom: {
-      proteina_id: "", salsa_id: "", proteina: "", salsa: "", sin: [], nota: ""
+      proteina: "Sin proteina", salsa_id: "", salsa: "", sin: [], extras: [], nota: ""
     }
   };
 
-  if (productoTieneModificadores(nombre, categoria)){
+  if (productoTieneModificadores(nombre, category)){
     editandoUid = uid;
     modalState = { producto_id: id, nombre, precio: Number(precio), uid };
     abrirCustomModal(); 
@@ -649,11 +619,8 @@ function agregarProducto(id, nombre, precio, categoria) {
 function cambiarCantidad(uid, delta) {
   if (carrito[uid]) {
     carrito[uid].cantidad += delta;
-    if (carrito[uid].cantidad <= 0) {
-      eliminarProducto(uid);
-    } else {
-      renderCarrito();
-    }
+    if (carrito[uid].cantidad <= 0) eliminarProducto(uid);
+    else renderCarrito();
   }
 }
 
@@ -672,46 +639,79 @@ function renderCarrito(){
 
   Object.keys(carrito).forEach(uid => {
     const item = carrito[uid];
-    const subtotal = item.precio * item.cantidad;
+    
+    // Sumamos los extras seleccionados al precio en interfaz
+    let precioExtrasAcumulado = 0;
+    item.custom.extras.forEach(extName => {
+      const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
+      if(target) precioExtrasAcumulado += target.precio;
+    });
+
+    const precioVentaTotal = item.precio + precioExtrasAcumulado;
+    const subtotal = precioVentaTotal * item.cantidad;
     subtotalGeneral += subtotal;
 
     let modsHtml = "";
-    if (item.custom.proteina) modsHtml += `<div class="tag">🥩 ${escapeHtml(item.custom.proteina)}</div>`;
-    if (item.custom.salsa) modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
-    if (item.custom.sin.length > 0) modsHtml += `<div class="tag tag-warn">🚫 Sin ${escapeHtml(item.custom.sin.join(', '))}</div>`;
-    if (item.custom.nota) modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
+    if (item.custom.proteina && item.custom.proteina !== "Sin proteina") {
+      modsHtml += `<div class="tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 ${escapeHtml(item.custom.proteina)}</div>`;
+    }
+    if (item.custom.salsa) {
+      modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
+    }
+    if (item.custom.extras.length > 0) {
+      modsHtml += `<div class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${escapeHtml(item.custom.extras.join(', '))}</div>`;
+    }
+    if (item.custom.sin.length > 0) {
+      modsHtml += `<div class="tag tag-warn">🚫 Sin ${escapeHtml(item.custom.sin.join(', '))}</div>`;
+    }
+    if (item.custom.nota) {
+      modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
+    }
 
     tbody.innerHTML += `
       <tr>
         <td class="td-left">
-          <strong>${escapeHtml(item.nombre)}</strong>
+          <b>${escapeHtml(item.nombre)}</b>
           ${modsHtml ? `<div class="cocina-meta">${modsHtml}</div>` : ''}
         </td>
-        <td class="qty-controls" style="display:flex; align-items:center; gap:4px;">
+        <td class="qty-controls">
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', -1)">-</button>
-          <span>${item.cantidad}</span>
+          <span><b>${item.cantidad}</b></span>
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', 1)">+</button>
         </td>
-        <td>$${item.precio.toFixed(2)}</td>
+        <td>$${precioVentaTotal.toFixed(2)}</td>
         <td><strong>$${subtotal.toFixed(2)}</strong></td>
-        <td style="text-align:right; min-width:60px;">
+        <td style="text-align:right;">
           <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:5px;" onclick="abrirCustomModal('${uid}')">✏️</button>
           <button type="button" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem;" onclick="eliminarProducto('${uid}')">🗑️</button>
         </td>
       </tr>
     `;
 
+    // 1. Mandamos el platillo base a Python
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
-      
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
-      
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
-      
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
       <input type="hidden" name="notas[]" value="${escapeHtml(item.custom.nota)}">
     `;
+
+    // 2. Mandamos cada Extra ligado como una línea independiente para que Python calcule el dinero real
+    item.custom.extras.forEach(extName => {
+      const extraProdId = encontrarProductoExtraId(extName);
+      if (extraProdId) {
+        hidden.innerHTML += `
+          <input type="hidden" name="producto_id[]" value="${extraProdId}">
+          <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+          <input type="hidden" name="proteina[]" value="">
+          <input type="hidden" name="salsa_id[]" value="">
+          <input type="hidden" name="sin[]" value="">
+          <input type="hidden" name="notas[]" value="👉 Para: ${escapeHtml(item.nombre)}">
+        `;
+      }
+    });
   });
 
   const descuentoAplicado = Math.min(descuentoTotal, subtotalGeneral);
@@ -725,7 +725,7 @@ function renderCarrito(){
 
 /* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
-  let customData = { proteina_id: "", salsa_id: "", sin: [], nota: "" };
+  let customData = { proteina: "Sin proteina", salsa_id: "", sin: [], extras: [], nota: "" };
   
   if (uid && carrito[uid]) {
     editandoUid = uid;
@@ -737,12 +737,21 @@ function abrirCustomModal(uid = null) {
     document.getElementById('customProductoNombre').innerText = modalState.nombre;
   }
 
-  let htmlProt = `<label class="custom-pill"><input type="radio" name="modal_prot" value="" ${!customData.proteina_id ? 'checked' : ''}><span>Sin proteína</span></label>`;
-  PROTEINAS_DB.forEach(p => {
-    let checked = (String(p.id) === String(customData.proteina_id)) ? "checked" : "";
-    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${p.id}" ${checked}><span>${p.nombre}</span></label>`;
+  // Renderiza las 4 opciones fijas de estilo de huevo solicitadas
+  let htmlProt = "";
+  OPCIONES_HUEVO.forEach(opc => {
+    let checked = (opc === customData.proteina) ? "checked" : "";
+    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${opc}" ${checked}><span>${opc}</span></label>`;
   });
   document.getElementById('proteinaRadios').innerHTML = htmlProt;
+
+  // Renderiza los 4 extras de proteínas con sus costos fijos solicitados
+  let htmlExt = "";
+  OPCIONES_EXTRAS.forEach(ext => {
+    let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
+    htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${ext.nombre}" ${checked}><span>${ext.nombre} (+$${ext.precio})</span></label>`;
+  });
+  document.getElementById('extrasChecks').innerHTML = htmlExt;
 
   let htmlSal = `<label class="custom-pill"><input type="radio" name="modal_sal" value="" ${!customData.salsa_id ? 'checked' : ''}><span>Ninguna</span></label>`;
   SALSAS_DB.forEach(s => {
@@ -764,31 +773,31 @@ function abrirCustomModal(uid = null) {
 
 function cerrarCustomModal() {
   document.getElementById('customModal').classList.remove('is-open');
-  if(editandoUid && carrito[editandoUid] && carrito[editandoUid].isNew) {
-     eliminarProducto(editandoUid);
-  }
+  if(editandoUid && carrito[editandoUid] && carrito[editandoUid].isNew) eliminarProducto(editandoUid);
   editandoUid = null;
   renderCarrito();
 }
 
 function confirmarCustom() {
-  if (!editandoUid || !carrito[editandoUid]) {
-    cerrarCustomModal();
-    return;
-  }
+  if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
   
-  const protId = document.querySelector('input[name="modal_prot"]:checked').value;
+  const protSelected = document.querySelector('input[name="modal_prot"]:checked').value;
   const salId = document.querySelector('input[name="modal_sal"]:checked').value;
+  
   const sinNodos = document.querySelectorAll('.check-sin:checked');
   const sinArr = Array.from(sinNodos).map(n => n.value);
+
+  const extraNodos = document.querySelectorAll('.check-extra:checked');
+  const extraArr = Array.from(extraNodos).map(n => n.value);
+
   const nota = document.getElementById('notaInput').value.trim();
 
   carrito[editandoUid].custom = {
-    proteina_id: protId,
+    proteina: protSelected,
     salsa_id: salId,
-    proteina: nombreProteinaPorId(protId),
     salsa: nombreSalsaPorId(salId),
     sin: sinArr,
+    extras: extraArr,
     nota: nota
   };
 
@@ -810,21 +819,19 @@ function abrirVistaCocina() {
       const item = carrito[uid];
       html += `<div style="margin-bottom: 12px;">
                  <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
-      if(item.custom.proteina) html += `<span class="tag">🥩 ${item.custom.proteina}</span> `;
+      if(item.custom.proteina && item.custom.proteina !== "Sin proteina") html += `<span class="tag">🍳 ${item.custom.proteina}</span> `;
       if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
+      if(item.custom.extras.length > 0) html += `<span class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${item.custom.extras.join(', ')}</span> `;
       if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
       if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
       html += `</div><hr style="border: 0.5px dashed #ccc;">`;
     });
   }
-
   document.getElementById('cocinaBody').innerHTML = html;
   document.getElementById('cocinaModal').classList.add('is-open');
 }
 
-function cerrarVistaCocina() {
-  document.getElementById('cocinaModal').classList.remove('is-open');
-}
+function cerrarVistaCocina() { document.getElementById('cocinaModal').classList.remove('is-open'); }
 
 /* ================== UI & WHATSAPP ================== */
 function toggleUberBox(){
@@ -833,35 +840,36 @@ function toggleUberBox(){
 }
 
 function guardarYEnviarWhatsApp() {
-  // 1. Obtener y limpiar el número de teléfono
   let telefono = document.getElementById('buscador_cliente').value.trim();
   let numeros = telefono.replace(/\D/g, '');
 
   if (numeros.length < 10) {
-    alert("⚠️ Por favor, ingresa un número de teléfono válido (al menos 10 dígitos) en el buscador para enviar el WhatsApp.");
+    alert("⚠️ Ingresa un teléfono de 10 dígitos en el buscador.");
     return;
   }
+  if (numeros.length === 10) numeros = "52" + numeros; 
 
-  if (numeros.length === 10) {
-    numeros = "52" + numeros; 
-  }
-
-  // 2. Construir el mensaje con los artículos del carrito
   let mensaje = "¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n\n";
-  
   const keys = Object.keys(carrito);
-  if (keys.length === 0) {
-    alert("⚠️ El carrito está vacío, no se puede enviar un pedido sin productos.");
-    return;
-  }
+  if (keys.length === 0) { alert("El carrito está vacío."); return; }
 
   keys.forEach(uid => {
     const item = carrito[uid];
-    mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})\n`;
+    let precioTotalItem = item.precio;
+    let txtExtras = "";
     
-    // Espacios añadidos para la indentación requerida
-    if(item.custom.proteina) mensaje += `   🥩 ${item.custom.proteina}\n`;
+    item.custom.extras.forEach(extName => {
+      const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
+      if(target) {
+        precioTotalItem += target.precio;
+        txtExtras += `   ➕ Extra ${target.nombre} (+$${target.precio})\n`;
+      }
+    });
+
+    mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(precioTotalItem * item.cantidad).toFixed(2)})\n`;
+    if(item.custom.proteina && item.custom.proteina !== "Sin proteina") mensaje += `   🍳 ${item.custom.proteina}\n`;
     if(item.custom.salsa) mensaje += `   🌶️ ${item.custom.salsa}\n`;
+    if(txtExtras) mensaje += txtExtras;
     if(item.custom.sin.length > 0) mensaje += `   🚫 Sin ${item.custom.sin.join(', ')}\n`;
     if(item.custom.nota) mensaje += `   📝 Nota: ${item.custom.nota}\n`;
   });
@@ -870,35 +878,16 @@ function guardarYEnviarWhatsApp() {
   const descuento = document.getElementById("descuentoMostrado").innerText;
   const total = document.getElementById("totalPedido").innerText;
 
-  // ASIGNACIÓN DE TOTOPOS: 1 pedido = 1 totopo
-  const totoposGanados = 1; 
-
-  // Ajuste de totales sin negritas y con el salto de línea correcto
   mensaje += `\nSubtotal: ${subtotal}`;
-  if (descuentoTotal > 0) {
-    mensaje += `\nDescuento: ${descuento}`;
-  }
+  if (descuentoTotal > 0) mensaje += `\nDescuento: ${descuento}`;
   mensaje += `\nTotal a pagar: ${total}\n`;
   
-  // Integración del mensaje de lealtad sin negritas
-  if (totoposGanados > 0) {
-    mensaje += `\n🎁 ¡Con esta compra sumas ${totoposGanados} totopo a tu cuenta! 🌮✨\n`;
-  }
+  mensaje += `\n🎁 ¡Con esta compra sumas 1 totopo a tu cuenta! 🌮✨\n`;
+  mensaje += `\nConsulta tus puntos y recompensas aquí:\n👉 https://www.senorchilaquil.com/mi-perfil/${numeros}\n\n`;
+  mensaje += "¡Gracias por tu preferencia! 🍳🔥";
 
-  // Enlace personalizado al perfil del cliente
-  mensaje += `\nConsulta tus puntos y recompensas aquí:\n`;
-  mensaje += `👉 https://www.senorchilaquil.com/mi-perfil/${numeros}\n\n`;
-
-  mensaje += "¡Gracias por tu preferencia! 🍔🍕";
-
-  // 3. Crear el enlace de WhatsApp y abrirlo
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeros}&text=${encodeURIComponent(mensaje)}`;
-  window.open(whatsappUrl, '_blank');
-
-  // 4. Enviar el formulario para guardarlo en la base de datos
-  setTimeout(() => {
-    document.getElementById('pedidoForm').submit();
-  }, 500);
+  window.open(`https://api.whatsapp.com/send?phone=${numeros}&text=${encodeURIComponent(mensaje)}`, '_blank');
+  setTimeout(() => { document.getElementById('pedidoForm').submit(); }, 500);
 }
 </script>
 
