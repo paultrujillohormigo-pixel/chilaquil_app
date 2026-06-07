@@ -1,242 +1,130 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Señor Chilaquil</title>
+{% extends "base.html" %}
 
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+{% block content %}
 
-  <style>
-    :root {
-      --rojo: #b32417;
-      --negro: #010101;
-      --rojo-oscuro: #6f150c;
-      --blanco: #ffffff;
-      --gris-suave: #f5f5f5;
+<style>
+    .app-header {
+        font-size: 28px; /* Cabecera mucho más grande */
+        padding: 20px;
+        font-weight: bold;
     }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Montserrat', sans-serif;
-    }
-
-    body {
-      background: var(--blanco);
-      color: var(--negro);
-      overflow-x: hidden; /* Evita scroll horizontal accidental */
-    }
-
-    /* NAV */
-    nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      background: white;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    nav img {
-      height: 50px; /* Un poco más pequeño para móviles */
-      object-fit: contain;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 15px;
-    }
-
-    nav a {
-      color: var(--negro);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: 0.2s;
-    }
-
-    nav a:hover {
-      color: var(--rojo);
-    }
-
-    /* HERO */
-    .hero {
-      height: 80vh; /* Ajustado para mejor visibilidad en móviles */
-      background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.5)), 
-                  url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774715379/srchi_pqbzmv.jpg') center/cover no-repeat;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-      color: white;
-    }
-
-    .hero-content {
-      width: 100%;
-      max-width: 800px;
-      background: rgba(0,0,0,0.4);
-      padding: 30px 20px;
-      border-radius: 15px;
-      backdrop-filter: blur(3px); /* Efecto moderno */
-    }
-
-    .hero h2 {
-      font-size: clamp(1.8rem, 8vw, 3.2rem); /* Tamaño fluido */
-      font-weight: 800;
-      margin-bottom: 15px;
-      line-height: 1.1;
-    }
-
-    .hero p {
-      font-size: clamp(1rem, 4vw, 1.2rem);
-      margin-bottom: 25px;
-    }
-
-    .btn {
-      display: inline-block;
-      background: var(--rojo);
-      padding: 15px 35px;
-      color: white;
-      text-decoration: none;
-      font-weight: bold;
-      border-radius: 8px;
-      transition: 0.3s;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .btn:hover {
-      background: var(--rojo-oscuro);
-      transform: translateY(-2px);
-    }
-
-    /* SECCION PRODUCTOS */
-    .section {
-      padding: 60px 20px;
-      text-align: center;
-      background: var(--blanco);
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 40px;
-      margin-top: 30px;
-    }
-
     .card {
-      transition: 0.3s;
-      padding: 15px;
+        padding: 20px !important; /* Más espacio interior */
     }
-
-    .card img {
-      width: 100%;
-      height: auto;
-      max-height: 250px;
-      object-fit: contain;
-      border-radius: 10px;
+    .btn {
+        font-size: 20px !important; /* Botones más grandes y fáciles de leer */
+        padding: 12px !important;
+        font-weight: bold;
     }
-
-    .card h4 {
-      margin-top: 15px;
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: var(--negro);
+    /* Tamaño base para el texto suelto dentro del panel */
+    .panel {
+        font-size: 20px; 
     }
+</style>
 
-    /* PROMO */
-    .promo {
-      background-image: url('https://res.cloudinary.com/dnzkctdej/image/upload/v1774716563/COMBO_GALLETA_AGUA_CHIL_cez0yn.png');
-      background-size: contain;
-      background-position: center;
-      background-repeat: no-repeat;
-      width: 100%;
-      height: 400px; /* Altura fija para móviles */
-      background-color: white;
-      margin: 20px 0;
-    }
+<div class="app-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>📋 Pedidos abiertos</div>
+    <div>{{ pedidos|length if pedidos else 0 }} activos</div>
+</div>
 
-    /* FOOTER */
-    footer {
-      background: var(--negro);
-      color: white;
-      text-align: center;
-      padding: 40px 20px;
-    }
+<div class="panel">
 
-    footer p {
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
+{% if pedidos %}
+<div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(380px,1fr)); gap:24px;">
 
-    /* MEDIA QUERIES PARA AJUSTES EXTRA EN MÓVILES MUY PEQUEÑOS */
-    @media (max-width: 480px) {
-      nav {
-        padding: 10px 15px;
-      }
-      .nav-links {
-        gap: 10px;
-      }
-      nav a {
-        font-size: 0.8rem;
-      }
-      .promo {
-        height: 250px; /* Reducir altura en pantallas pequeñas */
-      }
-    }
-  </style>
-</head>
+    {% for p in pedidos %}
+    <div class="card" style="border-top: 6px solid #b32417;">
 
-<body>
+        <strong style="font-size: 26px;">Pedido #{{ p.id }}</strong><br>
 
-  <nav>
-    <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png" alt="Logo">
-    <div class="nav-links">
-      <a href="/menu">Menú</a>
-      <a href="#promo">Promos</a>
-      <a href="/menu">Ordenar</a>
+        <small style="color: #666; font-size: 18px;">
+            📅 {{ p.fecha }}
+        </small><br><br>
+
+        {% if p.mesa %}
+            <span style="background: #eee; padding: 6px 12px; border-radius: 6px; font-size: 22px;">
+                Mesa: <b>{{ p.mesa }}</b>
+            </span><br><br>
+        {% endif %}
+
+        <span style="font-size: 20px;">Mesero: <strong>{{ p.mesero or '-' }}</strong></span><br>
+        <span style="font-size: 22px;">Total: <strong style="font-size: 28px; color: #25D366;">{{ p.total | money }}</strong></span><br>
+
+        {% if p.items_preview %}
+        <div style="margin:16px 0; font-size:22px; color:#333; background: #f9f9f9; padding: 16px; border-radius: 8px; border: 2px solid #eee;">
+            <strong style="display:block; margin-bottom: 10px; font-size: 20px; color:#b32417;">Resumen de platillos:</strong>
+            <ul style="list-style-type: none; padding-left:0; margin:0;">
+                
+                {% for it in p.items_preview %}
+                <li style="margin-bottom: 14px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                    <strong style="font-size: 22px;">{{ it.cantidad }} × {{ it.nombre }}</strong>
+                    
+                    <div style="font-size: 18px; color: #444; padding-left: 18px; margin-top: 6px; line-height: 1.5;">
+                        {% if it.salsa %}
+                            <div><span style="color:#d97706;">🌶️</span> {{ it.salsa }}</div>
+                        {% endif %}
+                        
+                        {% if it.proteina %}
+                            <div><span style="color:#4b5563;">🥩</span> {{ it.proteina }}</div>
+                        {% endif %}
+                        
+                        {% if it.modificadores %}
+                            <div><span style="color:#4b5563;">⚙️</span> {{ it.modificadores }}</div>
+                        {% endif %}
+                        
+                        {% if it.extras %}
+                            <div><span style="color:#059669;">➕</span> {{ it.extras }}</div>
+                        {% endif %}
+                        
+                        {% if it.notas %}
+                            <div style="color: #b32417; font-weight: bold; font-size: 20px; margin-top: 4px;">📝 Nota: {{ it.notas }}</div>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+
+            </ul>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top: 16px;">
+            <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
+               class="btn btn-primary"
+               style="text-align:center;">
+                ➕ Entrar al pedido
+            </a>
+
+            <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}">
+                <button type="submit" class="btn btn-warning" style="width:100%;">
+                    ✅ Cerrar pedido
+                </button>
+            </form>
+
+            <form method="post" action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}" onsubmit="return confirm('¿Eliminar este pedido?')">
+                <button type="submit" class="btn btn-danger" style="width:100%; background: #fff5f5; color: #c53030; border-color: #feb2b2;">
+                    🗑️ Eliminar pedido
+                </button>
+            </form>
+        </div>
+
     </div>
-  </nav>
+    {% endfor %}
 
-  <section class="hero">
-    <div class="hero-content">
-      <h2>LOS CHILAQUILES MÁS CABRONES DE AGUASCALIENTES</h2>
-      <p>Rápido, delicioso y directo hasta tu puerta</p>
-      <a href="https://wa.me/524497419166" class="btn">Ordenar ahora</a>
-    </div>
-  </section>
+</div>
+{% else %}
+<div style="text-align:center; padding: 60px; color:#888;">
+    <p style="font-size: 48px; margin-bottom: 20px;">🍽️</p>
+    <p style="font-size: 28px;">No hay pedidos abiertos en este momento.</p>
+</div>
+{% endif %}
 
-  <section id="menu" class="section">
-    <h2 style="margin-bottom: 20px; font-weight: 800;">NUESTROS SERVICIOS</h2>
-    <div class="cards">
-      <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718423/senor_chilaquil_imagen_qp2xk4.png" alt="Delivery">
-        <h4>Delivery (Pa` llevar)</h4>
-      </div>
+</div>
 
-      <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774718973/ChatGPT_Image_28_mar_2026_11_29_14_a.m._prfa1y.png" alt="Chilaquiles">
-        <h4>Chilaquiles</h4>
-      </div>
+<script>
+    // Recarga la página cada 3 minutos para mantener los pedidos actualizados
+    setTimeout(function() {
+        window.location.reload();
+    }, 180000); 
+</script>
 
-      <div class="card">
-        <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774724809/ChatGPT_Image_28_mar_2026_01_06_23_p.m._bmdow4.png" alt="Promos">
-        <h4>Paquetes / Promos</h4>
-      </div>
-    </div>
-  </section>
-
-  <section id="promo" class="promo"></section>
-
-  <footer>
-    <p>© 2026 Señor Chilaquil - Todos los derechos reservados</p>
-  </footer>
-
-</body>
-</html>
+{% endblock %}
