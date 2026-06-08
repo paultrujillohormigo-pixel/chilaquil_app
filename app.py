@@ -24,11 +24,21 @@ def index():
 
 @app.route('/menu')
 def menu():
-    # 1. Obtén los datos de tu base de datos (usa los mismos nombres de funciones que ya usas en tu POS)
-    productos_db = obtener_productos() # O el método que uses, ej. Producto.query.all()
-    salsas_db = obtener_salsas()       # O el método que uses, ej. Salsa.query.all()
-    
-    # 2. Pásalos a la plantilla
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 1. Obtenemos los productos activos ordenados por categoría
+            cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
+            productos_db = cursor.fetchall()
+            
+            # 2. Obtenemos las salsas disponibles
+            cursor.execute("SELECT * FROM salsas ORDER BY nombre")
+            salsas_db = cursor.fetchall()
+            
+    finally:
+        conn.close()
+        
+    # 3. Pásalos a la plantilla
     return render_template('menu.html', productos=productos_db, salsas=salsas_db)
     
 @app.route('/carta')
