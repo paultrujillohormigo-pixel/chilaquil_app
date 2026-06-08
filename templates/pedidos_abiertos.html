@@ -2,7 +2,27 @@
 
 {% block content %}
 
-<div class="app-header">
+<style>
+    .app-header {
+        font-size: 28px; /* Cabecera mucho más grande */
+        padding: 20px;
+        font-weight: bold;
+    }
+    .card {
+        padding: 20px !important; /* Más espacio interior */
+    }
+    .btn {
+        font-size: 20px !important; /* Botones más grandes y fáciles de leer */
+        padding: 12px !important;
+        font-weight: bold;
+    }
+    /* Tamaño base para el texto suelto dentro del panel */
+    .panel {
+        font-size: 20px; 
+    }
+</style>
+
+<div class="app-header" style="display:flex; justify-content:space-between; align-items:center;">
     <div>📋 Pedidos abiertos</div>
     <div>{{ pedidos|length if pedidos else 0 }} activos</div>
 </div>
@@ -10,36 +30,36 @@
 <div class="panel">
 
 {% if pedidos %}
-<div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap:16px;">
+<div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(380px,1fr)); gap:24px;">
 
     {% for p in pedidos %}
-    <div class="card" style="border-top: 4px solid #b32417;">
+    <div class="card" style="border-top: 6px solid #b32417;">
 
-        <strong>Pedido #{{ p.id }}</strong><br>
+        <strong style="font-size: 26px;">Pedido #{{ p.id }}</strong><br>
 
-        <small style="color: #666;">
+        <small style="color: #666; font-size: 18px;">
             📅 {{ p.fecha }}
         </small><br><br>
 
         {% if p.mesa %}
-            <span style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 13px;">
+            <span style="background: #eee; padding: 6px 12px; border-radius: 6px; font-size: 22px;">
                 Mesa: <b>{{ p.mesa }}</b>
-            </span><br>
+            </span><br><br>
         {% endif %}
 
-        Mesero: {{ p.mesero or '-' }}<br>
-        Total: <strong style="font-size: 16px; color: #25D366;">{{ p.total | money }}</strong><br>
+        <span style="font-size: 20px;">Mesero: <strong>{{ p.mesero or '-' }}</strong></span><br>
+        <span style="font-size: 22px;">Total: <strong style="font-size: 28px; color: #25D366;">{{ p.total | money }}</strong></span><br>
 
         {% if p.items_preview %}
-        <div style="margin:12px 0; font-size:14px; color:#333; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
-            <strong style="display:block; margin-bottom: 6px; color:#b32417;">Resumen de platillos:</strong>
+        <div style="margin:16px 0; font-size:22px; color:#333; background: #f9f9f9; padding: 16px; border-radius: 8px; border: 2px solid #eee;">
+            <strong style="display:block; margin-bottom: 10px; font-size: 20px; color:#b32417;">Resumen de platillos:</strong>
             <ul style="list-style-type: none; padding-left:0; margin:0;">
                 
                 {% for it in p.items_preview %}
-                <li style="margin-bottom: 10px; border-bottom: 1px dashed #ddd; padding-bottom: 6px;">
-                    <strong>{{ it.cantidad }} × {{ it.nombre }}</strong>
+                <li style="margin-bottom: 14px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                    <strong style="font-size: 22px;">{{ it.cantidad }} × {{ it.nombre }}</strong>
                     
-                    <div style="font-size: 12px; color: #555; padding-left: 14px; margin-top: 4px; line-height: 1.4;">
+                    <div style="font-size: 18px; color: #444; padding-left: 18px; margin-top: 6px; line-height: 1.5;">
                         {% if it.salsa %}
                             <div><span style="color:#d97706;">🌶️</span> {{ it.salsa }}</div>
                         {% endif %}
@@ -57,7 +77,7 @@
                         {% endif %}
                         
                         {% if it.notas %}
-                            <div style="color: #b32417; font-weight: bold;">📝 Nota: {{ it.notas }}</div>
+                            <div style="color: #b32417; font-weight: bold; font-size: 20px; margin-top: 4px;">📝 Nota: {{ it.notas }}</div>
                         {% endif %}
                     </div>
                 </li>
@@ -67,7 +87,7 @@
         </div>
         {% endif %}
 
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 12px;">
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top: 16px;">
             <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
                class="btn btn-primary"
                style="text-align:center;">
@@ -92,9 +112,9 @@
 
 </div>
 {% else %}
-<div style="text-align:center; padding: 40px; color:#888;">
-    <p style="font-size: 24px; margin-bottom: 10px;">🍽️</p>
-    <p>No hay pedidos abiertos en este momento.</p>
+<div style="text-align:center; padding: 60px; color:#888;">
+    <p style="font-size: 48px; margin-bottom: 20px;">🍽️</p>
+    <p style="font-size: 28px;">No hay pedidos abiertos en este momento.</p>
 </div>
 {% endif %}
 
