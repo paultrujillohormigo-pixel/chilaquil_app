@@ -20,10 +20,17 @@ app.register_blueprint(costeo_bp)
 def index():
     return render_template("index.html")
 
+# app.py
+
 @app.route('/menu')
 def menu():
-    return render_template('menu.html')
-
+    # 1. Obtén los datos de tu base de datos (usa los mismos nombres de funciones que ya usas en tu POS)
+    productos_db = obtener_productos() # O el método que uses, ej. Producto.query.all()
+    salsas_db = obtener_salsas()       # O el método que uses, ej. Salsa.query.all()
+    
+    # 2. Pásalos a la plantilla
+    return render_template('menu.html', productos=productos_db, salsas=salsas_db)
+    
 @app.route('/carta')
 def mostrar_carta():
     return send_from_directory(app.static_folder, 'carta.pdf')
