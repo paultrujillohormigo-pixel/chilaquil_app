@@ -58,14 +58,22 @@
           <td class="text-center" style="vertical-align: middle;">
             <span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe; font-size: 0.9rem;">🌮 {{ c.totopos_balance or 0 }}</span>
           </td>
-          <td class="text-right" style="vertical-align: middle;">
-            {% if c.wa_link %}
-            <a href="{{ c.wa_link }}" target="_blank" class="btn-pos btn-wa" style="text-decoration: none; padding: 8px 16px; font-size: 0.85rem;">
-              💬 Enviar Promo
-            </a>
+          <td class="text-right" id="action-cell-{{ c.id }}" style="vertical-align: middle;">
+            
+            {# VERIFICAMOS SI YA SE ENVIÓ DESDE EL BACKEND #}
+            {% if c.mensaje_enviado %}
+              <span class="pos-tag" style="background:#dcfce7; color:#166534; border:none; padding: 8px 16px;">
+                ✅ Enviado
+              </span>
+            {% elif c.wa_link %}
+              {# AÑADIMOS UNA CLASE Y EL ID DEL CLIENTE PARA EL JAVASCRIPT #}
+              <a href="{{ c.wa_link }}" target="_blank" class="btn-pos btn-wa btn-enviar-promo" data-id="{{ c.id }}" style="text-decoration: none; padding: 8px 16px; font-size: 0.85rem;">
+                💬 Enviar Promo
+              </a>
             {% else %}
-            <span style="font-size: 0.8rem; color: #94a3b8;">Sin WhatsApp</span>
+              <span style="font-size: 0.8rem; color: #94a3b8;">Sin WhatsApp</span>
             {% endif %}
+
           </td>
         </tr>
         {% endfor %}
@@ -80,5 +88,34 @@
   </div>
   {% endif %}
 </div>
+
+<!-- SCRIPT PARA CAMBIAR EL BOTÓN A "ENVIADO" AL HACER CLIC -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const botones = document.querySelectorAll('.btn-enviar-promo');
+    
+    botones.forEach(boton => {
+      boton.addEventListener('click', function() {
+        const clienteId = this.getAttribute('data-id');
+        const celdaAccion = document.getElementById(`action-cell-${clienteId}`);
+        
+        // Cambiar el botón por una etiqueta de "Enviado" visualmente
+        celdaAccion.innerHTML = `
+          <span class="pos-tag" style="background:#dcfce7; color:#166534; border:none; padding: 8px 16px; font-size: 0.85rem; display: inline-block;">
+            ✅ Enviado
+          </span>
+        `;
+
+        // OPCIONAL: Aquí podrías hacer una petición Fetch/AJAX a tu backend 
+        // para guardar en tu base de datos que ya se le envió el mensaje.
+        /*
+        fetch('/marcar_enviado/' + clienteId, { method: 'POST' })
+          .then(response => console.log('Guardado en BD'))
+          .catch(error => console.error('Error:', error));
+        */
+      });
+    });
+  });
+</script>
 
 {% endblock %}
