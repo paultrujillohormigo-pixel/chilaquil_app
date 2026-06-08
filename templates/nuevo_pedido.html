@@ -695,7 +695,7 @@ function renderCarrito(){
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
-      <input type="hidden" name="notas[]" value="${escapeHtml(item.custom.nota)}">
+      <input type="hidden" name="nota[]" value="${escapeHtml(item.custom.nota)}">
     `;
 
     // 2. Mandamos cada Extra ligado como una línea independiente para que Python calcule el dinero real
@@ -708,7 +708,7 @@ function renderCarrito(){
           <input type="hidden" name="proteina[]" value="">
           <input type="hidden" name="salsa_id[]" value="">
           <input type="hidden" name="sin[]" value="">
-          <input type="hidden" name="notas[]" value="👉 Para: ${escapeHtml(item.nombre)}">
+          <input type="hidden" name="nota[]" value="👉 Para: ${escapeHtml(item.nombre)}">
         `;
       }
     });
