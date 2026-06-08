@@ -3,17 +3,338 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Señor Chilaquil - Menú Digital</title>
+
+  <title>Señor Chilaquil - Sistema Ventas</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-  
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
+
   <style>
-    /* Pega aquí todo el bloque de CSS de tu primer archivo */
+    /* ================= ESTILOS BASE (SISTEMA) ================= */
     body { margin: 0; font-family: 'Montserrat', sans-serif; background: #f4f6f8; padding-bottom: 80px; }
-    /* ... resto de tu CSS ... */
+
+    .flash { padding: 8px; margin: 8px 12px; border-radius: 4px; }
+    .success { background: #c8e6c9; }
+    .error { background: #ffcdd2; }
+
+    .navbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 16px;
+      background:#fff;
+      border-bottom:1px solid #e5e7eb;
+      position:sticky;
+      top: 0;
+      z-index:1000;
+      box-shadow:0 4px 10px rgba(0,0,0,0.05);
+    }
+    .brand{ font-weight:800; font-size:18px; color:#b32417; text-decoration:none; }
+    .nav-links{ display:flex; gap:12px; align-items:center; }
+
+    .nav-dd{ position:relative; }
+    .nav-dd-btn{
+      border:0;
+      background:transparent;
+      padding:10px 12px;
+      border-radius:8px;
+      font-weight:700;
+      color:#111827;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .nav-caret{ margin-left:6px; font-size:12px; display:inline-block; transform: translateY(-1px); }
+
+    .nav-dd-menu{
+      display:none;
+      position:absolute;
+      top:calc(100% + 8px);
+      left:0;
+      min-width:210px;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      box-shadow:0 6px 16px rgba(0,0,0,.12);
+      padding:8px;
+      z-index:9999;
+    }
+
+    .nav-dd.is-open > .nav-dd-menu{ display:block; }
+
+    .nav-dd-menu a{
+      display:block;
+      padding:10px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:600;
+      color:#111827;
+      font-size: 14px;
+    }
+    .nav-dd-menu a:hover{ background:#f3f4f6; }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-dd:hover > .nav-dd-menu { display:block; }
+    }
+
+    /* ================= ESTILOS DEL MENÚ INTERACTIVO ================= */
+    :root { --rojo:#b32417; --negro: #010101; --rojo-oscuro: #6f150c; --blanco: #ffffff; --gris-suave: #f5f5f5; }
+
+    /* BANNER PROMO MIÉRCOLES */
+    #promo-banner {
+      display: none;
+      background: var(--rojo);
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 90px;
+      z-index: 999;
+    }
+
+    .menu-wrapper { padding:20px; max-width: 800px; margin: 0 auto; }
+
+    .category-title {
+      font-size: 22px;
+      color: var(--rojo);
+      margin: 30px 0 15px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+
+    .cards {
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:15px;
+    }
+
+    .card { 
+      cursor:pointer; 
+      text-align:center; 
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s;
+    }
+    .card:active { transform: scale(0.96); }
+
+    .img-box {
+      height:120px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-bottom: 10px;
+    }
+
+    .img-box img {
+      max-width:100%;
+      max-height:100%;
+      object-fit: contain;
+    }
+
+    .price-tag {
+      display: block;
+      font-weight: 600;
+      color: var(--rojo);
+      margin-top: 5px;
+    }
+
+    /* MODAL PERSONALIZACION */
+    #menu-modal {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(0,0,0,0.6);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:2000;
+    }
+
+    .modal-content {
+      background:white;
+      padding:20px;
+      border-radius:10px;
+      width:90%;
+      max-width:400px;
+      max-height:90vh;
+      overflow:auto;
+      overflow-x:hidden;
+    }
+
+    .modal-section-title { 
+      background: var(--gris-suave); 
+      padding: 8px 12px; 
+      margin: 15px 0 10px 0; 
+      border-radius: 6px; 
+      font-size: 13px; 
+      font-weight: 800; 
+      text-transform: uppercase; 
+      color: #555; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+    }
+
+    .option {
+      display:flex;
+      align-items:center; 
+      gap:10px;
+      margin:8px 0;
+      font-size:14px;
+      width:100%;
+    }
+
+    .option input { flex:0 0 auto; margin:0; width: 18px; height: 18px; }
+    .option span { flex:1; text-align:left; word-wrap: break-word; white-space: normal; }
+
+    /* CART BUTTON */
+    #cart-tab {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #b32417;
+      color: white;
+      padding: 14px;
+      border-radius: 40px;
+      font-weight: 700;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      z-index: 1500;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(179, 36, 23, 0.4);
+    }
+
+    /* CART PANEL */
+    #cart-panel {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      width: 100%;
+      height: 85%;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+      padding: 20px;
+      transition: 0.3s;
+      z-index: 2100;
+      overflow-y: auto;
+    }
+
+    #cart-panel.open { bottom:0; }
+
+    .menu-btn {
+      background:var(--rojo);
+      color:white;
+      border:none;
+      padding:12px;
+      margin-top:10px;
+      width:100%;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .remove-btn {
+      background:#ddd;
+      color:#000;
+      border:none;
+      padding:3px 6px;
+      font-size:12px;
+      border-radius:5px;
+      margin-left:8px;
+      width: auto;
+      cursor: pointer;
+    }
+
+    .menu-input {
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      font-size:16px;
+      font-family: 'Montserrat', sans-serif;
+      box-sizing: border-box;
+    }
+
+    #cart-panel label input[type="radio"] { width: auto; margin-right: 5px; }
+
+    /* NAV ORIGINAL */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    nav img {
+      height: 55px;
+      object-fit: contain;
+    }
+
+    nav div {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    nav a {
+      color: var(--negro);
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+      transition: 0.3s;
+    }
+
+    nav a::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 2px;
+      background: var(--rojo);
+      bottom: -5px;
+      left: 0;
+      transition: 0.3s;
+    }
+
+    nav a:hover::after {
+      width: 100%;
+    }
+
+    nav a:hover {
+      color: var(--rojo);
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 15px 20px; }
+      nav img { height: 45px; }
+      nav div { gap: 12px; }
+      nav a { font-size: 14px; }
+      #promo-banner { top: 75px; }
+    }
   </style>
 </head>
 
 <body>
+
 <nav>
   <img src="https://res.cloudinary.com/dnzkctdej/image/upload/v1774407839/logo_m0f0gu.png">
   <div>
@@ -114,6 +435,23 @@
     if(new Date().getDay() === 3) { // Miércoles 2x1
       document.getElementById("promo-banner").style.display = "block";
     }
+
+    // Lógica original de dropdowns
+    const dds = document.querySelectorAll(".nav-dd");
+    const buttons = document.querySelectorAll(".nav-dd-btn");
+    function closeAll(except = null) {
+      dds.forEach(dd => { if (dd !== except) dd.classList.remove("is-open"); });
+    }
+    buttons.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const dd = btn.closest(".nav-dd");
+        const isOpen = dd.classList.contains("is-open");
+        closeAll(dd);
+        dd.classList.toggle("is-open", !isOpen);
+      });
+    });
+    document.addEventListener("click", () => closeAll());
   });
 
   // Funciones de utilidad de tu POS
