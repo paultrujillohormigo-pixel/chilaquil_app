@@ -361,14 +361,12 @@
                     {% endfor %}
                   {% endif %}
                   {% if it.proteina %}
-                    <!-- Aquí usamos el formato huevo si aplica, o como extra en la DB si ya está guardado -->
                     <span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 {{ it.proteina }}</span>
                   {% endif %}
                   {% if it.sin %}
                     <span class="pos-tag pos-tag-warn">🚫 Sin {{ it.sin }}</span>
                   {% endif %}
                   {% if it.nota %}
-                    <!-- Las notas de los extras "👉 Para: Chilaquiles" aparecerán naturalmente aquí -->
                     <div class="pos-note mt-1">📝 {{ it.nota }}</div>
                   {% endif %}
                 </div>
@@ -449,7 +447,6 @@
 
 </div>
 
-<!-- MODAL INTELIGENTE DE EXTRAS (NUEVO ESTILO) -->
 <div id="modalCustom" class="modal-overlay">
   <div class="modal-content">
     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -460,21 +457,20 @@
       <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCustom')">✕</button>
     </div>
 
-    <!-- 🥚 HUEVO DE CAJÓN (SIN COSTO) -->
     <div class="mt-4">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Preparación del Huevo (De cajón)</label>
       <div id="mcProteinas" class="custom-grid"></div>
     </div>
 
-    <!-- 🥩 EXTRAS (CON COSTO Y LÍNEA OCULTA) -->
     <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Proteínas Extra (Opcional)</label>
       <div id="mcExtras" class="custom-grid"></div>
     </div>
 
     <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Salsa <span style="text-transform:none; font-weight:normal;">(Opcional)</span></label>
+      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Salsa (Máx. 2)</label>
       <div id="mcSalsas" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0; font-size: 0.8rem; color: #64748b;">Puedes elegir 1 o mitad y mitad.</p>
     </div>
 
     <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
@@ -484,7 +480,7 @@
 
     <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
       <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Notas Extra</label>
-      <textarea id="mcNota" class="custom-note" placeholder="Ej. salsa aparte, sin dorar mucho..."></textarea>
+      <textarea id="mcNota" class="custom-note" placeholder="Ej. bien dorados, etc."></textarea>
     </div>
 
     <div class="d-flex gap-2 mt-4">
@@ -621,7 +617,7 @@ const PosApp = {
   seleccionarProducto(id, nombre, precio, categoria) {
     if (!this.requiereModificadores(nombre, categoria)) {
       const uid = this.generarUid();
-      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", proteina: "Sin proteina", extras: [], sin: [], nota: "" } };
+      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", salsas_ids: [], proteina: "Sin proteina", extras: [], sin: [], nota: "" } };
       this.renderCart();
       return;
     }
@@ -646,11 +642,38 @@ const PosApp = {
     });
     document.getElementById('mcExtras').innerHTML = htmlExt;
 
-    let htmlSalsas = `<label class="custom-pill"><input type="radio" name="mc_salsa" value="" checked><span>— Sin salsa</span></label>`;
+    // AQUI CAMBIAMOS RADIO POR CHECKBOX PARA SALSAS
+    let htmlSalsas = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="mc_salsa_ninguna" checked><span>Ninguna</span></label>`;
     SALSAS_DB.forEach(s => {
-      htmlSalsas += `<label class="custom-pill"><input type="radio" name="mc_salsa" value="${this.escapeHtml(s.nombre)}"><span>${this.escapeHtml(s.nombre)}</span></label>`;
+      htmlSalsas += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${this.escapeHtml(s.nombre)}"><span>${this.escapeHtml(s.nombre)}</span></label>`;
     });
     document.getElementById('mcSalsas').innerHTML = htmlSalsas;
+
+    // Eventos para restringir 2 salsas máximo
+    setTimeout(() => {
+      const checksSalsa = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna)');
+      const btnNinguna = document.getElementById('mc_salsa_ninguna');
+
+      btnNinguna.addEventListener('change', (e) => {
+        if(e.target.checked) checksSalsa.forEach(c => c.checked = false);
+      });
+
+      checksSalsa.forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          if(e.target.checked) {
+            btnNinguna.checked = false;
+            const seleccionadas = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
+            if(seleccionadas.length > 2) {
+              e.target.checked = false;
+              alert("Solo puedes elegir hasta 2 salsas.");
+            }
+          } else {
+            const seleccionadas = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
+            if(seleccionadas.length === 0) btnNinguna.checked = true;
+          }
+        });
+      });
+    }, 50);
 
     let htmlSin = '';
     LISTA_SIN.forEach(s => {
@@ -668,13 +691,20 @@ const PosApp = {
   },
 
   confirmarCustomizacion() {
-    const salsaNode = document.querySelector('input[name="mc_salsa"]:checked');
-    const salsa = salsaNode ? salsaNode.value : "";
-    const salsa_id = this.mapSalsaId(salsa);
-
+    // 1. Obtener la proteína
     const protNode = document.querySelector('input[name="mc_prot"]:checked');
     const proteina = protNode ? protNode.value : "Sin proteina";
 
+    // 2. Extraemos las salsas con la lógica de 2 salsas
+    const salNodos = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
+    const salIdsArr = Array.from(salNodos).map(n => n.value);
+    const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
+
+    // Lógica DB: Si hay 1 manda ID, si hay 2 manda vacío y se une en nota
+    const salsa_id = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
+    const salsa = salNombresArr.join(' y ');
+
+    // 3. Obtener el resto de las cosas
     const extraNodes = document.querySelectorAll('.check-extra:checked');
     const extras = Array.from(extraNodes).map(n => n.value);
 
@@ -688,7 +718,7 @@ const PosApp = {
       nombre: this.activeItem.nombre,
       precio: this.activeItem.precio,
       qty: 1,
-      custom: { salsa, salsa_id, proteina, extras, sin, nota }
+      custom: { salsa, salsa_id, salsas_ids: salIdsArr, proteina, extras, sin, nota }
     };
 
     this.cerrarModal('modalCustom');
@@ -762,6 +792,12 @@ const PosApp = {
         </div>
       `;
 
+      // Truco inteligente para backend: Inyectar las dos salsas a la nota si hay más de 1
+      let notaBackend = c.nota;
+      if (c.salsas_ids && c.salsas_ids.length > 1) {
+        notaBackend = `🌶️ Mitad y mitad: ${c.salsa} | ` + notaBackend;
+      }
+
       // 1. INPUT OCULTO: Platillo Base
       hidden += `
         <input type="hidden" name="producto_id[]" value="${item.id}">
@@ -770,7 +806,7 @@ const PosApp = {
         <input type="hidden" name="proteina_id[]" value="">
         <input type="hidden" name="salsa_id[]" value="${c.salsa_id}">
         <input type="hidden" name="sin[]" value="${this.escapeHtml(c.sin.join(','))}">
-        <input type="hidden" name="nota[]" value="${this.escapeHtml(c.nota)}">
+        <input type="hidden" name="nota[]" value="${this.escapeHtml(notaBackend)}">
       `;
 
       // 2. INPUTS OCULTOS: Un registro por cada Extra seleccionado para cobrarlo en DB
