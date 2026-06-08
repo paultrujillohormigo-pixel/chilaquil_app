@@ -214,9 +214,9 @@
     </div>
 
     <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
-      <label><strong>Salsa</strong></label>
+      <label><strong>Salsa (Máx. 2)</strong></label>
       <div id="salsaRadios" class="custom-grid"></div>
-      <p class="hint" style="margin:6px 0 0;">Opcional (si no aplica, déjalo vacío).</p>
+      <p class="hint" style="margin:6px 0 0;">Puedes elegir 1 o mitad y mitad.</p>
     </div>
 
     <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
@@ -227,7 +227,7 @@
 
     <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
       <label><strong>Notas Adicionales</strong></label>
-      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. salsa aparte, bien dorados, etc."></textarea>
+      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. bien dorados, etc."></textarea>
     </div>
 
     <div class="modal-actions">
@@ -602,7 +602,7 @@ function agregarProducto(id, nombre, precio, category) {
     cantidad: 1,
     isNew: true, 
     custom: {
-      proteina: "Sin proteina", salsa_id: "", salsa: "", sin: [], extras: [], nota: ""
+      proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: ""
     }
   };
 
@@ -688,6 +688,13 @@ function renderCarrito(){
       </tr>
     `;
 
+    // Truco inteligente para evitar que la Base de Datos explote si eligen 2 salsas:
+    let notaParaBackend = item.custom.nota;
+    if (item.custom.salsas_ids && item.custom.salsas_ids.length > 1) {
+        // Concatenamos las 2 salsas en la nota para que no se pierdan.
+        notaParaBackend = `🌶️ Mitad y mitad: ${item.custom.salsa} | ` + notaParaBackend;
+    }
+
     // 1. Mandamos el platillo base a Python
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
@@ -695,7 +702,7 @@ function renderCarrito(){
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
-      <input type="hidden" name="nota[]" value="${escapeHtml(item.custom.nota)}">
+      <input type="hidden" name="nota[]" value="${escapeHtml(notaParaBackend)}">
     `;
 
     // 2. Mandamos cada Extra ligado como una línea independiente para que Python calcule el dinero real
@@ -725,7 +732,7 @@ function renderCarrito(){
 
 /* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
-  let customData = { proteina: "Sin proteina", salsa_id: "", sin: [], extras: [], nota: "" };
+  let customData = { proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "" };
   
   if (uid && carrito[uid]) {
     editandoUid = uid;
@@ -745,7 +752,7 @@ function abrirCustomModal(uid = null) {
   });
   document.getElementById('proteinaRadios').innerHTML = htmlProt;
 
-  // Renderiza los 4 extras de proteínas con sus costos fijos solicitados
+  // Renderiza los 4 extras de proteínas
   let htmlExt = "";
   OPCIONES_EXTRAS.forEach(ext => {
     let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
@@ -753,12 +760,41 @@ function abrirCustomModal(uid = null) {
   });
   document.getElementById('extrasChecks').innerHTML = htmlExt;
 
-  let htmlSal = `<label class="custom-pill"><input type="radio" name="modal_sal" value="" ${!customData.salsa_id ? 'checked' : ''}><span>Ninguna</span></label>`;
+  // Renderiza salsas como Checkboxes (Máximo 2)
+  let htmlSal = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="salsa_ninguna" ${(!customData.salsas_ids || customData.salsas_ids.length === 0) ? 'checked' : ''}><span>Ninguna</span></label>`;
   SALSAS_DB.forEach(s => {
-    let checked = (String(s.id) === String(customData.salsa_id)) ? "checked" : "";
-    htmlSal += `<label class="custom-pill"><input type="radio" name="modal_sal" value="${s.id}" ${checked}><span>${s.nombre}</span></label>`;
+    let checked = (customData.salsas_ids && customData.salsas_ids.includes(String(s.id))) ? "checked" : "";
+    htmlSal += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${s.nombre}" ${checked}><span>${s.nombre}</span></label>`;
   });
   document.getElementById('salsaRadios').innerHTML = htmlSal;
+
+  // Event Listeners para restringir máximo 2 salsas
+  setTimeout(() => {
+    const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
+    const btnNinguna = document.getElementById('salsa_ninguna');
+
+    btnNinguna.addEventListener('change', (e) => {
+      if(e.target.checked) {
+        checksSalsa.forEach(c => c.checked = false);
+      }
+    });
+
+    checksSalsa.forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        if(e.target.checked) {
+          btnNinguna.checked = false;
+          const seleccionadas = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+          if(seleccionadas.length > 2) {
+            e.target.checked = false;
+            alert("Solo puedes elegir hasta 2 salsas.");
+          }
+        } else {
+          const seleccionadas = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+          if(seleccionadas.length === 0) btnNinguna.checked = true;
+        }
+      });
+    });
+  }, 50);
 
   let htmlSin = "";
   SIN_OPCIONES.forEach(opc => {
@@ -782,8 +818,17 @@ function confirmarCustom() {
   if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
   
   const protSelected = document.querySelector('input[name="modal_prot"]:checked').value;
-  const salId = document.querySelector('input[name="modal_sal"]:checked').value;
   
+  // Extraemos las salsas seleccionadas
+  const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+  const salIdsArr = Array.from(salNodos).map(n => n.value);
+  const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
+
+  // Lógica de compatibilidad para el backend:
+  // Si es 1 salsa, manda el ID normal. Si son 2, manda vacío ("") para que la DB no colapse.
+  const salIdParaDB = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
+  const salNombreUnido = salNombresArr.join(' y ');
+
   const sinNodos = document.querySelectorAll('.check-sin:checked');
   const sinArr = Array.from(sinNodos).map(n => n.value);
 
@@ -794,8 +839,9 @@ function confirmarCustom() {
 
   carrito[editandoUid].custom = {
     proteina: protSelected,
-    salsa_id: salId,
-    salsa: nombreSalsaPorId(salId),
+    salsa_id: salIdParaDB,
+    salsas_ids: salIdsArr,
+    salsa: salNombreUnido,
     sin: sinArr,
     extras: extraArr,
     nota: nota
