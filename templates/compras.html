@@ -250,29 +250,28 @@ qs("menuBtn").addEventListener("click",()=>{
 });
 
 /* SELECT CARD */
-/* SELECT CARD */
 function selectCard(card){
   document.querySelectorAll(".card-option").forEach(c=>c.classList.remove("active"));
   card.classList.add("active");
 
   if(card.id==="cardOtro"){
-    qs("esOtro").checked=true;
-    // Eliminamos la línea que forzaba a desmarcar "Sumar stock"
-    // qs("esInsumo").checked=false; 
+    qs("esOtro").checked = true;
+    qs("esInsumo").checked = true; // Activa "Sumar stock" por defecto para insumos nuevos
     
     qs("otroWrap").style.display="block";
-    qs("insumoSelect").value="";
-    qs("unidadBase").value=""; // Limpiamos la unidad por si quedó una anterior
+    qs("insumoSelect").value=""; // Sin ID, es nuevo
+    qs("unidadBase").value="";   // Limpia unidad anterior
     qs("concepto").value = qs("otroTexto").value || "Otro";
+    
     setTimeout(()=>qs("otroTexto").focus(),100);
-  }else{
+  } else {
     qs("esOtro").checked=false;
     qs("otroWrap").style.display="none";
     qs("insumoSelect").value=card.dataset.id;
     qs("unidadBase").value=card.dataset.unidad;
     qs("concepto").value=card.dataset.nombre;
     
-    // Auto-seleccionar "Sumar stock" si tiene ID de insumo
+    // Auto-seleccionar "Sumar stock" si la tarjeta tiene ID de insumo
     if (card.dataset.id) {
         qs("esInsumo").checked = true;
     } else {
@@ -286,26 +285,20 @@ function selectCard(card){
 /* TOGGLE PANELS */
 function togglePanels(){
   const stock = qs("esInsumo").checked;
-  const isNuevo = !qs("insumoSelect").value; // Si no hay ID, es un concepto nuevo
+  const tieneId = qs("insumoSelect").value;
 
-  // Mostramos el panel de stock siempre que esté marcado, sea nuevo o existente
+  // Mostrar el panel de stock si "Sumar Stock" está marcado
   qs("stockPanel").style.display = stock ? "block" : "none";
   qs("textoFields").style.display = stock ? "none" : "block";
 
-  // Si es un insumo nuevo, permitimos editar la unidad de medida
-  if (stock && isNuevo) {
+  // Si es un concepto nuevo y suma stock, quitamos el readOnly de unidad
+  if (stock && !tieneId) {
       qs("unidadBase").readOnly = false;
-      qs("unidadBase").placeholder = "Escribe la unidad (kg, pza...)";
+      qs("unidadBase").placeholder = "Ej: kg, pza, lt";
   } else {
       qs("unidadBase").readOnly = true;
+      qs("unidadBase").placeholder = "";
   }
-}
-function togglePanels(){
-  const stock=qs("esInsumo").checked;
-  const has=qs("insumoSelect").value;
-
-  qs("stockPanel").style.display=(stock && has)?"block":"none";
-  qs("textoFields").style.display=stock?"none":"block";
 }
 
 function calcCostoUnitario(){
@@ -321,7 +314,9 @@ document.querySelectorAll(".card-option").forEach(c=>{
   c.addEventListener("click",()=>selectCard(c));
 });
 
-qs("esInsumo").addEventListener("change",togglePanels);
+qs("esInsumo").addEventListener("change", togglePanels);
+qs("esOtro").addEventListener("change", togglePanels);
+
 qs("cantidadBase").addEventListener("input",calcCostoUnitario);
 document.querySelector("input[name='costo']").addEventListener("input",calcCostoUnitario);
 
