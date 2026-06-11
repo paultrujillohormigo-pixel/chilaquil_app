@@ -250,15 +250,19 @@ qs("menuBtn").addEventListener("click",()=>{
 });
 
 /* SELECT CARD */
+/* SELECT CARD */
 function selectCard(card){
   document.querySelectorAll(".card-option").forEach(c=>c.classList.remove("active"));
   card.classList.add("active");
 
   if(card.id==="cardOtro"){
     qs("esOtro").checked=true;
-    qs("esInsumo").checked=false;
+    // Eliminamos la línea que forzaba a desmarcar "Sumar stock"
+    // qs("esInsumo").checked=false; 
+    
     qs("otroWrap").style.display="block";
     qs("insumoSelect").value="";
+    qs("unidadBase").value=""; // Limpiamos la unidad por si quedó una anterior
     qs("concepto").value = qs("otroTexto").value || "Otro";
     setTimeout(()=>qs("otroTexto").focus(),100);
   }else{
@@ -279,6 +283,23 @@ function selectCard(card){
   togglePanels();
 }
 
+/* TOGGLE PANELS */
+function togglePanels(){
+  const stock = qs("esInsumo").checked;
+  const isNuevo = !qs("insumoSelect").value; // Si no hay ID, es un concepto nuevo
+
+  // Mostramos el panel de stock siempre que esté marcado, sea nuevo o existente
+  qs("stockPanel").style.display = stock ? "block" : "none";
+  qs("textoFields").style.display = stock ? "none" : "block";
+
+  // Si es un insumo nuevo, permitimos editar la unidad de medida
+  if (stock && isNuevo) {
+      qs("unidadBase").readOnly = false;
+      qs("unidadBase").placeholder = "Escribe la unidad (kg, pza...)";
+  } else {
+      qs("unidadBase").readOnly = true;
+  }
+}
 function togglePanels(){
   const stock=qs("esInsumo").checked;
   const has=qs("insumoSelect").value;
