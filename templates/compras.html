@@ -249,75 +249,64 @@ qs("menuBtn").addEventListener("click",()=>{
   qs("mobileMenu").classList.toggle("active");
 });
 
+
 /* SELECT CARD */
 function selectCard(card){
   document.querySelectorAll(".card-option").forEach(c=>c.classList.remove("active"));
   card.classList.add("active");
 
   if(card.id==="cardOtro"){
-    // Si es nuevo, lo tratamos como Insumo por defecto y apagamos "Otro"
-    qs("esInsumo").checked = true; 
-    qs("esOtro").checked = false; 
-    
+    qs("esOtro").checked=true;
+    qs("esInsumo").checked=false;
+
+
     qs("otroWrap").style.display="block";
-    qs("insumoSelect").value=""; // Sin ID, es nuevo
-    qs("unidadBase").value="";   // Limpia unidad anterior
+    qs("insumoSelect").value="";
+
     qs("concepto").value = qs("otroTexto").value || "Otro";
-    
     setTimeout(()=>qs("otroTexto").focus(),100);
-  } else {
+  }else{
+    qs("esOtro").checked=false;
     qs("otroWrap").style.display="none";
     qs("insumoSelect").value=card.dataset.id;
     qs("unidadBase").value=card.dataset.unidad;
     qs("concepto").value=card.dataset.nombre;
-    
+
+    // Auto-seleccionar "Sumar stock" si tiene ID de insumo
     if (card.dataset.id) {
-        // Es un insumo existente
         qs("esInsumo").checked = true;
-        qs("esOtro").checked = false;
     } else {
-        // Es un concepto/gasto preguardado (no tiene ID)
         qs("esInsumo").checked = false;
-        qs("esOtro").checked = true;
     }
   }
 
   togglePanels();
 }
 
-/* TOGGLE PANELS */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function togglePanels(){
-  const stock = qs("esInsumo").checked;
-  const tieneId = qs("insumoSelect").value;
+  const stock=qs("esInsumo").checked;
+  const has=qs("insumoSelect").value;
 
-  // Mostrar el panel de stock si "Sumar Stock" está marcado
-  qs("stockPanel").style.display = stock ? "block" : "none";
-  qs("textoFields").style.display = stock ? "none" : "block";
-
-  // Si es un concepto nuevo y suma stock, quitamos el readOnly de unidad
-  if (stock && !tieneId) {
-      qs("unidadBase").readOnly = false;
-      qs("unidadBase").placeholder = "Ej: kg, pza, lt";
-  } else {
-      qs("unidadBase").readOnly = true;
-      qs("unidadBase").placeholder = "";
-  }
+  qs("stockPanel").style.display=(stock && has)?"block":"none";
+  qs("textoFields").style.display=stock?"none":"block";
 }
-
-/* EVITAR CONFLICTOS AL MARCAR MANUALMENTE */
-qs("esInsumo").addEventListener("change", function() {
-  if (this.checked) {
-    qs("esOtro").checked = false; // Si sumas stock, apaga "Otro"
-  }
-  togglePanels();
-});
-
-qs("esOtro").addEventListener("change", function() {
-  if (this.checked) {
-    qs("esInsumo").checked = false; // Si es un gasto genérico, apaga "Sumar stock"
-  }
-  togglePanels();
-});
 
 function calcCostoUnitario(){
   const costo=parseFloat(document.querySelector("input[name='costo']").value||0);
@@ -332,6 +321,7 @@ document.querySelectorAll(".card-option").forEach(c=>{
   c.addEventListener("click",()=>selectCard(c));
 });
 
+qs("esInsumo").addEventListener("change",togglePanels);
 qs("cantidadBase").addEventListener("input",calcCostoUnitario);
 document.querySelector("input[name='costo']").addEventListener("input",calcCostoUnitario);
 
@@ -341,14 +331,7 @@ qs("otroTexto").addEventListener("input", ()=>{
 
 qs("compraForm").addEventListener("submit", function(e){
 
-  // Validación básica para conceptos nuevos
-  if(qs("esInsumo").checked && !qs("insumoSelect").value && !qs("otroTexto").value.trim()){
-      alert("Escribe el nombre del nuevo insumo.");
-      e.preventDefault();
-      return;
-  }
-
-  if(qs("esOtro").checked && !qs("otroTexto").value.trim() && !qs("concepto").value){
+  if(qs("esOtro").checked && !qs("otroTexto").value.trim()){
     alert("Escribe el concepto en 'Nuevo'");
     e.preventDefault();
     return;
