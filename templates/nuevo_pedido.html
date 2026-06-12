@@ -741,75 +741,113 @@ function renderCarrito(){
 /* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
   let customData = { proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "" };
+  let productoNombre = "";
   
   if (uid && carrito[uid]) {
     editandoUid = uid;
     customData = carrito[uid].custom;
+    productoNombre = carrito[uid].nombre;
     document.getElementById('customModalTitle').innerText = "Editar Personalización";
-    document.getElementById('customProductoNombre').innerText = carrito[uid].nombre;
+    document.getElementById('customProductoNombre').innerText = productoNombre;
   } else {
+    productoNombre = modalState.nombre;
     document.getElementById('customModalTitle').innerText = "Personalizar";
-    document.getElementById('customProductoNombre').innerText = modalState.nombre;
+    document.getElementById('customProductoNombre').innerText = productoNombre;
   }
 
-  // Renderiza las 4 opciones fijas de estilo de huevo solicitadas
-  let htmlProt = "";
-  OPCIONES_HUEVO.forEach(opc => {
-    let checked = (opc === customData.proteina) ? "checked" : "";
-    htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${opc}" ${checked}><span>${opc}</span></label>`;
-  });
-  document.getElementById('proteinaRadios').innerHTML = htmlProt;
+  // Detectar si estamos personalizando el agua de sabor
+  const nomNorm = normaliza(productoNombre);
+  const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
 
-  // Renderiza los 4 extras de proteínas
-  let htmlExt = "";
-  OPCIONES_EXTRAS.forEach(ext => {
-    let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
-    htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${ext.nombre}" ${checked}><span>${ext.nombre} (+$${ext.precio})</span></label>`;
-  });
-  document.getElementById('extrasChecks').innerHTML = htmlExt;
+  // Conseguimos las referencias de los bloques contenedores en el HTML (subiendo al elemento padre .custom-section)
+  const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
+  const contenedorSalsas = document.getElementById('salsaRadios').closest('.custom-section');
+  const contenedorSin = document.getElementById('sinChecks').closest('.custom-section');
+  const tituloExtras = document.getElementById('extrasChecks').closest('.custom-section').querySelector('label strong');
 
-  // Renderiza salsas como Checkboxes (Máximo 2)
-  let htmlSal = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="salsa_ninguna" ${(!customData.salsas_ids || customData.salsas_ids.length === 0) ? 'checked' : ''}><span>Ninguna</span></label>`;
-  SALSAS_DB.forEach(s => {
-    let checked = (customData.salsas_ids && customData.salsas_ids.includes(String(s.id))) ? "checked" : "";
-    htmlSal += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${s.nombre}" ${checked}><span>${s.nombre}</span></label>`;
-  });
-  document.getElementById('salsaRadios').innerHTML = htmlSal;
+  if (esAguaSabor) {
+    // 1. Ocultamos lo que NO usa un agua
+    if (contenedorHuevo) contenedorHuevo.style.display = "none";
+    if (contenedorSalsas) contenedorSalsas.style.display = "none";
+    if (contenedorSin) contenedorSin.style.display = "none";
+    
+    // 2. Renombramos la sección de "Extras" a "Selecciona el sabor"
+    if (tituloExtras) tituloExtras.innerText = "Selecciona el sabor (Obligatorio)";
 
-  // Event Listeners para restringir máximo 2 salsas
-  setTimeout(() => {
-    const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
-    const btnNinguna = document.getElementById('salsa_ninguna');
-
-    btnNinguna.addEventListener('change', (e) => {
-      if(e.target.checked) {
-        checksSalsa.forEach(c => c.checked = false);
+    // 3. Renderizamos los sabores como RADIOS (para que solo puedan elegir uno)
+    const SABORES_AGUA = ["Limón", "Guayaba", "Tamarindo", "Jamaica", "Otra"];
+    let htmlSabores = "";
+    SABORES_AGUA.forEach(sab => {
+      // Usamos el array de extras para guardar el sabor seleccionado
+      let checked = (customData.extras && customData.extras.includes(sab)) ? "checked" : "";
+      // Si está vacío y es Limón (el primero), lo dejamos seleccionado por defecto
+      if (!customData.extras || customData.extras.length === 0) {
+        if (sab === "Limón") checked = "checked";
       }
+      htmlSabores += `<label class="custom-pill"><input type="radio" name="modal_sabor_agua" value="${sab}" ${checked}><span>${sab}</span></label>`;
     });
+    document.getElementById('extrasChecks').innerHTML = htmlSabores;
 
-    checksSalsa.forEach(chk => {
-      chk.addEventListener('change', (e) => {
-        if(e.target.checked) {
-          btnNinguna.checked = false;
-          const seleccionadas = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
-          if(seleccionadas.length > 2) {
-            e.target.checked = false;
-            alert("Solo puedes elegir hasta 2 salsas.");
-          }
-        } else {
-          const seleccionadas = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
-          if(seleccionadas.length === 0) btnNinguna.checked = true;
-        }
-      });
+  } else {
+    // COMPORTAMIENTO NORMAL PARA CHILAQUILES / COMIDA
+    if (contenedorHuevo) contenedorHuevo.style.display = "block";
+    if (contenedorSalsas) contenedorSalsas.style.display = "block";
+    if (contenedorSin) contenedorSin.style.display = "block";
+    if (tituloExtras) tituloExtras.innerText = "Proteínas Extra (Opcional)";
+
+    // Render original de Huevo
+    let htmlProt = "";
+    OPCIONES_HUEVO.forEach(opc => {
+      let checked = (opc === customData.proteina) ? "checked" : "";
+      htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${opc}" ${checked}><span>${opc}</span></label>`;
     });
-  }, 50);
+    document.getElementById('proteinaRadios').innerHTML = htmlProt;
 
-  let htmlSin = "";
-  SIN_OPCIONES.forEach(opc => {
-    let checked = customData.sin.includes(opc) ? "checked" : "";
-    htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}" ${checked}><span>Sin ${opc}</span></label>`;
-  });
-  document.getElementById('sinChecks').innerHTML = htmlSin;
+    // Render original de Extras
+    let htmlExt = "";
+    OPCIONES_EXTRAS.forEach(ext => {
+      let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
+      htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${ext.nombre}" ${checked}><span>${ext.nombre} (+$${ext.precio})</span></label>`;
+    });
+    document.getElementById('extrasChecks').innerHTML = htmlExt;
+
+    // Render original de Salsas
+    let htmlSal = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="salsa_ninguna" ${(!customData.salsas_ids || customData.salsas_ids.length === 0) ? 'checked' : ''}><span>Ninguna</span></label>`;
+    SALSAS_DB.forEach(s => {
+      let checked = (customData.salsas_ids && customData.salsas_ids.includes(String(s.id))) ? "checked" : "";
+      htmlSal += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${s.nombre}" ${checked}><span>${s.nombre}</span></label>`;
+    });
+    document.getElementById('salsaRadios').innerHTML = htmlSal;
+
+    // Escuchador de salsas máximo 2
+    setTimeout(() => {
+      const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
+      const btnNinguna = document.getElementById('salsa_ninguna');
+      if (btnNinguna) {
+        btnNinguna.addEventListener('change', (e) => { if(e.target.checked) checksSalsa.forEach(c => c.checked = false); });
+        checksSalsa.forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            if(e.target.checked) {
+              btnNinguna.checked = false;
+              const sel = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+              if(sel.length > 2) { e.target.checked = false; alert("Solo puedes elegir hasta 2 salsas."); }
+            } else {
+              const sel = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+              if(sel.length === 0) btnNinguna.checked = true;
+            }
+          });
+        });
+      }
+    }, 50);
+
+    // Render original de Quitar ingredientes
+    let htmlSin = "";
+    SIN_OPCIONES.forEach(opc => {
+      let checked = customData.sin.includes(opc) ? "checked" : "";
+      htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}" ${checked}><span>Sin ${opc}</span></label>`;
+    });
+    document.getElementById('sinChecks').innerHTML = htmlSin;
+  }
 
   document.getElementById('notaInput').value = customData.nota || "";
   document.getElementById('customModal').classList.add('is-open');
@@ -825,25 +863,41 @@ function cerrarCustomModal() {
 function confirmarCustom() {
   if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
   
-  const protSelected = document.querySelector('input[name="modal_prot"]:checked').value;
-  
-  // Extraemos las salsas seleccionadas
-  const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
-  const salIdsArr = Array.from(salNodos).map(n => n.value);
-  const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
+  const productoNombre = carrito[editandoUid].nombre;
+  const nomNorm = normaliza(productoNombre);
+  const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
 
-  // Lógica de compatibilidad para el backend:
-  // Si es 1 salsa, manda el ID normal. Si son 2, manda vacío ("") para que la DB no colapse.
-  const salIdParaDB = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
-  const salNombreUnido = salNombresArr.join(' y ');
-
-  const sinNodos = document.querySelectorAll('.check-sin:checked');
-  const sinArr = Array.from(sinNodos).map(n => n.value);
-
-  const extraNodos = document.querySelectorAll('.check-extra:checked');
-  const extraArr = Array.from(extraNodos).map(n => n.value);
-
+  let protSelected = "Sin proteina";
+  let salIdParaDB = "";
+  let salIdsArr = [];
+  let salNombreUnido = "";
+  let sinArr = [];
+  let extraArr = [];
   const nota = document.getElementById('notaInput').value.trim();
+
+  if (esAguaSabor) {
+    // Si es agua, el sabor viaja en el grupo de radio "modal_sabor_agua"
+    const saborRadio = document.querySelector('input[name="modal_sabor_agua"]:checked');
+    if (saborRadio) {
+      extraArr = [saborRadio.value]; // Lo guardamos en el array de extras para no romper la estructura visual
+    }
+  } else {
+    // COMPORTAMIENTO NORMAL PARA COMIDA
+    protSelected = document.querySelector('input[name="modal_prot"]:checked').value;
+    
+    const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+    salIdsArr = Array.from(salNodos).map(n => n.value);
+    const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
+
+    salIdParaDB = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
+    salNombreUnido = salNombresArr.join(' y ');
+
+    const sinNodos = document.querySelectorAll('.check-sin:checked');
+    sinArr = Array.from(sinNodos).map(n => n.value);
+
+    const extraNodos = document.querySelectorAll('.check-extra:checked');
+    extraArr = Array.from(extraNodos).map(n => n.value);
+  }
 
   carrito[editandoUid].custom = {
     proteina: protSelected,
@@ -851,7 +905,7 @@ function confirmarCustom() {
     salsas_ids: salIdsArr,
     salsa: salNombreUnido,
     sin: sinArr,
-    extras: extraArr,
+    extras: extraArr, // Aquí viaja ["Limón"], ["Guayaba"], etc. si es agua
     nota: nota
   };
 
@@ -860,7 +914,6 @@ function confirmarCustom() {
   document.getElementById('customModal').classList.remove('is-open');
   renderCarrito();
 }
-
 /* ================== VISTA COCINA ================== */
 function abrirVistaCocina() {
   let html = "";
