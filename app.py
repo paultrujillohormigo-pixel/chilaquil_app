@@ -220,33 +220,33 @@ def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, e
     return row["totopos_balance"] if row else 0
 
 def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, phone: str) -> str:
-    bar5 = make_bar(balance, 5)
-    bar10 = make_bar(balance, 10)
+    phone_clean = phone.replace("+", "") if phone else ""
+    # Usamos _external=True para que genere la URL completa (ej. https://www.senorchilaquil.com/...)
+    url_perfil = url_for('mi_perfil', phone=phone_clean, _external=True)
+    
+    lines = []
+    
+    if earned > 0:
+        lines.append(f"🎁 ¡Con esta compra sumas {earned} totopo(s) a tu cuenta! 🌮✨")
+    else:
+        lines.append(f"🌮 Tienes {balance} totopos acumulados en tu cuenta.")
+
+    # Avisar si ya alcanzó una recompensa
     f5 = faltan_para(balance, 5)
     f10 = faltan_para(balance, 10)
-    canje = []
-    if f5 == 0:
-        canje.append(f"{E['check']} Ya puedes canjear una bebida (excepto chai).")
-    if f10 == 0:
-        canje.append(f"{E['check']} Ya puedes canjear un plato fuerte.")
-    canje_txt = "\n".join(canje) if canje else "Sigue acumulando totopos :)"
-    phone_clean = phone.replace("+", "") if phone else ""
-    url_perfil = url_for('mi_perfil', phone=phone_clean, _external=True)
-    link_perfil = f"\nConsulta tus puntos y recompensas aquí:\n👉 {url_perfil}\n"
-    return (
-        f"{E['title']} SENOR CHILAQUIL - TOTOPOS {E['title']}\n\n"
-        f"{E['receipt']} Pedido {pedido_id}   {E['pay']} Total: {float(total):.2f}\n"
-        f"{E['check']} Ganaste hoy: +{earned} totopo(s)\n"
-        f"{E['pin']} Totopos acumulados: {balance}\n\n"
-        f"{E['gift']} Recompensas\n"
-        f"{E['drink']}: {balance}/5  {bar5}\n"
-        f"{E['plate']}: {balance}/10 {bar10}\n\n"
-        "Te faltan:\n"
-        f"{E['arrow']} {f5} para una bebida gratis\n"
-        f"{E['arrow']} {f10} para un platofuerte \n\n"
-        f"{canje_txt}\n"
-        f"{link_perfil}"
-    )
+    
+    if f5 == 0 or f10 == 0:
+        lines.append("")
+        if f10 == 0:
+            lines.append("🌟 ¡Ya puedes canjear un plato fuerte gratis!")
+        elif f5 == 0:
+            lines.append("🥤 ¡Ya puedes canjear una bebida gratis!")
+
+    lines.append("\nConsulta tus puntos y recompensas aquí:")
+    lines.append(f"👉 {url_perfil}\n")
+    
+    return "\n".join(lines)
+
 
 @app.template_filter("money")
 def money_format(value):
