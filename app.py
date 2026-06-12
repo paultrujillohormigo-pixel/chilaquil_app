@@ -226,9 +226,10 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     lines = []
     
     if earned > 0:
-        lines.append(f"🎁 ¡Con esta compra sumas {earned} totopo(s) a tu cuenta! 🌮✨")
+        # \U0001F381 = Regalo 🎁 | \U0001F32E = Taco 🌮 | \u2728 = Destellos ✨
+        lines.append(f"\U0001F381 ¡Con esta compra sumas {earned} totopo(s) a tu cuenta! \U0001F32E\u2728")
     else:
-        lines.append(f"🌮 Tienes {balance} totopos acumulados en tu cuenta.")
+        lines.append(f"\U0001F32E Tienes {balance} totopos acumulados en tu cuenta.")
 
     f5 = faltan_para(balance, 5)
     f10 = faltan_para(balance, 10)
@@ -236,13 +237,17 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     if f5 == 0 or f10 == 0:
         lines.append("")
         if f10 == 0:
-            lines.append("🌟 ¡Ya puedes canjear un plato fuerte gratis!")
+            # \U0001F31F = Estrella 🌟
+            lines.append("\U0001F31F ¡Ya puedes canjear un plato fuerte gratis!")
         elif f5 == 0:
-            lines.append("🥤 ¡Ya puedes canjear una bebida gratis!")
+            # \U0001F964 = Vaso de bebida 🥤
+            lines.append("\U0001F964 ¡Ya puedes canjear una bebida gratis!")
 
     lines.append("\nConsulta tus puntos y recompensas aquí:")
-    lines.append(f"👉 {url_perfil}\n")
-    lines.append("¡Gracias por tu preferencia! 🍳🔥")
+    # \U0001F449 = Dedo apuntando 👉
+    lines.append(f"\U0001F449 {url_perfil}\n")
+    # \U0001F525 = Fueguito 🔥
+    lines.append("¡Gracias por tu preferencia! \U0001F373\U0001F525")
     
     return "\n".join(lines)
 
@@ -1877,7 +1882,8 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
     pedido = cursor.fetchone()
 
     lines = []
-    lines.append("¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n")
+    # \U0001F44B = Manita saludando 👋
+    lines.append("¡Hola! \U0001F44B Aquí tienes el resumen de tu pedido:\n")
 
     subtotal_items = Decimal("0")
 
@@ -1885,20 +1891,26 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
         subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
         subtotal_items += subtotal
         
-        lines.append(f'▪️ {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
+        # \u25AA\uFE0F = Cuadrito negro ▪️
+        lines.append(f'\u25AA\uFE0F {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
 
         if it.get("proteina") and it.get("proteina") != "Sin proteina":
-            lines.append(f'   🍳 {it["proteina"]}')
+            # \U0001F373 = Sartén con huevo 🍳
+            lines.append(f'   \U0001F373 {it["proteina"]}')
         if it.get("salsa"):
-            lines.append(f'   🌶️ {it["salsa"]}')
+            # \U0001F336\uFE0F = Chile 🌶️
+            lines.append(f'   \U0001F336\uFE0F {it["salsa"]}')
         if it.get("sin"):
-            lines.append(f'   🚫 Sin {it["sin"]}')
+            # \U0001F6AB = Señal prohibido 🚫
+            lines.append(f'   \U0001F6AB Sin {it["sin"]}')
         
         nota = it.get("nota")
         if nota:
-            if "👉 Para:" in nota:
-                nota = nota.replace("👉 Para:", "➕ Extra para:")
-            lines.append(f'   📝 {nota}')
+            # Reemplazamos la mano (👉) por el más (➕)
+            if "👉 Para:" in nota or "\U0001F449 Para:" in nota:
+                nota = nota.replace("👉 Para:", "\u2795 Extra para:").replace("\U0001F449 Para:", "\u2795 Extra para:")
+            # \U0001F4DD = Papel con lápiz 📝
+            lines.append(f'   \U0001F4DD {nota}')
 
     total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
     
