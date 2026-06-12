@@ -386,9 +386,10 @@ def pedidos_abiertos():
         # Usamos DictCursor para asegurar que los datos se manden como diccionario al HTML
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             
+           # ...
             # Verificamos si existe la columna mesa por si en un futuro la agregas
             has_mesa = table_has_column(cursor, "pedidos", "mesa")
-            col_mesa = ", mesa" if has_mesa else ""
+            col_mesa = ", mesa, entregado_cocina" if has_mesa else ""
 
             cursor.execute(f"""
                 SELECT id, fecha, origen, mesero, total {col_mesa}
@@ -397,6 +398,7 @@ def pedidos_abiertos():
                 ORDER BY fecha DESC
             """)
             pedidos = cursor.fetchall()
+            # ...
 
             # Verificamos si la base de datos tiene la relación con salsas
             has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
