@@ -409,6 +409,7 @@ body{ overflow-x:hidden; }
 </style>
 
 <script>
+<script>
 /* ================== FIX VH (iOS) ================== */
 function setVH(){
   const vh = window.innerHeight * 0.01;
@@ -466,22 +467,12 @@ function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
   
-  // Excepción especial: Si es "agua de sabor", SÍ queremos que pida modificador (el sabor)
-  if (nom.includes("agua de sabor") || nom.includes("aguas de sabor")) {
-    return true;
-  }
+  if (nom.includes("agua de sabor") || nom.includes("aguas de sabor")) return true;
   
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
 }
 
-function nombreSalsaPorId(id){
-  if (!id) return "";
-  const x = SALSAS_DB.find(s => String(s.id) === String(id));
-  return x ? x.nombre : "";
-}
-
-// Escanea el catálogo dinámicamente para enlazar el ID del Extra y que el Backend calcule bien la cuenta
 function encontrarProductoExtraId(nombreBuscar) {
   const botones = document.querySelectorAll('.js-add');
   const nomNorm = normaliza(nombreBuscar);
@@ -610,7 +601,7 @@ function agregarProducto(id, nombre, precio, category) {
     cantidad: 1,
     isNew: true, 
     custom: {
-      proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: ""
+      proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: ""
     }
   };
 
@@ -648,7 +639,6 @@ function renderCarrito(){
   Object.keys(carrito).forEach(uid => {
     const item = carrito[uid];
     
-    // Sumamos los extras seleccionados al precio en interfaz
     let precioExtrasAcumulado = 0;
     item.custom.extras.forEach(extName => {
       const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
@@ -665,6 +655,9 @@ function renderCarrito(){
     }
     if (item.custom.salsa) {
       modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
+    }
+    if (item.custom.sabor) {
+      modsHtml += `<div class="tag" style="background:#e0f2fe; color:#1e40af; border-color:#bae6fd;">💧 ${escapeHtml(item.custom.sabor)}</div>`;
     }
     if (item.custom.extras.length > 0) {
       modsHtml += `<div class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${escapeHtml(item.custom.extras.join(', '))}</div>`;
@@ -696,14 +689,15 @@ function renderCarrito(){
       </tr>
     `;
 
-    // Truco inteligente para evitar que la Base de Datos explote si eligen 2 salsas:
     let notaParaBackend = item.custom.nota;
+    if (item.custom.sabor) {
+        notaParaBackend = `💧 Sabor: ${item.custom.sabor} | ` + notaParaBackend;
+    }
     if (item.custom.salsas_ids && item.custom.salsas_ids.length > 1) {
-        // Concatenamos las 2 salsas en la nota para que no se pierdan.
         notaParaBackend = `🌶️ Mitad y mitad: ${item.custom.salsa} | ` + notaParaBackend;
     }
 
-    // 1. Mandamos el platillo base a Python
+    // 1. Mandamos el platillo base
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
@@ -713,7 +707,7 @@ function renderCarrito(){
       <input type="hidden" name="nota[]" value="${escapeHtml(notaParaBackend)}">
     `;
 
-    // 2. Mandamos cada Extra ligado como una línea independiente para que Python calcule el dinero real
+    // 2. Mandamos Extras separados
     item.custom.extras.forEach(extName => {
       const extraProdId = encontrarProductoExtraId(extName);
       if (extraProdId) {
@@ -740,7 +734,7 @@ function renderCarrito(){
 
 /* ================== MODAL PERSONALIZACIÓN ================== */
 function abrirCustomModal(uid = null) {
-  let customData = { proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "" };
+  let customData = { proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: "" };
   let productoNombre = "";
   
   if (uid && carrito[uid]) {
@@ -755,47 +749,35 @@ function abrirCustomModal(uid = null) {
     document.getElementById('customProductoNombre').innerText = productoNombre;
   }
 
-  // Detectar si estamos personalizando el agua de sabor
   const nomNorm = normaliza(productoNombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
 
-  // Conseguimos las referencias de los bloques contenedores en el HTML (subiendo al elemento padre .custom-section)
   const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
   const contenedorSalsas = document.getElementById('salsaRadios').closest('.custom-section');
   const contenedorSin = document.getElementById('sinChecks').closest('.custom-section');
   const tituloExtras = document.getElementById('extrasChecks').closest('.custom-section').querySelector('label strong');
 
   if (esAguaSabor) {
-    // 1. Ocultamos lo que NO usa un agua
     if (contenedorHuevo) contenedorHuevo.style.display = "none";
     if (contenedorSalsas) contenedorSalsas.style.display = "none";
     if (contenedorSin) contenedorSin.style.display = "none";
-    
-    // 2. Renombramos la sección de "Extras" a "Selecciona el sabor"
     if (tituloExtras) tituloExtras.innerText = "Selecciona el sabor (Obligatorio)";
 
-    // 3. Renderizamos los sabores como RADIOS (para que solo puedan elegir uno)
     const SABORES_AGUA = ["Limón", "Guayaba", "Tamarindo", "Jamaica", "Otra"];
     let htmlSabores = "";
     SABORES_AGUA.forEach(sab => {
-      // Usamos el array de extras para guardar el sabor seleccionado
-      let checked = (customData.extras && customData.extras.includes(sab)) ? "checked" : "";
-      // Si está vacío y es Limón (el primero), lo dejamos seleccionado por defecto
-      if (!customData.extras || customData.extras.length === 0) {
-        if (sab === "Limón") checked = "checked";
-      }
+      let checked = (customData.sabor === sab) ? "checked" : "";
+      if (!customData.sabor && sab === "Limón") checked = "checked";
       htmlSabores += `<label class="custom-pill"><input type="radio" name="modal_sabor_agua" value="${sab}" ${checked}><span>${sab}</span></label>`;
     });
     document.getElementById('extrasChecks').innerHTML = htmlSabores;
 
   } else {
-    // COMPORTAMIENTO NORMAL PARA CHILAQUILES / COMIDA
     if (contenedorHuevo) contenedorHuevo.style.display = "block";
     if (contenedorSalsas) contenedorSalsas.style.display = "block";
     if (contenedorSin) contenedorSin.style.display = "block";
     if (tituloExtras) tituloExtras.innerText = "Proteínas Extra (Opcional)";
 
-    // Render original de Huevo
     let htmlProt = "";
     OPCIONES_HUEVO.forEach(opc => {
       let checked = (opc === customData.proteina) ? "checked" : "";
@@ -803,7 +785,6 @@ function abrirCustomModal(uid = null) {
     });
     document.getElementById('proteinaRadios').innerHTML = htmlProt;
 
-    // Render original de Extras
     let htmlExt = "";
     OPCIONES_EXTRAS.forEach(ext => {
       let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
@@ -811,7 +792,6 @@ function abrirCustomModal(uid = null) {
     });
     document.getElementById('extrasChecks').innerHTML = htmlExt;
 
-    // Render original de Salsas
     let htmlSal = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="salsa_ninguna" ${(!customData.salsas_ids || customData.salsas_ids.length === 0) ? 'checked' : ''}><span>Ninguna</span></label>`;
     SALSAS_DB.forEach(s => {
       let checked = (customData.salsas_ids && customData.salsas_ids.includes(String(s.id))) ? "checked" : "";
@@ -819,7 +799,6 @@ function abrirCustomModal(uid = null) {
     });
     document.getElementById('salsaRadios').innerHTML = htmlSal;
 
-    // Escuchador de salsas máximo 2
     setTimeout(() => {
       const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
       const btnNinguna = document.getElementById('salsa_ninguna');
@@ -840,7 +819,6 @@ function abrirCustomModal(uid = null) {
       }
     }, 50);
 
-    // Render original de Quitar ingredientes
     let htmlSin = "";
     SIN_OPCIONES.forEach(opc => {
       let checked = customData.sin.includes(opc) ? "checked" : "";
@@ -863,8 +841,7 @@ function cerrarCustomModal() {
 function confirmarCustom() {
   if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
   
-  const productoNombre = carrito[editandoUid].nombre;
-  const nomNorm = normaliza(productoNombre);
+  const nomNorm = normaliza(carrito[editandoUid].nombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
 
   let protSelected = "Sin proteina";
@@ -873,22 +850,18 @@ function confirmarCustom() {
   let salNombreUnido = "";
   let sinArr = [];
   let extraArr = [];
-  const nota = document.getElementById('notaInput').value.trim();
+  let saborAgua = "";
 
   if (esAguaSabor) {
-    // Si es agua, el sabor viaja en el grupo de radio "modal_sabor_agua"
     const saborRadio = document.querySelector('input[name="modal_sabor_agua"]:checked');
-    if (saborRadio) {
-      extraArr = [saborRadio.value]; // Lo guardamos en el array de extras para no romper la estructura visual
-    }
+    if (saborRadio) saborAgua = saborRadio.value;
   } else {
-    // COMPORTAMIENTO NORMAL PARA COMIDA
-    protSelected = document.querySelector('input[name="modal_prot"]:checked').value;
+    const pSel = document.querySelector('input[name="modal_prot"]:checked');
+    if(pSel) protSelected = pSel.value;
     
     const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
     salIdsArr = Array.from(salNodos).map(n => n.value);
     const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
-
     salIdParaDB = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
     salNombreUnido = salNombresArr.join(' y ');
 
@@ -905,8 +878,9 @@ function confirmarCustom() {
     salsas_ids: salIdsArr,
     salsa: salNombreUnido,
     sin: sinArr,
-    extras: extraArr, // Aquí viaja ["Limón"], ["Guayaba"], etc. si es agua
-    nota: nota
+    extras: extraArr,
+    sabor: saborAgua,
+    nota: document.getElementById('notaInput').value.trim()
   };
 
   delete carrito[editandoUid].isNew; 
@@ -914,6 +888,7 @@ function confirmarCustom() {
   document.getElementById('customModal').classList.remove('is-open');
   renderCarrito();
 }
+
 /* ================== VISTA COCINA ================== */
 function abrirVistaCocina() {
   let html = "";
@@ -928,6 +903,7 @@ function abrirVistaCocina() {
                  <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
       if(item.custom.proteina && item.custom.proteina !== "Sin proteina") html += `<span class="tag">🍳 ${item.custom.proteina}</span> `;
       if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
+      if(item.custom.sabor) html += `<span class="tag" style="background:#e0f2fe; color:#1e40af; border-color:#bae6fd;">💧 ${item.custom.sabor}</span> `;
       if(item.custom.extras.length > 0) html += `<span class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${item.custom.extras.join(', ')}</span> `;
       if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
       if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
@@ -945,14 +921,13 @@ function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
+
 function guardarYEnviarWhatsApp() {
-  // 1. Evitar procesar si el carrito está vacío
   if (Object.keys(carrito).length === 0) { 
     alert("⚠️ El carrito está vacío. Agrega productos primero."); 
     return; 
   }
 
-  // 2. Validar teléfono
   let telefono = document.getElementById('buscador_cliente').value.trim();
   let numeros = telefono.replace(/\D/g, '');
 
@@ -961,46 +936,32 @@ function guardarYEnviarWhatsApp() {
     return;
   }
 
-  // 3. TRUCO ANTI-BLOQUEO: Abrimos la pestaña en blanco
   const waWindow = window.open('about:blank', '_blank');
-  
-  // 4. EL FIX MAESTRO: Alteramos el valor del input oculto DIRECTAMENTE
   document.getElementById('enviarWaHidden').value = "1";
   
-  // Empaquetamos todo el formulario
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
 
-  // 5. Animación de carga en el botón
   const btn = event.currentTarget;
   const textoOriginal = btn.innerHTML;
   btn.innerHTML = "⏳ Generando...";
   btn.style.pointerEvents = "none";
 
-  // 6. Enviamos por debajo del agua
   fetch(window.location.href, {
       method: 'POST',
-      headers: {
-          'Accept': 'application/json' // Le rogamos a Python que nos responda en JSON
-      },
+      headers: { 'Accept': 'application/json' },
       body: formData
   })
   .then(async res => {
       const text = await res.text();
-      try {
-          return JSON.parse(text);
-      } catch(e) {
-          console.error("Respuesta cruda del servidor:", text);
-          throw new Error("El servidor devolvió una respuesta no válida (probablemente HTML en vez de JSON). Revisa la consola.");
-      }
+      try { return JSON.parse(text); } 
+      catch(e) { throw new Error("Error interno del servidor. Revisa la consola."); }
   })
   .then(data => {
       if(data && data.status === 'success') {
-          // ¡Éxito! Inyectamos la URL a la pestaña y redirigimos
           waWindow.location.href = data.wa_link;
           window.location.href = data.redirect_url;
       } else {
-          // Si Python responde pero sin éxito
           waWindow.close();
           btn.innerHTML = textoOriginal;
           btn.style.pointerEvents = "auto";
@@ -1008,13 +969,13 @@ function guardarYEnviarWhatsApp() {
       }
   })
   .catch(err => {
-      // Si falla la red o el parseo
       waWindow.close();
       btn.innerHTML = textoOriginal;
       btn.style.pointerEvents = "auto";
       alert("❌ " + err.message);
   });
 }
+</script>
 </script>
 
 {% endblock %}
