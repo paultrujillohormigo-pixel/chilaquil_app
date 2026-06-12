@@ -602,7 +602,7 @@ def nuevo_pedido():
                         customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                         loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, totopos_int)
 
-                # ========================================================
+               # ========================================================
                 # NUEVA LÓGICA: RESPONDER CON JSON PARA EVITAR BLOQUEO
                 # ========================================================
                 enviar_wa = request.form.get("enviar_wa") == "1"
@@ -613,15 +613,20 @@ def nuevo_pedido():
                     # Armamos el texto centralizado del backend
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
                     
-                    # Conseguimos el balance de totopos
+                    # CONVERSIÓN SEGURA DE TOTOPOS: Evita que el servidor colapse si viene vacío
+                    totopos_int = 0
+                    if totopos_ganados and str(totopos_ganados).isdigit():
+                        totopos_int = int(totopos_ganados)
+
+                    # Conseguimos el balance
                     balance = 0
-                    if totopos_ganados and str(totopos_ganados).isdigit() and int(totopos_ganados) > 0:
+                    if totopos_int > 0:
                         cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
                         row_totopos = cursor.fetchone()
                         if row_totopos: 
                             balance = row_totopos["totopos_balance"]
                             
-                    msg_loyalty = loyalty_message(balance, int(totopos_ganados), pedido_id, total_final, telefono_e164)
+                    msg_loyalty = loyalty_message(balance, totopos_int, pedido_id, total_final, telefono_e164)
                     full_message = ticket_text + "\n\n" + msg_loyalty
                     wa_link = wa_me_link(telefono_e164, full_message)
                     
