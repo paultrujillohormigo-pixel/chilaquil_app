@@ -386,10 +386,9 @@ def pedidos_abiertos():
         # Usamos DictCursor para asegurar que los datos se manden como diccionario al HTML
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             
-           # ...
-            # Verificamos si existe la columna mesa por si en un futuro la agregas
+            # Verificamos si existe la columna mesa
             has_mesa = table_has_column(cursor, "pedidos", "mesa")
-            col_mesa = ", mesa, entregado_cocina" if has_mesa else ""
+            col_mesa = ", mesa" if has_mesa else ""
 
             cursor.execute(f"""
                 SELECT id, fecha, origen, mesero, total {col_mesa}
@@ -398,7 +397,6 @@ def pedidos_abiertos():
                 ORDER BY fecha DESC
             """)
             pedidos = cursor.fetchall()
-            # ...
 
             # Verificamos si la base de datos tiene la relación con salsas
             has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
@@ -406,15 +404,17 @@ def pedidos_abiertos():
             for p in pedidos:
                 if has_salsa_id:
                     # Hacemos JOIN con 'salsas' para traer el nombre textual de la salsa
-                    # y renombramos 'sin' a 'modificadores' y 'nota' a 'notas' para el HTML
+                    # y extraemos el id y el estado 'entregado' de cada platillo
                     cursor.execute("""
                         SELECT 
+                            pi.id, 
                             pr.nombre, 
                             pi.cantidad, 
                             pi.proteina, 
                             pi.sin AS modificadores, 
                             pi.nota AS notas,
-                            s.nombre AS salsa
+                            s.nombre AS salsa,
+                            COALESCE(pi.entregado, 0) AS entregado
                         FROM pedido_items pi
                         JOIN productos pr ON pr.id = pi.producto_id
                         LEFT JOIN salsas s ON pi.salsa_id = s.id
@@ -424,19 +424,21 @@ def pedidos_abiertos():
                 else:
                     cursor.execute("""
                         SELECT 
+                            pi.id, 
                             pr.nombre, 
                             pi.cantidad, 
                             pi.proteina, 
                             pi.sin AS modificadores, 
                             pi.nota AS notas,
-                            NULL AS salsa
+                            NULL AS salsa,
+                            COALESCE(pi.entregado, 0) AS entregado
                         FROM pedido_items pi
                         JOIN productos pr ON pr.id = pi.producto_id
                         WHERE pi.pedido_id = %s
                         ORDER BY pi.id ASC
                     """, (p["id"],))
                 
-                # Guardamos todos los items (quitamos el LIMIT 4 para ver el pedido completo)
+                # Guardamos todos los items para enviarlos al HTML
                 p["items_preview"] = cursor.fetchall()
     finally:
         conn.close()
@@ -1772,20 +1774,23 @@ def dashboard():
 
 
 
-@app.route("/api/pedido/<int:pedido_id>/toggle_cocina", methods=["POST"])
-def toggle_cocina(pedido_id):
+# =========================================================
+# ================== CONTROL DE COCINA ====================
+# =========================================================
+
+@app.route("/api/item/<int:item_id>/toggle_cocina", methods=["POST"])
+def toggle_item_cocina(item_id):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             # Invierte el estado: si era 0 lo hace 1, si era 1 lo hace 0
-            cur.execute("UPDATE pedidos SET entregado_cocina = NOT entregado_cocina WHERE id = %s", (pedido_id,))
+            cur.execute("UPDATE pedido_items SET entregado = NOT entregado WHERE id = %s", (item_id,))
             conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         conn.close()
-
 
 
 
