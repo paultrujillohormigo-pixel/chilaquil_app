@@ -1816,6 +1816,7 @@ def eliminar_pedido(pedido_id):
 # =========================================================
 
 def generar_ticket_texto(pedido_id, cursor) -> str:
+    # 1. Traer los artículos del pedido
     cursor.execute("""
         SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
         FROM pedido_items pi
@@ -1825,29 +1826,36 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
     """, (pedido_id,))
     items = cursor.fetchall()
 
-    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
+    # 2. Traer los datos generales del pedido (Agregamos fecha y telefono)
+    cursor.execute("SELECT total, fecha, telefono_whatsapp FROM pedidos WHERE id = %s", (pedido_id,))
     pedido = cursor.fetchone()
 
+    # 3. Preparar variables
+    cliente = pedido.get("telefono_whatsapp") or "Público en general"
+    fecha_str = pedido["fecha"].strftime('%d/%m/%Y %H:%M') if pedido.get("fecha") else "Fecha reciente"
+    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
+
+    # 4. Armar el ticket con el formato estandarizado
     lines = []
-    lines.append("SEÑOR CHILAQUIL")
-    lines.append("------------------------")
+    lines.append(f"🏪 *TICKET DE PEDIDO #{pedido_id}* 🏪\n")
+    lines.append(f"👤 *Cliente:* {cliente}")
+    lines.append(f"📅 *Fecha:* {fecha_str}\n")
+    lines.append("📌 *Detalles del pedido:*")
 
     for it in items:
         subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
-        lines.append(f'{it["cantidad"]} {it["nombre"]} - ${float(subtotal):.2f}')
+        lines.append(f'▫️ {it["cantidad"]}x {it["nombre"]} - ${float(subtotal):.2f}')
 
-        if it.get("proteina"):
-            lines.append(f'  PROT: {it["proteina"]}')
+        # Agregamos los modificadores visualmente tabulados debajo del producto
+        if it.get("proteina") and it.get("proteina") != "Sin proteina":
+            lines.append(f'   🍳 {it["proteina"]}')
         if it.get("sin"):
-            lines.append(f'  SIN: {it["sin"]}')
+            lines.append(f'   🚫 Sin {it["sin"]}')
         if it.get("nota"):
-            lines.append(f'  NOTA: {it["nota"]}')
+            lines.append(f'   📝 {it["nota"]}')
 
-    lines.append("------------------------")
-    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
-    lines.append(f'TOTAL: ${float(total):.2f}')
-    lines.append("")
-    lines.append("¡Gracias por tu compra!")
+    lines.append(f"\n💰 *Total:* ${float(total):.2f}\n")
+    lines.append("✅ _¡Gracias por tu compra! Conserva este ticket._")
 
     return "\n".join(lines)
 
