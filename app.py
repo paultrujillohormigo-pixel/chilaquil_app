@@ -221,7 +221,6 @@ def loyalty_add_totopos_for_purchase(cursor, customer_id: int, pedido_id: int, e
 
 def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, phone: str) -> str:
     phone_clean = phone.replace("+", "") if phone else ""
-    # Usamos _external=True para que genere la URL completa (ej. https://www.senorchilaquil.com/...)
     url_perfil = url_for('mi_perfil', phone=phone_clean, _external=True)
     
     lines = []
@@ -231,7 +230,6 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     else:
         lines.append(f"🌮 Tienes {balance} totopos acumulados en tu cuenta.")
 
-    # Avisar si ya alcanzó una recompensa
     f5 = faltan_para(balance, 5)
     f10 = faltan_para(balance, 10)
     
@@ -244,6 +242,7 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
 
     lines.append("\nConsulta tus puntos y recompensas aquí:")
     lines.append(f"👉 {url_perfil}\n")
+    lines.append("¡Gracias por tu preferencia! 🍳🔥")
     
     return "\n".join(lines)
 
@@ -1852,49 +1851,65 @@ def eliminar_pedido(pedido_id):
 # =========================================================
 
 def generar_ticket_texto(pedido_id, cursor) -> str:
-    # 1. Traer los artículos del pedido
-    cursor.execute("""
-        SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota
-        FROM pedido_items pi
-        JOIN productos p ON p.id = pi.producto_id
-        WHERE pi.pedido_id = %s
-        ORDER BY pi.id ASC
-    """, (pedido_id,))
+    has_salsa = table_has_column(cursor, "pedido_items", "salsa_id")
+    
+    if has_salsa:
+        cursor.execute("""
+            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, s.nombre AS salsa
+            FROM pedido_items pi
+            JOIN productos p ON p.id = pi.producto_id
+            LEFT JOIN salsas s ON pi.salsa_id = s.id
+            WHERE pi.pedido_id = %s
+            ORDER BY pi.id ASC
+        """, (pedido_id,))
+    else:
+        cursor.execute("""
+            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, NULL AS salsa
+            FROM pedido_items pi
+            JOIN productos p ON p.id = pi.producto_id
+            WHERE pi.pedido_id = %s
+            ORDER BY pi.id ASC
+        """, (pedido_id,))
+        
     items = cursor.fetchall()
 
-    # 2. Traer los datos generales del pedido (Agregamos fecha y telefono)
-    cursor.execute("SELECT total, fecha, telefono_whatsapp FROM pedidos WHERE id = %s", (pedido_id,))
+    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
     pedido = cursor.fetchone()
 
-    # 3. Preparar variables
-    cliente = pedido.get("telefono_whatsapp") or "Público en general"
-    fecha_str = pedido["fecha"].strftime('%d/%m/%Y %H:%M') if pedido.get("fecha") else "Fecha reciente"
-    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
-
-    # 4. Armar el ticket con el formato estandarizado
     lines = []
-    lines.append(f"🏪 *TICKET DE PEDIDO #{pedido_id}* 🏪\n")
-    lines.append(f"👤 *Cliente:* {cliente}")
-    lines.append(f"📅 *Fecha:* {fecha_str}\n")
-    lines.append("📌 *Detalles del pedido:*")
+    lines.append("¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n")
+
+    subtotal_items = Decimal("0")
 
     for it in items:
         subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
-        lines.append(f'▫️ {it["cantidad"]}x {it["nombre"]} - ${float(subtotal):.2f}')
+        subtotal_items += subtotal
+        
+        lines.append(f'▪️ {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
 
-        # Agregamos los modificadores visualmente tabulados debajo del producto
         if it.get("proteina") and it.get("proteina") != "Sin proteina":
             lines.append(f'   🍳 {it["proteina"]}')
+        if it.get("salsa"):
+            lines.append(f'   🌶️ {it["salsa"]}')
         if it.get("sin"):
             lines.append(f'   🚫 Sin {it["sin"]}')
-        if it.get("nota"):
-            lines.append(f'   📝 {it["nota"]}')
+        
+        nota = it.get("nota")
+        if nota:
+            if "👉 Para:" in nota:
+                nota = nota.replace("👉 Para:", "➕ Extra para:")
+            lines.append(f'   📝 {nota}')
 
-    lines.append(f"\n💰 *Total:* ${float(total):.2f}\n")
-    lines.append("✅ _¡Gracias por tu compra! Conserva este ticket._")
+    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
+    
+    lines.append(f"\nSubtotal: ${float(subtotal_items):.2f}")
+    if subtotal_items != total:
+        descuento = subtotal_items - total
+        lines.append(f"Descuento: -${float(descuento):.2f}")
+        
+    lines.append(f"Total a pagar: ${float(total):.2f}")
 
     return "\n".join(lines)
-
 
 @app.route("/pedido/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
