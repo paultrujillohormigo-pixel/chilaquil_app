@@ -465,6 +465,12 @@ function normaliza(str){
 function productoTieneModificadores(nombre, categoria){
   const cat = normaliza(categoria);
   const nom = normaliza(nombre);
+  
+  // Excepción especial: Si es "agua de sabor", SÍ queremos que pida modificador (el sabor)
+  if (nom.includes("agua de sabor") || nom.includes("aguas de sabor")) {
+    return true;
+  }
+  
   if (NO_MOD_CATEGORIAS.includes(cat)) return false;
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
 }
