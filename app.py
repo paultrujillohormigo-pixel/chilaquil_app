@@ -469,6 +469,7 @@ def nuevo_pedido():
                 mesero = request.form.get("mesero", "")
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
+                mesa = request.form.get("mesa", "Envío/Recoger") # <--- LÍNEA NUEVA
 
                 try:
                     descuento = Decimal(request.form.get("descuento", "0") or "0")
@@ -568,9 +569,10 @@ def nuevo_pedido():
 
                 has_desc = table_has_column(cursor, "pedidos", "descuento")
 
-                cols = ["fecha", "origen", "mesero", "telefono_whatsapp", "metodo_pago", "total", "monto_uber", "neto", "estado"]
-                vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, "abierto"]
-
+                # Busca estas dos líneas y agrégales la mesa al final
+                cols = ["fecha", "origen", "mesero", "telefono_whatsapp", "metodo_pago", "total", "monto_uber", "neto", "estado", "mesa"]
+                vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, "abierto", mesa]
+                
                 if has_desc:
                     cols.insert(6, "descuento")
                     vals.insert(6, descuento)
@@ -1764,6 +1766,26 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
+
+
+
+
+@app.route("/api/pedido/<int:pedido_id>/toggle_cocina", methods=["POST"])
+def toggle_cocina(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Invierte el estado: si era 0 lo hace 1, si era 1 lo hace 0
+            cur.execute("UPDATE pedidos SET entregado_cocina = NOT entregado_cocina WHERE id = %s", (pedido_id,))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        conn.close()
+
+
+
 
 
 # =========================================================
