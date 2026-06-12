@@ -896,11 +896,41 @@ function guardarYEnviarWhatsApp() {
     return;
   }
 
-  // Le avisamos a Python que queremos que mande el WhatsApp al guardar
-  document.getElementById('enviarWaHidden').value = "1";
+  // TRUCO ANTI-BLOQUEO: Abrimos la pestaña en blanco EN EL MOMENTO DEL CLIC
+  const waWindow = window.open('about:blank', '_blank');
   
-  // Enviamos el formulario para que Python haga el trabajo
-  document.getElementById('pedidoForm').submit();
+  // Preparamos los datos del formulario para mandarlos "por detrás"
+  const form = document.getElementById('pedidoForm');
+  const formData = new FormData(form);
+  formData.append('enviar_wa', '1'); // Le avisamos a Python que queremos el link
+
+  // Cambiamos el texto del botón para que el usuario sepa que está cargando
+  const btn = event.currentTarget;
+  btn.innerHTML = "⏳ Guardando...";
+  btn.style.opacity = "0.7";
+  btn.style.pointerEvents = "none";
+
+  // Enviamos los datos a Python usando Fetch (AJAX)
+  fetch(window.location.href, {
+      method: 'POST',
+      body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+      if(data.status === 'success') {
+          // 1. Mandamos la pestaña que abrimos directo a WhatsApp
+          waWindow.location.href = data.wa_link;
+          // 2. Redirigimos nuestra pantalla actual a la vista del pedido
+          window.location.href = data.redirect_url;
+      } else {
+          waWindow.close(); // Cerramos la pestaña si algo falló
+          alert("Hubo un error al guardar el pedido.");
+      }
+  })
+  .catch(err => {
+      waWindow.close();
+      alert("Error de conexión con el servidor.");
+  });
 }
 </script>
 
