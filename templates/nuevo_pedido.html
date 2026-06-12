@@ -886,8 +886,13 @@ function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
-
 function guardarYEnviarWhatsApp() {
+  // Evitar procesar si el carrito está vacío
+  if (Object.keys(carrito).length === 0) { 
+    alert("⚠️ El carrito está vacío. Agrega productos primero."); 
+    return; 
+  }
+
   let telefono = document.getElementById('buscador_cliente').value.trim();
   let numeros = telefono.replace(/\D/g, '');
 
@@ -899,39 +904,53 @@ function guardarYEnviarWhatsApp() {
   // TRUCO ANTI-BLOQUEO: Abrimos la pestaña en blanco EN EL MOMENTO DEL CLIC
   const waWindow = window.open('about:blank', '_blank');
   
-  // Preparamos los datos del formulario para mandarlos "por detrás"
+  // Preparamos los datos
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
-  formData.append('enviar_wa', '1'); // Le avisamos a Python que queremos el link
+  formData.append('enviar_wa', '1');
 
-  // Cambiamos el texto del botón para que el usuario sepa que está cargando
+  // Cambiamos el botón para mostrar que está cargando
   const btn = event.currentTarget;
-  btn.innerHTML = "⏳ Guardando...";
-  btn.style.opacity = "0.7";
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = "⏳ Generando...";
   btn.style.pointerEvents = "none";
 
-  // Enviamos los datos a Python usando Fetch (AJAX)
   fetch(window.location.href, {
       method: 'POST',
       body: formData
   })
-  .then(res => res.json())
+  .then(async res => {
+      // Revisamos si el servidor nos mandó un error de código
+      if (!res.ok) throw new Error("Error interno del servidor (Código " + res.status + ").");
+      
+      // Intentamos leer la respuesta
+      const text = await res.text();
+      try {
+          return JSON.parse(text);
+      } catch(e) {
+          throw new Error("Respuesta inválida. (Tal vez faltó seleccionar un campo obligatorio).");
+      }
+  })
   .then(data => {
-      if(data.status === 'success') {
-          // 1. Mandamos la pestaña que abrimos directo a WhatsApp
+      if(data && data.status === 'success') {
           waWindow.location.href = data.wa_link;
-          // 2. Redirigimos nuestra pantalla actual a la vista del pedido
           window.location.href = data.redirect_url;
       } else {
-          waWindow.close(); // Cerramos la pestaña si algo falló
-          alert("Hubo un error al guardar el pedido.");
+          waWindow.close();
+          btn.innerHTML = textoOriginal;
+          btn.style.pointerEvents = "auto";
+          alert("⚠️ No se pudo generar el enlace de WhatsApp.");
       }
   })
   .catch(err => {
       waWindow.close();
-      alert("Error de conexión con el servidor.");
+      btn.innerHTML = textoOriginal;
+      btn.style.pointerEvents = "auto";
+      console.error(err);
+      alert("❌ " + err.message);
   });
 }
+
 </script>
 
 {% endblock %}
