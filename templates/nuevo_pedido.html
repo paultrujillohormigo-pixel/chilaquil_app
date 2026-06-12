@@ -5,6 +5,8 @@
 
 <form method="post" id="pedidoForm" class="pos-layout">
 
+  <input type="hidden" name="enviar_wa" id="enviarWaHidden" value="0">
+
   <section class="pos-left">
 
     <div class="card">
@@ -890,50 +892,15 @@ function guardarYEnviarWhatsApp() {
   let numeros = telefono.replace(/\D/g, '');
 
   if (numeros.length < 10) {
-    alert("⚠️ Ingresa un teléfono de 10 dígitos en el buscador.");
+    alert("⚠️ Ingresa un teléfono de al menos 10 dígitos para enviar WhatsApp.");
     return;
   }
-  if (numeros.length === 10) numeros = "52" + numeros; 
 
-  let mensaje = "¡Hola! 👋 Aquí tienes el resumen de tu pedido:\n\n";
-  const keys = Object.keys(carrito);
-  if (keys.length === 0) { alert("El carrito está vacío."); return; }
-
-  keys.forEach(uid => {
-    const item = carrito[uid];
-    let precioTotalItem = item.precio;
-    let txtExtras = "";
-    
-    item.custom.extras.forEach(extName => {
-      const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
-      if(target) {
-        precioTotalItem += target.precio;
-        txtExtras += `   ➕ Extra ${target.nombre} (+$${target.precio})\n`;
-      }
-    });
-
-    mensaje += `▪️ ${item.cantidad}x ${item.nombre} ($${(precioTotalItem * item.cantidad).toFixed(2)})\n`;
-    if(item.custom.proteina && item.custom.proteina !== "Sin proteina") mensaje += `   🍳 ${item.custom.proteina}\n`;
-    if(item.custom.salsa) mensaje += `   🌶️ ${item.custom.salsa}\n`;
-    if(txtExtras) mensaje += txtExtras;
-    if(item.custom.sin.length > 0) mensaje += `   🚫 Sin ${item.custom.sin.join(', ')}\n`;
-    if(item.custom.nota) mensaje += `   📝 Nota: ${item.custom.nota}\n`;
-  });
-
-  const subtotal = document.getElementById("subtotalPedido").innerText;
-  const descuento = document.getElementById("descuentoMostrado").innerText;
-  const total = document.getElementById("totalPedido").innerText;
-
-  mensaje += `\nSubtotal: ${subtotal}`;
-  if (descuentoTotal > 0) mensaje += `\nDescuento: ${descuento}`;
-  mensaje += `\nTotal a pagar: ${total}\n`;
+  // Le avisamos a Python que queremos que mande el WhatsApp al guardar
+  document.getElementById('enviarWaHidden').value = "1";
   
-  mensaje += `\n🎁 ¡Con esta compra sumas 1 totopo a tu cuenta! 🌮✨\n`;
-  mensaje += `\nConsulta tus puntos y recompensas aquí:\n👉 https://www.senorchilaquil.com/mi-perfil/${numeros}\n\n`;
-  mensaje += "¡Gracias por tu preferencia! 🍳🔥";
-
-  window.open(`https://api.whatsapp.com/send?phone=${numeros}&text=${encodeURIComponent(mensaje)}`, '_blank');
-  setTimeout(() => { document.getElementById('pedidoForm').submit(); }, 500);
+  // Enviamos el formulario para que Python haga el trabajo
+  document.getElementById('pedidoForm').submit();
 }
 </script>
 
