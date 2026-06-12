@@ -4,21 +4,34 @@
 
 <style>
     .app-header {
-        font-size: 28px; /* Cabecera mucho más grande */
+        font-size: 28px;
         padding: 20px;
         font-weight: bold;
     }
     .card {
-        padding: 20px !important; /* Más espacio interior */
+        padding: 20px !important;
+        position: relative;
     }
     .btn {
-        font-size: 20px !important; /* Botones más grandes y fáciles de leer */
+        font-size: 20px !important;
         padding: 12px !important;
         font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
     }
-    /* Tamaño base para el texto suelto dentro del panel */
     .panel {
         font-size: 20px; 
+    }
+    .timer-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #f1f5f9;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 22px;
+        border: 2px solid #e2e8f0;
     }
 </style>
 
@@ -35,6 +48,10 @@
     {% for p in pedidos %}
     <div class="card" style="border-top: 6px solid #b32417;">
 
+        <div class="timer-badge tiempo-espera" data-fecha="{{ p.fecha }}">
+            ⏳ 0 min
+        </div>
+
         <strong style="font-size: 26px;">Pedido #{{ p.id }}</strong><br>
 
         <small style="color: #666; font-size: 18px;">
@@ -42,8 +59,8 @@
         </small><br><br>
 
         {% if p.mesa %}
-            <span style="background: #eee; padding: 6px 12px; border-radius: 6px; font-size: 22px;">
-                Mesa: <b>{{ p.mesa }}</b>
+            <span style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 6px; font-size: 22px; border: 1px solid #bae6fd;">
+                📍 <b>{{ p.mesa }}</b>
             </span><br><br>
         {% endif %}
 
@@ -51,15 +68,15 @@
         <span style="font-size: 22px;">Total: <strong style="font-size: 28px; color: #25D366;">{{ p.total | money }}</strong></span><br>
 
         {% if p.items_preview %}
-        <div style="margin:16px 0; font-size:22px; color:#333; background: #f9f9f9; padding: 16px; border-radius: 8px; border: 2px solid #eee;">
+        <div style="margin:16px 0; font-size:22px; color:#333; background: #f8fafc; padding: 16px; border-radius: 8px; border: 2px solid #e2e8f0;">
             <strong style="display:block; margin-bottom: 10px; font-size: 20px; color:#b32417;">Resumen de platillos:</strong>
             <ul style="list-style-type: none; padding-left:0; margin:0;">
                 
                 {% for it in p.items_preview %}
-                <li style="margin-bottom: 14px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                <li style="margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px;">
                     <strong style="font-size: 22px;">{{ it.cantidad }} × {{ it.nombre }}</strong>
                     
-                    <div style="font-size: 18px; color: #444; padding-left: 18px; margin-top: 6px; line-height: 1.5;">
+                    <div style="font-size: 18px; color: #475569; padding-left: 18px; margin-top: 6px; line-height: 1.5;">
                         {% if it.salsa %}
                             <div><span style="color:#d97706;">🌶️</span> {{ it.salsa }}</div>
                         {% endif %}
@@ -88,21 +105,23 @@
         {% endif %}
 
         <div style="display:flex; flex-direction:column; gap:12px; margin-top: 16px;">
+            
+            <button type="button" class="btn btn-cocina" 
+                    data-id="{{ p.id }}" 
+                    data-estado="{{ p.entregado_cocina }}" 
+                    style="width:100%; border: none; border-radius: 8px; background: {{ '#10b981' if p.entregado_cocina else '#f59e0b' }}; color: white;">
+                {{ '✅ Entregado' if p.entregado_cocina else '👨‍🍳 Marcar como Entregado' }}
+            </button>
+
             <a href="{{ url_for('ver_pedido', pedido_id=p.id) }}"
                class="btn btn-primary"
-               style="text-align:center;">
-                ➕ Entrar al pedido
+               style="text-align:center; border-radius: 8px;">
+                ✏️ Editar / Ver Ticket
             </a>
 
-            <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}">
-                <button type="submit" class="btn btn-warning" style="width:100%;">
-                    ✅ Cerrar pedido
-                </button>
-            </form>
-
-            <form method="post" action="{{ url_for('eliminar_pedido', pedido_id=p.id) }}" onsubmit="return confirm('¿Eliminar este pedido?')">
-                <button type="submit" class="btn btn-danger" style="width:100%; background: #fff5f5; color: #c53030; border-color: #feb2b2;">
-                    🗑️ Eliminar pedido
+            <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=p.id) }}" style="margin: 0;">
+                <button type="submit" class="btn btn-warning" style="width:100%; border-radius: 8px;">
+                    💰 Cerrar cuenta (Cobrar)
                 </button>
             </form>
         </div>
@@ -121,7 +140,86 @@
 </div>
 
 <script>
-    // Recarga la página cada 3 minutos para mantener los pedidos actualizados
+    /* --- LÓGICA DEL TEMPORIZADOR --- */
+    function actualizarTimers() {
+        document.querySelectorAll('.tiempo-espera').forEach(el => {
+            // Reemplazamos guiones por barras para que Safari/iOS no falle al leer la fecha
+            let fechaStr = el.getAttribute('data-fecha').replace(/-/g, '/'); 
+            let fechaPedido = new Date(fechaStr);
+            let ahora = new Date();
+            
+            let diffMs = ahora - fechaPedido;
+            if(diffMs < 0) diffMs = 0; // Por si hay desajuste de zona horaria
+            
+            let mins = Math.floor(diffMs / 60000);
+            
+            // Cambiar color según el tiempo de espera
+            if (mins < 15) {
+                el.style.color = "#059669"; // Verde (Buen tiempo)
+                el.style.borderColor = "#a7f3d0";
+                el.style.backgroundColor = "#ecfdf5";
+            } else if (mins < 25) {
+                el.style.color = "#d97706"; // Naranja (Atención)
+                el.style.borderColor = "#fde68a";
+                el.style.backgroundColor = "#fffbeb";
+            } else {
+                el.style.color = "#dc2626"; // Rojo (Demorado)
+                el.style.borderColor = "#fecaca";
+                el.style.backgroundColor = "#fef2f2";
+            }
+            
+            el.innerHTML = `⏳ ${mins} min`;
+        });
+    }
+
+    // Actualizar inmediatamente y luego cada 60 segundos
+    actualizarTimers();
+    setInterval(actualizarTimers, 60000);
+
+    /* --- LÓGICA DEL BOTÓN DE COCINA (AJAX) --- */
+    document.querySelectorAll('.btn-cocina').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            let id = this.getAttribute('data-id');
+            let estadoActual = this.getAttribute('data-estado') == '1';
+            
+            // Animación de carga
+            this.innerHTML = "⏳ Guardando...";
+            this.style.opacity = "0.7";
+            this.style.pointerEvents = "none";
+            
+            fetch(`/api/pedido/${id}/toggle_cocina`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                this.style.opacity = "1";
+                this.style.pointerEvents = "auto";
+                
+                if(data.status === 'success') {
+                    let nuevoEstado = !estadoActual;
+                    this.setAttribute('data-estado', nuevoEstado ? '1' : '0');
+                    
+                    if (nuevoEstado) {
+                        this.style.background = "#10b981"; // Verde
+                        this.innerHTML = "✅ Entregado";
+                    } else {
+                        this.style.background = "#f59e0b"; // Naranja
+                        this.innerHTML = "👨‍🍳 Marcar como Entregado";
+                    }
+                } else {
+                    alert("Error al actualizar estado.");
+                    this.innerHTML = estadoActual ? "✅ Entregado" : "👨‍🍳 Marcar como Entregado";
+                }
+            })
+            .catch(err => {
+                alert("Error de conexión.");
+                this.style.opacity = "1";
+                this.style.pointerEvents = "auto";
+                this.innerHTML = estadoActual ? "✅ Entregado" : "👨‍🍳 Marcar como Entregado";
+            });
+        });
+    });
+
+    // Recarga general cada 3 minutos para sincronizar nuevos pedidos
     setTimeout(function() {
         window.location.reload();
     }, 180000); 
