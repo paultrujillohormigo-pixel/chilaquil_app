@@ -602,9 +602,44 @@ def nuevo_pedido():
                         customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                         loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, totopos_int)
 
-                conn.commit()
-                flash(f"Pedido #{pedido_id} creado y abierto", "success")
-                return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+                # ========================================================
+                # NUEVA LÓGICA: INTERCEPTAR "ENVIAR WHATSAPP" DESDE PYTHON
+                # ========================================================
+                enviar_wa = request.form.get("enviar_wa") == "1"
+                
+                if enviar_wa and telefono_e164:
+                    conn.commit() # Guardamos primero para que el ticket pueda leer los datos
+                    
+                    # Armamos el texto centralizado del backend
+                    ticket_text = generar_ticket_texto(pedido_id, cursor)
+                    
+                    # Conseguimos el balance de totopos para el mensaje
+                    balance = 0
+                    if totopos_ganados and int(totopos_ganados) > 0:
+                        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
+                        row_totopos = cursor.fetchone()
+                        if row_totopos: 
+                            balance = row_totopos["totopos_balance"]
+                            
+                    msg_loyalty = loyalty_message(balance, int(totopos_ganados), pedido_id, total_final, telefono_e164)
+                    full_message = ticket_text + "\n\n" + msg_loyalty
+                    wa_link = wa_me_link(telefono_e164, full_message)
+                    
+                    flash(f"Pedido #{pedido_id} creado correctamente.", "success")
+                    
+                    # Truco de magia: Le decimos a la pantalla que abra WhatsApp en una pestaña nueva 
+                    # y que en la pestaña actual nos mande a ver el pedido.
+                    return f"""
+                    <script>
+                        window.open('{wa_link}', '_blank');
+                        window.location.href = '{url_for("ver_pedido", pedido_id=pedido_id)}';
+                    </script>
+                    """
+                else:
+                    # Comportamiento normal si solo le dieron a "Guardar"
+                    conn.commit()
+                    flash(f"Pedido #{pedido_id} creado y abierto", "success")
+                    return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
     finally:
         conn.close()
