@@ -887,12 +887,13 @@ function toggleUberBox(){
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
 function guardarYEnviarWhatsApp() {
-  // Evitar procesar si el carrito está vacío
+  // 1. Evitar procesar si el carrito está vacío
   if (Object.keys(carrito).length === 0) { 
     alert("⚠️ El carrito está vacío. Agrega productos primero."); 
     return; 
   }
 
+  // 2. Validar teléfono
   let telefono = document.getElementById('buscador_cliente').value.trim();
   let numeros = telefono.replace(/\D/g, '');
 
@@ -901,56 +902,60 @@ function guardarYEnviarWhatsApp() {
     return;
   }
 
-  // TRUCO ANTI-BLOQUEO: Abrimos la pestaña en blanco EN EL MOMENTO DEL CLIC
+  // 3. TRUCO ANTI-BLOQUEO: Abrimos la pestaña en blanco
   const waWindow = window.open('about:blank', '_blank');
   
-  // Preparamos los datos
+  // 4. EL FIX MAESTRO: Alteramos el valor del input oculto DIRECTAMENTE
+  document.getElementById('enviarWaHidden').value = "1";
+  
+  // Empaquetamos todo el formulario
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
-  formData.append('enviar_wa', '1');
 
-  // Cambiamos el botón para mostrar que está cargando
+  // 5. Animación de carga en el botón
   const btn = event.currentTarget;
   const textoOriginal = btn.innerHTML;
   btn.innerHTML = "⏳ Generando...";
   btn.style.pointerEvents = "none";
 
+  // 6. Enviamos por debajo del agua
   fetch(window.location.href, {
       method: 'POST',
+      headers: {
+          'Accept': 'application/json' // Le rogamos a Python que nos responda en JSON
+      },
       body: formData
   })
   .then(async res => {
-      // Revisamos si el servidor nos mandó un error de código
-      if (!res.ok) throw new Error("Error interno del servidor (Código " + res.status + ").");
-      
-      // Intentamos leer la respuesta
       const text = await res.text();
       try {
           return JSON.parse(text);
       } catch(e) {
-          throw new Error("Respuesta inválida. (Tal vez faltó seleccionar un campo obligatorio).");
+          console.error("Respuesta cruda del servidor:", text);
+          throw new Error("El servidor devolvió una respuesta no válida (probablemente HTML en vez de JSON). Revisa la consola.");
       }
   })
   .then(data => {
       if(data && data.status === 'success') {
+          // ¡Éxito! Inyectamos la URL a la pestaña y redirigimos
           waWindow.location.href = data.wa_link;
           window.location.href = data.redirect_url;
       } else {
+          // Si Python responde pero sin éxito
           waWindow.close();
           btn.innerHTML = textoOriginal;
           btn.style.pointerEvents = "auto";
-          alert("⚠️ No se pudo generar el enlace de WhatsApp.");
+          alert("⚠️ Hubo un problema al generar el enlace.");
       }
   })
   .catch(err => {
+      // Si falla la red o el parseo
       waWindow.close();
       btn.innerHTML = textoOriginal;
       btn.style.pointerEvents = "auto";
-      console.error(err);
       alert("❌ " + err.message);
   });
 }
-
 </script>
 
 {% endblock %}
