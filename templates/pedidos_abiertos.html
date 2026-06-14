@@ -3,84 +3,71 @@
 {% block content %}
 
 <style>
-    /* Ocultamos el scroll vertical de toda la página */
-    body {
-        overflow: hidden; 
-    }
-    
     .app-header {
         font-size: 24px;
         padding: 15px 20px;
         font-weight: bold;
         background: #fff;
         border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 20px;
     }
 
-    /* CONTENEDOR DE PEDIDOS: Horizontal (De izquierda a derecha) */
+    /* CONTENEDOR DE PEDIDOS: Hacia abajo, pero ocupan todo el ancho */
     .kds-container {
         display: flex;
-        overflow-x: auto;
-        gap: 20px;
-        padding: 20px;
-        height: calc(100vh - 75px); /* Toma el alto de la pantalla */
-        align-items: flex-start;
-        background: #f1f5f9;
+        flex-direction: column;
+        gap: 24px;
+        padding: 0 20px 20px 20px;
     }
 
-    /* TARJETA DEL PEDIDO: Ancho fijo, crece hacia abajo pero tiene su propio scroll */
+    /* TARJETA DEL PEDIDO: 100% de ancho */
     .kds-card {
-        min-width: 380px;
-        max-width: 380px;
         background: #fff;
         border-radius: 12px;
         border-top: 8px solid #b32417;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        max-height: 100%;
-        position: relative;
+        width: 100%;
         transition: opacity 0.5s ease, transform 0.5s ease;
     }
 
     .kds-card-header {
-        padding: 15px;
+        padding: 15px 20px;
         border-bottom: 2px solid #e2e8f0;
         background: #f8fafc;
         border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .timer-badge {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: 8px;
         font-weight: bold;
-        font-size: 18px;
+        font-size: 22px;
         border: 2px solid #e2e8f0;
         background: #fff;
     }
 
-    /* CUERPO DEL PEDIDO: Scroll vertical independiente para cada pedido */
+    /* CUERPO DEL PEDIDO: Cuadrícula horizontal para los platillos */
     .kds-card-body {
-        overflow-y: auto;
-        padding: 15px;
-        flex-grow: 1;
+        padding: 20px;
+        display: grid;
+        /* Esto hace que los platillos se pongan uno al lado del otro automáticamente */
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); 
+        gap: 20px;
     }
-
-    /* Barras de scroll personalizadas para pantallas táctiles */
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
 
     /* ESTILOS DE LOS PLATILLOS Y LISTAS */
     .platillo-box {
-        margin-bottom: 15px;
-        padding: 14px;
+        padding: 16px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         background: #fff;
         transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }
     
     .platillo-box.entregado {
@@ -94,7 +81,7 @@
         padding: 0;
         margin: 12px 0 0 0;
         font-size: 18px;
-        line-height: 1.4;
+        line-height: 1.5;
         color: #334155;
     }
 
@@ -127,22 +114,25 @@
     <div class="kds-card" id="pedido-{{ p.id }}">
 
         <div class="kds-card-header">
+            <div>
+                <strong style="font-size: 24px;">Pedido #{{ p.id }}</strong>
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 6px;">
+                    {% if p.mesa %}
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; font-size: 18px; font-weight: bold;">
+                            📍 {{ p.mesa }}
+                        </span>
+                    {% endif %}
+                    <span style="font-size: 18px; color: #64748b;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</span>
+                </div>
+            </div>
             <div class="timer-badge tiempo-espera" data-fecha="{{ p.fecha }}">⏳ 0 min</div>
-            <strong style="font-size: 24px;">#{{ p.id }}</strong><br>
-            
-            {% if p.mesa %}
-                <span style="display:inline-block; margin-top:8px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 18px; font-weight: bold;">
-                    📍 {{ p.mesa }}
-                </span>
-            {% endif %}
-            <div style="font-size: 16px; color: #64748b; margin-top: 5px;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</div>
         </div>
 
         <div class="kds-card-body">
             {% if p.items_preview %}
                 {% for it in p.items_preview %}
                     
-                    {# Detectamos si este platillo es un extra "suelto" para ocultar su tarjeta principal #}
+                    {# Detectamos si es un extra (ej. Chicharrón para Hotcakes) para ocultar su tarjeta principal #}
                     {% set es_extra = false %}
                     {% if it.notas and 'Para:' in it.notas %}
                         {% set es_extra = true %}
@@ -249,8 +239,8 @@
         let todosListos = Array.from(botones).every(b => b.getAttribute('data-estado') === '1');
         
         if (todosListos && botones.length > 0) {
-            // Animación de desvanecimiento
-            pedidoCard.style.transform = "scale(0.9)";
+            // Animación para desaparecer
+            pedidoCard.style.transform = "scale(0.95)";
             pedidoCard.style.opacity = "0";
             setTimeout(() => {
                 pedidoCard.style.display = "none";
@@ -280,7 +270,6 @@
                     this.setAttribute('data-estado', nuevoEstado ? '1' : '0');
                     
                     if (esSubItem) {
-                        // Extra en la lista (Chicharrón)
                         let liParent = this.closest('.extra-item');
                         let textSpan = liParent.querySelector('span');
                         
@@ -292,7 +281,6 @@
                             liParent.classList.remove('entregado'); textSpan.style.textDecoration = "none";
                         }
                     } else {
-                        // Platillo Principal
                         let boxParent = this.closest('.platillo-box');
                         let textStrong = boxParent.querySelector('.item-title');
                         
@@ -305,7 +293,6 @@
                         }
                     }
 
-                    // Verificamos si ya completamos todos los platillos de esta columna
                     let pedidoCard = this.closest('.kds-card');
                     revisarPedidoCompletado(pedidoCard);
 
@@ -322,7 +309,6 @@
         });
     });
 
-    // Revisión inicial por si la página recarga y un pedido ya estaba listo
     document.querySelectorAll('.kds-card').forEach(card => {
         revisarPedidoCompletado(card);
     });
