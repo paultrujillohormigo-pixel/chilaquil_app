@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from db import get_connection
 from costeo import costeo_bp
 
-
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
@@ -20,25 +19,20 @@ app.register_blueprint(costeo_bp)
 def index():
     return render_template("index.html")
 
-# app.py
-
 @app.route('/menu')
 def menu():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 1. Obtenemos los productos activos ordenados por categoría
             cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
             productos_db = cursor.fetchall()
             
-            # 2. Obtenemos las salsas disponibles
             cursor.execute("SELECT * FROM salsas ORDER BY nombre")
             salsas_db = cursor.fetchall()
             
     finally:
         conn.close()
         
-    # 3. Pásalos a la plantilla
     return render_template('menu.html', productos=productos_db, salsas=salsas_db)
     
 @app.route('/carta')
@@ -91,7 +85,6 @@ def raw_data():
                            pedidos_agrupados=pedidos_agrupados, 
                            meses_disponibles=meses_disponibles, 
                            mes=mes)
-
 
 # =========================================================
 # ================== HELPERS ==============================
@@ -146,30 +139,6 @@ def parse_decimal_mx(val: str | None) -> Decimal | None:
 # =========================================================
 # ================== LOYALTY (TOTOPOS) ====================
 # =========================================================
-
-E = {
-    "title": "*",
-    "receipt": "#",
-    "pay": "$",
-    "check": "OK",
-    "pin": "-",
-    "gift": "*",
-    "drink": "Una bebida gratis",
-    "plate": "Un plato fuerte gratis",
-    "arrow": "->",
-}
-
-BAR_ON = "#"
-BAR_OFF = "-"
-
-def make_bar(balance: int, goal: int) -> str:
-    if goal <= 0:
-        return ""
-    prog = balance % goal
-    if prog == 0 and balance > 0:
-        prog = goal
-    filled = min(prog, goal)
-    return (BAR_ON * filled) + (BAR_OFF * (goal - filled))
 
 def faltan_para(balance: int, goal: int) -> int:
     if goal <= 0:
@@ -226,7 +195,6 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     lines = []
     
     if earned > 0:
-        # \U0001F381 = Regalo 🎁 | \U0001F32E = Taco 🌮 | \u2728 = Destellos ✨
         lines.append(f"\U0001F381 ¡Con esta compra sumas {earned} totopo(s) a tu cuenta! \U0001F32E\u2728")
     else:
         lines.append(f"\U0001F32E Tienes {balance} totopos acumulados en tu cuenta.")
@@ -237,16 +205,12 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
     if f5 == 0 or f10 == 0:
         lines.append("")
         if f10 == 0:
-            # \U0001F31F = Estrella 🌟
             lines.append("\U0001F31F ¡Ya puedes canjear un plato fuerte gratis!")
         elif f5 == 0:
-            # \U0001F964 = Vaso de bebida 🥤
             lines.append("\U0001F964 ¡Ya puedes canjear una bebida gratis!")
 
     lines.append("\nConsulta tus puntos y recompensas aquí:")
-    # \U0001F449 = Dedo apuntando 👉
     lines.append(f"\U0001F449 {url_perfil}\n")
-    # \U0001F525 = Fueguito 🔥
     lines.append("¡Gracias por tu preferencia! \U0001F373\U0001F525")
     
     return "\n".join(lines)
@@ -383,10 +347,7 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
 def pedidos_abiertos():
     conn = get_connection()
     try:
-        # Usamos DictCursor para asegurar que los datos se manden como diccionario al HTML
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            
-            # Verificamos si existe la columna mesa
             has_mesa = table_has_column(cursor, "pedidos", "mesa")
             col_mesa = ", mesa" if has_mesa else ""
 
@@ -398,47 +359,32 @@ def pedidos_abiertos():
             """)
             pedidos = cursor.fetchall()
 
-            # Verificamos si la base de datos tiene la relación con salsas
             has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
+            has_padre_id = table_has_column(cursor, "pedido_items", "item_padre_id")
+            
+            # MAGIA 1: Mandamos el item_padre_id a la vista (si existe)
+            col_padre = "pi.item_padre_id" if has_padre_id else "NULL AS item_padre_id"
+            col_salsa = "s.nombre AS salsa" if has_salsa_id else "NULL AS salsa"
+            join_salsa = "LEFT JOIN salsas s ON pi.salsa_id = s.id" if has_salsa_id else ""
 
             for p in pedidos:
-                if has_salsa_id:
-                    # Hacemos JOIN con 'salsas' para traer el nombre textual de la salsa
-                    # y extraemos el id y el estado 'entregado' de cada platillo
-                    cursor.execute("""
-                        SELECT 
-                            pi.id, 
-                            pr.nombre, 
-                            pi.cantidad, 
-                            pi.proteina, 
-                            pi.sin AS modificadores, 
-                            pi.nota AS notas,
-                            s.nombre AS salsa,
-                            COALESCE(pi.entregado, 0) AS entregado
-                        FROM pedido_items pi
-                        JOIN productos pr ON pr.id = pi.producto_id
-                        LEFT JOIN salsas s ON pi.salsa_id = s.id
-                        WHERE pi.pedido_id = %s
-                        ORDER BY pi.id ASC
-                    """, (p["id"],))
-                else:
-                    cursor.execute("""
-                        SELECT 
-                            pi.id, 
-                            pr.nombre, 
-                            pi.cantidad, 
-                            pi.proteina, 
-                            pi.sin AS modificadores, 
-                            pi.nota AS notas,
-                            NULL AS salsa,
-                            COALESCE(pi.entregado, 0) AS entregado
-                        FROM pedido_items pi
-                        JOIN productos pr ON pr.id = pi.producto_id
-                        WHERE pi.pedido_id = %s
-                        ORDER BY pi.id ASC
-                    """, (p["id"],))
-                
-                # Guardamos todos los items para enviarlos al HTML
+                cursor.execute(f"""
+                    SELECT 
+                        pi.id, 
+                        pr.nombre, 
+                        pi.cantidad, 
+                        pi.proteina, 
+                        pi.sin AS modificadores, 
+                        pi.nota AS notas,
+                        {col_salsa},
+                        COALESCE(pi.entregado, 0) AS entregado,
+                        {col_padre}
+                    FROM pedido_items pi
+                    JOIN productos pr ON pr.id = pi.producto_id
+                    {join_salsa}
+                    WHERE pi.pedido_id = %s
+                    ORDER BY pi.id ASC
+                """, (p["id"],))
                 p["items_preview"] = cursor.fetchall()
     finally:
         conn.close()
@@ -473,14 +419,13 @@ def nuevo_pedido():
                 mesero = request.form.get("mesero", "")
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
-                mesa = request.form.get("mesa", "Envío/Recoger") # <--- LÍNEA NUEVA
+                mesa = request.form.get("mesa", "Envío/Recoger")
 
                 try:
                     descuento = Decimal(request.form.get("descuento", "0") or "0")
                 except Exception:
                     descuento = Decimal("0")
-                if descuento < 0:
-                    descuento = Decimal("0")
+                if descuento < 0: descuento = Decimal("0")
 
                 tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
                 telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
@@ -488,68 +433,51 @@ def nuevo_pedido():
 
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
-
                 proteinas_sel = request.form.getlist("proteina[]")
                 sin_sel = request.form.getlist("sin[]")
                 notas_sel = request.form.getlist("nota[]")
-
                 proteinas_id_sel = request.form.getlist("proteina_id[]")
                 salsas_id_sel = request.form.getlist("salsa_id[]")
+                
+                # Leemos el índice padre temporal del Frontend
+                padre_index_sel = request.form.getlist("padre_index[]")
 
-                def safe_get(lst, i, default=""):
-                    return lst[i] if i < len(lst) else default
-
+                def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
                 def safe_int_or_none(val):
                     v = (val or "").strip()
-                    if not v or v.lower() == "null" or v == "0":
-                        return None
-                    try:
-                        return int(v)
-                    except Exception:
-                        return None
+                    return int(v) if v and v.lower() != "null" and v != "0" and v.isdigit() else None
 
                 total_bruto = Decimal("0")
                 items = []
 
                 for i, prod_id in enumerate(productos_ids):
-                    if not str(prod_id).isdigit():
-                        continue
+                    if not str(prod_id).isdigit(): continue
 
                     cant_raw = safe_get(cantidades, i, "0")
                     cant = int(cant_raw) if str(cant_raw).strip().isdigit() else 0
-                    if cant <= 0:
-                        continue
+                    if cant <= 0: continue
 
                     if table_has_column(cursor, "productos", "precio_uber"):
                         cursor.execute("""
-                            SELECT
-                                CASE
-                                    WHEN %s = 'uber' AND precio_uber IS NOT NULL
-                                        THEN precio_uber
-                                    ELSE precio
-                                END AS precio_final
-                            FROM productos
-                            WHERE id = %s
+                            SELECT CASE
+                                WHEN %s = 'uber' AND precio_uber IS NOT NULL THEN precio_uber
+                                ELSE precio END AS precio_final
+                            FROM productos WHERE id = %s
                         """, (origen, int(prod_id)))
                     else:
-                        cursor.execute("""
-                            SELECT precio AS precio_final
-                            FROM productos
-                            WHERE id=%s
-                        """, (int(prod_id),))
+                        cursor.execute("SELECT precio AS precio_final FROM productos WHERE id=%s", (int(prod_id),))
 
                     row = cursor.fetchone()
-                    if not row or row.get("precio_final") is None:
-                        continue
+                    if not row or row.get("precio_final") is None: continue
 
                     precio_unit = Decimal(str(row["precio_final"]))
                     subtotal = precio_unit * cant
                     total_bruto += subtotal
 
-                    prot_id = safe_int_or_none(safe_get(proteinas_id_sel, i, ""))
-                    salsa_id = safe_int_or_none(safe_get(salsas_id_sel, i, ""))
+                    padre_idx = safe_int_or_none(safe_get(padre_index_sel, i, ""))
 
                     items.append({
+                        "original_index": i,
                         "producto_id": int(prod_id),
                         "cantidad": cant,
                         "precio_unitario": precio_unit,
@@ -557,23 +485,20 @@ def nuevo_pedido():
                         "proteina": safe_get(proteinas_sel, i, ""),
                         "sin": safe_get(sin_sel, i, ""),
                         "nota": safe_get(notas_sel, i, ""),
-                        "proteina_id": prot_id,
-                        "salsa_id": salsa_id,
+                        "proteina_id": safe_int_or_none(safe_get(proteinas_id_sel, i, "")),
+                        "salsa_id": safe_int_or_none(safe_get(salsas_id_sel, i, "")),
+                        "padre_index": padre_idx
                     })
 
                 if not items:
                     flash("No hay productos en el carrito.", "error")
                     return redirect(url_for("nuevo_pedido"))
 
-                if descuento > total_bruto:
-                    descuento = total_bruto
-
+                if descuento > total_bruto: descuento = total_bruto
                 total_final = total_bruto - descuento
                 neto = total_final + monto_uber
 
                 has_desc = table_has_column(cursor, "pedidos", "descuento")
-
-                # Busca estas dos líneas y agrégales la mesa al final
                 cols = ["fecha", "origen", "mesero", "telefono_whatsapp", "metodo_pago", "total", "monto_uber", "neto", "estado", "mesa"]
                 vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, "abierto", mesa]
                 
@@ -589,22 +514,47 @@ def nuevo_pedido():
 
                 has_prot_id = table_has_column(cursor, "pedido_items", "proteina_id")
                 has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
+                has_padre_id = table_has_column(cursor, "pedido_items", "item_padre_id")
 
+                index_to_db_id = {}
+                extras_to_insert = []
+
+                # MAGIA 2: Guardamos PRIMERO los platillos padre y recordamos sus IDs
                 for it in items:
+                    # Es extra si tiene padre_index o temporalmente si su nota dice "Para:" (Compatibilidad hacia atrás)
+                    es_extra = (it["padre_index"] is not None) or ("Para:" in it["nota"])
+
+                    if not es_extra:
+                        cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
+                        vals_it = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
+
+                        if has_prot_id: cols_it.append("proteina_id"); vals_it.append(it["proteina_id"])
+                        if has_salsa_id: cols_it.append("salsa_id"); vals_it.append(it["salsa_id"])
+
+                        placeholders_it = ",".join(["%s"] * len(cols_it))
+                        cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
+                        
+                        # Recordamos el ID real de este platillo
+                        index_to_db_id[it["original_index"]] = cursor.lastrowid
+                    else:
+                        extras_to_insert.append(it)
+
+                # MAGIA 3: Guardamos los EXTRAS y los amarramos al ID real de su padre
+                for it in extras_to_insert:
                     cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
                     vals_it = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
 
-                    if has_prot_id:
-                        cols_it.append("proteina_id")
-                        vals_it.append(it["proteina_id"])
+                    if has_prot_id: cols_it.append("proteina_id"); vals_it.append(it["proteina_id"])
+                    if has_salsa_id: cols_it.append("salsa_id"); vals_it.append(it["salsa_id"])
 
-                    if has_salsa_id:
-                        cols_it.append("salsa_id")
-                        vals_it.append(it["salsa_id"])
+                    if has_padre_id:
+                        db_padre_id = index_to_db_id.get(it["padre_index"]) if it["padre_index"] is not None else None
+                        if db_padre_id:
+                            cols_it.append("item_padre_id")
+                            vals_it.append(db_padre_id)
 
                     placeholders_it = ",".join(["%s"] * len(cols_it))
-                    colsql_it = ",".join(cols_it)
-                    cursor.execute(f"INSERT INTO pedido_items ({colsql_it}) VALUES ({placeholders_it})", tuple(vals_it))
+                    cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
                 
                 if totopos_ganados and str(totopos_ganados).isdigit() and telefono_e164:
                     totopos_int = int(totopos_ganados)
@@ -612,42 +562,29 @@ def nuevo_pedido():
                         customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                         loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, totopos_int)
 
-               # ========================================================
-                # NUEVA LÓGICA: RESPONDER CON JSON PARA EVITAR BLOQUEO
-                # ========================================================
                 enviar_wa = request.form.get("enviar_wa") == "1"
                 
                 if enviar_wa and telefono_e164:
-                    conn.commit() # Guardamos primero
-                    
-                    # Armamos el texto centralizado del backend
+                    conn.commit()
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
                     
-                    # CONVERSIÓN SEGURA DE TOTOPOS: Evita que el servidor colapse si viene vacío
-                    totopos_int = 0
-                    if totopos_ganados and str(totopos_ganados).isdigit():
-                        totopos_int = int(totopos_ganados)
-
-                    # Conseguimos el balance
+                    totopos_int = int(totopos_ganados) if totopos_ganados and str(totopos_ganados).isdigit() else 0
                     balance = 0
                     if totopos_int > 0:
                         cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
                         row_totopos = cursor.fetchone()
-                        if row_totopos: 
-                            balance = row_totopos["totopos_balance"]
+                        if row_totopos: balance = row_totopos["totopos_balance"]
                             
                     msg_loyalty = loyalty_message(balance, totopos_int, pedido_id, total_final, telefono_e164)
                     full_message = ticket_text + "\n\n" + msg_loyalty
                     wa_link = wa_me_link(telefono_e164, full_message)
                     
-                    # Le enviamos las instrucciones a Javascript en formato JSON
                     return jsonify({
                         "status": "success",
                         "wa_link": wa_link,
                         "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
                     })
                 else:
-                    # Comportamiento normal si solo le dieron a "💾 Solo Guardar"
                     conn.commit()
                     flash(f"Pedido #{pedido_id} creado y abierto", "success")
                     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
@@ -656,6 +593,9 @@ def nuevo_pedido():
         conn.close()
 
     return render_template("nuevo_pedido.html", productos=productos, salsas=salsas, proteinas=proteinas)
+
+# (EL RESTO DEL ARCHIVO SE MANTIENE EXACTAMENTE IGUAL A PARTIR DE AQUÍ. 
+# Solo pega tu bloque original de Clientes, Perfil, Borrar, Dashboard, Costeo, etc.)
 
 
 # =========================================================
