@@ -3,74 +3,80 @@
 {% block content %}
 
 <style>
+    /* Ocultamos el scroll vertical de toda la página */
+    body {
+        overflow: hidden; 
+    }
+    
     .app-header {
         font-size: 24px;
         padding: 15px 20px;
         font-weight: bold;
         background: #fff;
         border-bottom: 2px solid #e2e8f0;
-        margin-bottom: 20px;
     }
 
-    /* Contenedor vertical estándar (hacia abajo) */
+    /* CONTENEDOR DE PEDIDOS: Horizontal (De izquierda a derecha) */
     .kds-container {
         display: flex;
-        flex-direction: column;
-        gap: 24px;
-        padding: 0 20px 20px 20px;
+        overflow-x: auto;
+        gap: 20px;
+        padding: 20px;
+        height: calc(100vh - 75px); /* Toma el alto de la pantalla */
+        align-items: flex-start;
+        background: #f1f5f9;
     }
 
-    /* La tarjeta toma el 100% del ancho disponible */
+    /* TARJETA DEL PEDIDO: Ancho fijo, crece hacia abajo pero tiene su propio scroll */
     .kds-card {
+        min-width: 380px;
+        max-width: 380px;
         background: #fff;
         border-radius: 12px;
         border-top: 8px solid #b32417;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        width: 100%;
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
         position: relative;
+        transition: opacity 0.5s ease, transform 0.5s ease;
     }
 
     .kds-card-header {
-        padding: 15px 20px;
+        padding: 15px;
         border-bottom: 2px solid #e2e8f0;
         background: #f8fafc;
         border-radius: 12px 12px 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .header-info {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
     }
 
     .timer-badge {
-        padding: 8px 16px;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        padding: 6px 12px;
         border-radius: 8px;
         font-weight: bold;
-        font-size: 22px;
+        font-size: 18px;
         border: 2px solid #e2e8f0;
         background: #fff;
     }
 
-    /* MAGIA AQUÍ: Divide los platillos en columnas hacia la derecha */
+    /* CUERPO DEL PEDIDO: Scroll vertical independiente para cada pedido */
     .kds-card-body {
-        padding: 20px;
-        column-width: 360px; /* Si hay espacio, crea columnas de 360px */
-        column-gap: 20px;
+        overflow-y: auto;
+        padding: 15px;
+        flex-grow: 1;
     }
 
-    /* El "cuadro" del platillo */
+    /* Barras de scroll personalizadas para pantallas táctiles */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+
+    /* ESTILOS DE LOS PLATILLOS Y LISTAS */
     .platillo-box {
-        break-inside: avoid; /* Evita que el cuadro se parta entre columnas */
-        page-break-inside: avoid;
-        display: inline-block; /* Necesario para que break-inside funcione perfecto */
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 20px;
-        padding: 16px;
+        margin-bottom: 15px;
+        padding: 14px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         background: #fff;
@@ -82,6 +88,32 @@
         background: #f1f5f9;
         border-color: #cbd5e1;
     }
+
+    .item-list {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0 0;
+        font-size: 18px;
+        line-height: 1.4;
+        color: #334155;
+    }
+
+    .item-list li {
+        margin-bottom: 6px;
+    }
+
+    .extra-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed #cbd5e1;
+        background: #f8fafc;
+        padding-left: 8px;
+        padding-right: 8px;
+        border-radius: 6px;
+    }
 </style>
 
 <div class="app-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -92,67 +124,88 @@
 {% if pedidos %}
 <div class="kds-container">
     {% for p in pedidos %}
-    <div class="kds-card">
+    <div class="kds-card" id="pedido-{{ p.id }}">
 
         <div class="kds-card-header">
-            <div class="header-info">
-                <strong style="font-size: 24px;">Pedido #{{ p.id }}</strong>
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    {% if p.mesa %}
-                        <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; font-size: 18px; font-weight: bold;">
-                            📍 {{ p.mesa }}
-                        </span>
-                    {% endif %}
-                    <span style="font-size: 18px; color: #64748b;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</span>
-                </div>
-            </div>
-            
             <div class="timer-badge tiempo-espera" data-fecha="{{ p.fecha }}">⏳ 0 min</div>
+            <strong style="font-size: 24px;">#{{ p.id }}</strong><br>
+            
+            {% if p.mesa %}
+                <span style="display:inline-block; margin-top:8px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 18px; font-weight: bold;">
+                    📍 {{ p.mesa }}
+                </span>
+            {% endif %}
+            <div style="font-size: 16px; color: #64748b; margin-top: 5px;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</div>
         </div>
 
         <div class="kds-card-body">
             {% if p.items_preview %}
                 {% for it in p.items_preview %}
-                <div class="platillo-box {{ 'entregado' if it.entregado else '' }}">
                     
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                        <strong class="item-title" style="font-size: 22px; line-height: 1.2; text-decoration: {{ 'line-through' if it.entregado else 'none' }};">
-                            {{ it.cantidad }}x {{ it.nombre }}
-                        </strong>
-                        
-                        <button type="button" class="btn-item-cocina" 
-                                data-id="{{ it.id }}" 
-                                data-estado="{{ it.entregado }}" 
-                                style="min-width: 90px; padding: 8px; font-size: 16px; font-weight:bold; border-radius: 6px; border:none; cursor: pointer; background: {{ '#10b981' if it.entregado else '#e2e8f0' }}; color: {{ '#fff' if it.entregado else '#334155' }};">
-                            {{ '✅ Listo' if it.entregado else '⏳ Pend' }}
-                        </button>
-                    </div>
-                    
-                    <div style="font-size: 18px; color: #334155; margin-top: 10px; line-height: 1.4;">
-                        {% if it.salsa or it.proteina or it.modificadores or it.extras %}
-                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                👉 
-                                {% if it.salsa %}<b>{{ it.salsa }}</b>{% endif %}
-                                {% if it.proteina %}{% if it.salsa %} - {% endif %}<b>{{ it.proteina }}</b>{% endif %}
-                                
-                                {% if it.modificadores %}
-                                    <span style="color:#dc2626; font-weight: bold;"> (Sin: {{ it.modificadores }})</span>
-                                {% endif %}
-                                
-                                {% if it.extras %}
-                                    <span style="color:#059669; font-weight: bold;"> [+ {{ it.extras }}]</span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                        
-                        {% if it.notas %}
-                            <div style="color: #b32417; font-weight: bold; font-size: 18px; background: #fee2e2; padding: 8px; border-radius: 6px; margin-top: 8px;">
-                                📝 Nota: {{ it.notas }}
-                            </div>
-                        {% endif %}
-                    </div>
+                    {# Detectamos si este platillo es un extra "suelto" para ocultar su tarjeta principal #}
+                    {% set es_extra = false %}
+                    {% if it.notas and 'Para:' in it.notas %}
+                        {% set es_extra = true %}
+                    {% endif %}
 
-                </div>
+                    {% if not es_extra %}
+                    <div class="platillo-box {{ 'entregado' if it.entregado else '' }}">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <strong class="item-title" style="font-size: 20px; line-height: 1.2; text-decoration: {{ 'line-through' if it.entregado else 'none' }};">
+                                {{ it.cantidad }}x {{ it.nombre }}
+                            </strong>
+                            
+                            <button type="button" class="btn-item-cocina" 
+                                    data-id="{{ it.id }}" 
+                                    data-estado="{{ it.entregado }}" 
+                                    style="min-width: 80px; padding: 8px; font-size: 14px; font-weight:bold; border-radius: 6px; border:none; cursor: pointer; background: {{ '#10b981' if it.entregado else '#e2e8f0' }}; color: {{ '#fff' if it.entregado else '#334155' }};">
+                                {{ '✅ Listo' if it.entregado else '⏳ Pend' }}
+                            </button>
+                        </div>
+                        
+                        <ul class="item-list">
+                            {% if it.salsa %}
+                                <li><strong style="color:#059669;">+</strong> {{ it.salsa }}</li>
+                            {% endif %}
+                            
+                            {% if it.proteina %}
+                                <li><strong style="color:#059669;">+</strong> {{ it.proteina }}</li>
+                            {% endif %}
+                            
+                            {% if it.modificadores %}
+                                {% for mod in it.modificadores.split(',') %}
+                                    <li style="color:#dc2626; font-weight: bold;"><strong>-</strong> {{ mod | trim }}</li>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% if it.extras %}
+                                <li><strong style="color:#059669;">+</strong> {{ it.extras }}</li>
+                            {% endif %}
+                            
+                            {% if it.notas and 'Para:' not in it.notas %}
+                                <li style="color: #b32417; font-weight: bold; background: #fee2e2; padding: 4px; border-radius: 4px; margin-top: 6px;">📝 {{ it.notas }}</li>
+                            {% endif %}
+
+                            {% for sub_it in p.items_preview %}
+                                {% if sub_it.notas and ('Para: ' ~ it.nombre) in sub_it.notas %}
+                                    <li class="extra-item {{ 'entregado' if sub_it.entregado else '' }}">
+                                        <span style="font-weight: bold; font-size: 16px; text-decoration: {{ 'line-through' if sub_it.entregado else 'none' }};">
+                                            <strong style="color:#059669;">+</strong> {{ sub_it.cantidad }}x {{ sub_it.nombre }}
+                                        </span>
+                                        <button type="button" class="btn-item-cocina" 
+                                                data-id="{{ sub_it.id }}" 
+                                                data-estado="{{ sub_it.entregado }}" 
+                                                style="padding: 4px 8px; font-size: 14px; font-weight:bold; border-radius: 4px; border:none; cursor: pointer; background: {{ '#10b981' if sub_it.entregado else '#e2e8f0' }}; color: {{ '#fff' if sub_it.entregado else '#334155' }};">
+                                            {{ '✅' if sub_it.entregado else '⏳' }}
+                                        </button>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         </div>
@@ -173,33 +226,37 @@
         document.querySelectorAll('.tiempo-espera').forEach(el => {
             let fechaStr = el.getAttribute('data-fecha').replace(/-/g, '/'); 
             let fechaPedido = new Date(fechaStr);
-            let ahora = new Date();
-            
-            let diffMs = ahora - fechaPedido;
-            if(diffMs < 0) diffMs = 0; 
-            
-            let mins = Math.floor(diffMs / 60000);
+            let diffMs = new Date() - fechaPedido;
+            let mins = Math.floor(Math.max(0, diffMs) / 60000);
             
             if (mins < 15) {
-                el.style.color = "#059669";
-                el.style.borderColor = "#a7f3d0";
-                el.style.backgroundColor = "#ecfdf5";
+                el.style.color = "#059669"; el.style.borderColor = "#a7f3d0"; el.style.backgroundColor = "#ecfdf5";
             } else if (mins < 25) {
-                el.style.color = "#d97706";
-                el.style.borderColor = "#fde68a";
-                el.style.backgroundColor = "#fffbeb";
+                el.style.color = "#d97706"; el.style.borderColor = "#fde68a"; el.style.backgroundColor = "#fffbeb";
             } else {
-                el.style.color = "#dc2626";
-                el.style.borderColor = "#fecaca";
-                el.style.backgroundColor = "#fef2f2";
+                el.style.color = "#dc2626"; el.style.borderColor = "#fecaca"; el.style.backgroundColor = "#fef2f2";
             }
-            
             el.innerHTML = `⏳ ${mins} min`;
         });
     }
 
     actualizarTimers();
     setInterval(actualizarTimers, 60000);
+
+    /* --- LÓGICA DE OCULTAR PEDIDO HORIZONTAL --- */
+    function revisarPedidoCompletado(pedidoCard) {
+        let botones = pedidoCard.querySelectorAll('.btn-item-cocina');
+        let todosListos = Array.from(botones).every(b => b.getAttribute('data-estado') === '1');
+        
+        if (todosListos && botones.length > 0) {
+            // Animación de desvanecimiento
+            pedidoCard.style.transform = "scale(0.9)";
+            pedidoCard.style.opacity = "0";
+            setTimeout(() => {
+                pedidoCard.style.display = "none";
+            }, 500); 
+        }
+    }
 
     /* --- LÓGICA DEL BOTÓN AJAX --- */
     document.querySelectorAll('.btn-item-cocina').forEach(btn => {
@@ -208,6 +265,7 @@
             let id = this.getAttribute('data-id');
             let estadoActual = this.getAttribute('data-estado') == '1';
             let textoOriginal = this.innerHTML;
+            let esSubItem = this.closest('.extra-item') !== null;
             
             this.innerHTML = "⏳...";
             this.style.pointerEvents = "none";
@@ -221,22 +279,36 @@
                     let nuevoEstado = !estadoActual;
                     this.setAttribute('data-estado', nuevoEstado ? '1' : '0');
                     
-                    let boxParent = this.closest('.platillo-box');
-                    let textStrong = boxParent.querySelector('.item-title');
-                    
-                    if (nuevoEstado) {
-                        this.style.background = "#10b981"; 
-                        this.style.color = "#fff";
-                        this.innerHTML = "✅ Listo";
-                        boxParent.classList.add('entregado'); 
-                        textStrong.style.textDecoration = "line-through";
+                    if (esSubItem) {
+                        // Extra en la lista (Chicharrón)
+                        let liParent = this.closest('.extra-item');
+                        let textSpan = liParent.querySelector('span');
+                        
+                        if (nuevoEstado) {
+                            this.style.background = "#10b981"; this.style.color = "#fff"; this.innerHTML = "✅";
+                            liParent.classList.add('entregado'); textSpan.style.textDecoration = "line-through";
+                        } else {
+                            this.style.background = "#e2e8f0"; this.style.color = "#334155"; this.innerHTML = "⏳";
+                            liParent.classList.remove('entregado'); textSpan.style.textDecoration = "none";
+                        }
                     } else {
-                        this.style.background = "#e2e8f0"; 
-                        this.style.color = "#334155";
-                        this.innerHTML = "⏳ Pend";
-                        boxParent.classList.remove('entregado'); 
-                        textStrong.style.textDecoration = "none";
+                        // Platillo Principal
+                        let boxParent = this.closest('.platillo-box');
+                        let textStrong = boxParent.querySelector('.item-title');
+                        
+                        if (nuevoEstado) {
+                            this.style.background = "#10b981"; this.style.color = "#fff"; this.innerHTML = "✅ Listo";
+                            boxParent.classList.add('entregado'); textStrong.style.textDecoration = "line-through";
+                        } else {
+                            this.style.background = "#e2e8f0"; this.style.color = "#334155"; this.innerHTML = "⏳ Pend";
+                            boxParent.classList.remove('entregado'); textStrong.style.textDecoration = "none";
+                        }
                     }
+
+                    // Verificamos si ya completamos todos los platillos de esta columna
+                    let pedidoCard = this.closest('.kds-card');
+                    revisarPedidoCompletado(pedidoCard);
+
                 } else {
                     alert("Error al actualizar platillo.");
                     this.innerHTML = textoOriginal;
@@ -248,6 +320,11 @@
                 this.innerHTML = textoOriginal;
             });
         });
+    });
+
+    // Revisión inicial por si la página recarga y un pedido ya estaba listo
+    document.querySelectorAll('.kds-card').forEach(card => {
+        revisarPedidoCompletado(card);
     });
 
     setTimeout(function() { window.location.reload(); }, 180000); 
