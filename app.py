@@ -440,7 +440,9 @@ def nuevo_pedido():
                 salsas_id_sel = request.form.getlist("salsa_id[]")
                 
                 # Leemos el índice padre temporal del Frontend
-               def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
+                padre_index_sel = request.form.getlist("padre_index[]")
+
+                def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
                 def safe_int_or_none(val):
                     v = (val or "").strip()
                     return int(v) if v and v.lower() != "null" and v != "0" and v.isdigit() else None
@@ -593,10 +595,6 @@ def nuevo_pedido():
         conn.close()
 
     return render_template("nuevo_pedido.html", productos=productos, salsas=salsas, proteinas=proteinas)
-
-# (EL RESTO DEL ARCHIVO SE MANTIENE EXACTAMENTE IGUAL A PARTIR DE AQUÍ. 
-# Solo pega tu bloque original de Clientes, Perfil, Borrar, Dashboard, Costeo, etc.)
-
 
 # =========================================================
 # GESTIÓN DE CLIENTES Y LEALTAD (TOTOPOS)
@@ -1074,10 +1072,6 @@ def productos_set_platillo(producto_id):
         conn.close()
     return redirect(url_for("productos"))
 
-
-# =========================================================
-# ================== COMPRAS ===============================
-# =========================================================
 
 # =========================================================
 # ================== COMPRAS ===============================
