@@ -130,13 +130,13 @@
         <div class="kds-card-body">
             {% if p.items_preview %}
                 
-                {# MAGIA: Creamos un registro para "recordar" qué extras ya asignamos y evitar duplicados #}
-                {% set extras_asignados = namespace(ids=[]) %}
-
                 {% for it in p.items_preview %}
                     
+                    {# PASO 1: Identificar si es un platillo padre (No tiene item_padre_id) #}
                     {% set es_extra = false %}
-                    {% if it.notas and 'Para:' in it.notas %}
+                    {% if it.item_padre_id %}
+                        {% set es_extra = true %}
+                    {% elif it.notas and 'Para:' in it.notas %} {# Respaldo por si hay pedidos viejos guardados #}
                         {% set es_extra = true %}
                     {% endif %}
 
@@ -157,13 +157,8 @@
                         </div>
                         
                         <ul class="item-list">
-                            {% if it.salsa %}
-                                <li><strong style="color:#059669;">+</strong> {{ it.salsa }}</li>
-                            {% endif %}
-                            
-                            {% if it.proteina %}
-                                <li><strong style="color:#059669;">+</strong> {{ it.proteina }}</li>
-                            {% endif %}
+                            {% if it.salsa %}<li><strong style="color:#059669;">+</strong> {{ it.salsa }}</li>{% endif %}
+                            {% if it.proteina %}<li><strong style="color:#059669;">+</strong> {{ it.proteina }}</li>{% endif %}
                             
                             {% if it.modificadores %}
                                 {% for mod in it.modificadores.split(',') %}
@@ -171,36 +166,29 @@
                                 {% endfor %}
                             {% endif %}
                             
-                            {% if it.extras %}
-                                <li><strong style="color:#059669;">+</strong> {{ it.extras }}</li>
-                            {% endif %}
+                            {% if it.extras %}<li><strong style="color:#059669;">+</strong> {{ it.extras }}</li>{% endif %}
                             
                             {% if it.notas and 'Para:' not in it.notas %}
                                 <li style="color: #b32417; font-weight: bold; background: #fee2e2; padding: 4px; border-radius: 4px; margin-top: 6px;">📝 {{ it.notas }}</li>
                             {% endif %}
 
+                            {# ========================================== #}
+                            {# MAGIA FINAL: BUSCAMOS SUS HIJOS EXACTOS    #}
+                            {# (Adiós a las adivinanzas con textos)       #}
+                            {# ========================================== #}
                             {% for sub_it in p.items_preview %}
-                                {% if sub_it.notas and ('Para: ' ~ it.nombre) in sub_it.notas %}
-                                    
-                                    {# Verificamos si este extra en particular ya fue asignado a otro platillo igual #}
-                                    {% if sub_it.id not in extras_asignados.ids %}
-                                        
-                                        <li class="extra-item {{ 'entregado' if sub_it.entregado else '' }}">
-                                            <span style="font-weight: bold; font-size: 16px; text-decoration: {{ 'line-through' if sub_it.entregado else 'none' }};">
-                                                <strong style="color:#059669;">+</strong> {{ sub_it.cantidad }}x {{ sub_it.nombre }}
-                                            </span>
-                                            <button type="button" class="btn-item-cocina" 
-                                                    data-id="{{ sub_it.id }}" 
-                                                    data-estado="{{ sub_it.entregado }}" 
-                                                    style="padding: 4px 8px; font-size: 14px; font-weight:bold; border-radius: 4px; border:none; cursor: pointer; background: {{ '#10b981' if sub_it.entregado else '#e2e8f0' }}; color: {{ '#fff' if sub_it.entregado else '#334155' }};">
-                                                {{ '✅' if sub_it.entregado else '⏳' }}
-                                            </button>
-                                        </li>
-                                        
-                                        {# Registramos este extra como YA asignado #}
-                                        {% set _ = extras_asignados.ids.append(sub_it.id) %}
-                                    {% endif %}
-
+                                {% if sub_it.item_padre_id == it.id %}
+                                    <li class="extra-item {{ 'entregado' if sub_it.entregado else '' }}">
+                                        <span style="font-weight: bold; font-size: 16px; text-decoration: {{ 'line-through' if sub_it.entregado else 'none' }};">
+                                            <strong style="color:#059669;">+</strong> {{ sub_it.cantidad }}x {{ sub_it.nombre }}
+                                        </span>
+                                        <button type="button" class="btn-item-cocina" 
+                                                data-id="{{ sub_it.id }}" 
+                                                data-estado="{{ sub_it.entregado }}" 
+                                                style="padding: 4px 8px; font-size: 14px; font-weight:bold; border-radius: 4px; border:none; cursor: pointer; background: {{ '#10b981' if sub_it.entregado else '#e2e8f0' }}; color: {{ '#fff' if sub_it.entregado else '#334155' }};">
+                                            {{ '✅' if sub_it.entregado else '⏳' }}
+                                        </button>
+                                    </li>
                                 {% endif %}
                             {% endfor %}
                         </ul>
@@ -208,6 +196,25 @@
                     </div>
                     {% endif %}
                 {% endfor %}
+
+                {# Extras sueltos de pedidos viejos (antes de la actualización) para que no desaparezcan #}
+                {% for it in p.items_preview %}
+                    {% if it.notas and 'Para:' in it.notas and not it.item_padre_id %}
+                        <div class="platillo-box {{ 'entregado' if it.entregado else '' }}" style="border-color: #f59e0b; background: #fffbeb;">
+                            <strong style="color: #d97706; font-size: 14px; margin-bottom: 6px;">⚠️ Extra suelto (Pedido Antiguo)</strong>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong class="item-title" style="font-size: 18px; line-height: 1.2; text-decoration: {{ 'line-through' if it.entregado else 'none' }};">
+                                    {{ it.cantidad }}x {{ it.nombre }}
+                                </strong>
+                                <button type="button" class="btn-item-cocina" data-id="{{ it.id }}" data-estado="{{ it.entregado }}" style="min-width: 80px; padding: 6px; font-size: 14px; font-weight:bold; border-radius: 6px; border:none; cursor: pointer; background: {{ '#10b981' if it.entregado else '#e2e8f0' }}; color: {{ '#fff' if it.entregado else '#334155' }};">
+                                    {{ '✅ Listo' if it.entregado else '⏳ Pend' }}
+                                </button>
+                            </div>
+                            <div style="color: #b32417; font-weight: bold; margin-top: 6px; font-size: 16px;">📝 {{ it.notas }}</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
             {% endif %}
         </div>
 
