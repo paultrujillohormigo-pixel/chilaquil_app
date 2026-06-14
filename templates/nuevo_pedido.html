@@ -650,6 +650,9 @@ function renderCarrito(){
   tbody.innerHTML = "";
   hidden.innerHTML = "";
   let subtotalGeneral = 0;
+  
+  // MAGIA AQUI: Creamos un contador para saber en qué posición va cada platillo
+  let currentIndex = 0; 
 
   Object.keys(carrito).forEach(uid => {
     const item = carrito[uid];
@@ -712,7 +715,10 @@ function renderCarrito(){
         notaParaBackend = `🌶️ Mitad y mitad: ${item.custom.salsa} | ` + notaParaBackend;
     }
 
-    // 1. Mandamos el platillo base
+    // Guardamos el número de índice que le toca al platillo principal ("El Papá")
+    const parentIndex = currentIndex;
+
+    // 1. Mandamos el platillo base (Su padre_index va vacío porque él es el jefe)
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
@@ -720,9 +726,11 @@ function renderCarrito(){
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
       <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
       <input type="hidden" name="nota[]" value="${escapeHtml(notaParaBackend)}">
+      <input type="hidden" name="padre_index[]" value=""> 
     `;
+    currentIndex++; // Avanzamos el contador
 
-    // 2. Mandamos Extras separados
+    // 2. Mandamos Extras separados amarrándolos a "El Papá"
     item.custom.extras.forEach(extName => {
       const extraProdId = encontrarProductoExtraId(extName);
       if (extraProdId) {
@@ -733,7 +741,9 @@ function renderCarrito(){
           <input type="hidden" name="salsa_id[]" value="">
           <input type="hidden" name="sin[]" value="">
           <input type="hidden" name="nota[]" value="👉 Para: ${escapeHtml(item.nombre)}">
+          <input type="hidden" name="padre_index[]" value="${parentIndex}">
         `;
+        currentIndex++; // Avanzamos el contador por cada extra
       }
     });
   });
