@@ -3,74 +3,74 @@
 {% block content %}
 
 <style>
-    /* Ocultamos el scroll general de la página para que parezca una app nativa */
-    body {
-        overflow: hidden; 
-    }
     .app-header {
         font-size: 24px;
         padding: 15px 20px;
         font-weight: bold;
         background: #fff;
         border-bottom: 2px solid #e2e8f0;
-    }
-    
-    /* Contenedor principal: Desplazamiento HORIZONTAL */
-    .kds-container {
-        display: flex;
-        overflow-x: auto;
-        gap: 20px;
-        padding: 20px;
-        /* La altura se ajusta a la pantalla menos el header */
-        height: calc(100vh - 80px); 
-        align-items: flex-start;
-        background: #f1f5f9;
+        margin-bottom: 20px;
     }
 
-    /* Tarjeta del pedido: Ancho fijo, altura máxima el 100% de la pantalla */
+    /* Contenedor vertical estándar (hacia abajo) */
+    .kds-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding: 0 20px 20px 20px;
+    }
+
+    /* La tarjeta toma el 100% del ancho disponible */
     .kds-card {
-        min-width: 360px;
-        max-width: 360px;
         background: #fff;
         border-radius: 12px;
         border-top: 8px solid #b32417;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        max-height: 100%;
+        width: 100%;
         position: relative;
     }
 
     .kds-card-header {
-        padding: 15px;
+        padding: 15px 20px;
         border-bottom: 2px solid #e2e8f0;
         background: #f8fafc;
         border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    /* Lista de platillos: Desplazamiento VERTICAL interno si hay muchos */
-    .kds-card-body {
-        overflow-y: auto;
-        padding: 15px;
-        flex-grow: 1;
+    .header-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
     }
 
     .timer-badge {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: 8px;
         font-weight: bold;
-        font-size: 18px;
+        font-size: 22px;
         border: 2px solid #e2e8f0;
         background: #fff;
     }
 
-    /* Estilo del "cuadro" de cada platillo */
+    /* MAGIA AQUÍ: Divide los platillos en columnas hacia la derecha */
+    .kds-card-body {
+        padding: 20px;
+        column-width: 360px; /* Si hay espacio, crea columnas de 360px */
+        column-gap: 20px;
+    }
+
+    /* El "cuadro" del platillo */
     .platillo-box {
-        margin-bottom: 15px;
-        padding: 12px;
+        break-inside: avoid; /* Evita que el cuadro se parta entre columnas */
+        page-break-inside: avoid;
+        display: inline-block; /* Necesario para que break-inside funcione perfecto */
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 20px;
+        padding: 16px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         background: #fff;
@@ -82,11 +82,6 @@
         background: #f1f5f9;
         border-color: #cbd5e1;
     }
-
-    /* Barras de scroll personalizadas para pantallas táctiles */
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
 </style>
 
 <div class="app-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -100,15 +95,19 @@
     <div class="kds-card">
 
         <div class="kds-card-header">
-            <div class="timer-badge tiempo-espera" data-fecha="{{ p.fecha }}">⏳ 0 min</div>
-            <strong style="font-size: 24px;">#{{ p.id }}</strong><br>
+            <div class="header-info">
+                <strong style="font-size: 24px;">Pedido #{{ p.id }}</strong>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if p.mesa %}
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; font-size: 18px; font-weight: bold;">
+                            📍 {{ p.mesa }}
+                        </span>
+                    {% endif %}
+                    <span style="font-size: 18px; color: #64748b;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</span>
+                </div>
+            </div>
             
-            {% if p.mesa %}
-                <span style="display:inline-block; margin-top:8px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 18px; font-weight: bold;">
-                    📍 {{ p.mesa }}
-                </span>
-            {% endif %}
-            <div style="font-size: 16px; color: #64748b; margin-top: 5px;">🧑‍🍳 {{ p.mesero or 'Sin mesero' }}</div>
+            <div class="timer-badge tiempo-espera" data-fecha="{{ p.fecha }}">⏳ 0 min</div>
         </div>
 
         <div class="kds-card-body">
@@ -116,22 +115,22 @@
                 {% for it in p.items_preview %}
                 <div class="platillo-box {{ 'entregado' if it.entregado else '' }}">
                     
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <strong class="item-title" style="font-size: 20px; line-height: 1.2; text-decoration: {{ 'line-through' if it.entregado else 'none' }};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <strong class="item-title" style="font-size: 22px; line-height: 1.2; text-decoration: {{ 'line-through' if it.entregado else 'none' }};">
                             {{ it.cantidad }}x {{ it.nombre }}
                         </strong>
                         
                         <button type="button" class="btn-item-cocina" 
                                 data-id="{{ it.id }}" 
                                 data-estado="{{ it.entregado }}" 
-                                style="min-width: 80px; padding: 8px; font-size: 14px; font-weight:bold; border-radius: 6px; border:none; cursor: pointer; background: {{ '#10b981' if it.entregado else '#e2e8f0' }}; color: {{ '#fff' if it.entregado else '#334155' }};">
+                                style="min-width: 90px; padding: 8px; font-size: 16px; font-weight:bold; border-radius: 6px; border:none; cursor: pointer; background: {{ '#10b981' if it.entregado else '#e2e8f0' }}; color: {{ '#fff' if it.entregado else '#334155' }};">
                             {{ '✅ Listo' if it.entregado else '⏳ Pend' }}
                         </button>
                     </div>
                     
-                    <div style="font-size: 16px; color: #334155; margin-top: 8px; line-height: 1.4;">
+                    <div style="font-size: 18px; color: #334155; margin-top: 10px; line-height: 1.4;">
                         {% if it.salsa or it.proteina or it.modificadores or it.extras %}
-                            <div style="background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
                                 👉 
                                 {% if it.salsa %}<b>{{ it.salsa }}</b>{% endif %}
                                 {% if it.proteina %}{% if it.salsa %} - {% endif %}<b>{{ it.proteina }}</b>{% endif %}
@@ -147,8 +146,8 @@
                         {% endif %}
                         
                         {% if it.notas %}
-                            <div style="color: #b32417; font-weight: bold; font-size: 15px; background: #fee2e2; padding: 6px; border-radius: 4px; margin-top: 6px;">
-                                📝 {{ it.notas }}
+                            <div style="color: #b32417; font-weight: bold; font-size: 18px; background: #fee2e2; padding: 8px; border-radius: 6px; margin-top: 8px;">
+                                📝 Nota: {{ it.notas }}
                             </div>
                         {% endif %}
                     </div>
@@ -202,7 +201,7 @@
     actualizarTimers();
     setInterval(actualizarTimers, 60000);
 
-    /* --- LÓGICA DEL BOTÓN DE COCINA POR PLATILLO (AJAX) --- */
+    /* --- LÓGICA DEL BOTÓN AJAX --- */
     document.querySelectorAll('.btn-item-cocina').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -251,7 +250,6 @@
         });
     });
 
-    // Recarga general cada 3 minutos para asegurar sincronización
     setTimeout(function() { window.location.reload(); }, 180000); 
 </script>
 
