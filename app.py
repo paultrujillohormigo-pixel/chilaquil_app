@@ -440,9 +440,7 @@ def nuevo_pedido():
                 salsas_id_sel = request.form.getlist("salsa_id[]")
                 
                 # Leemos el índice padre temporal del Frontend
-                padre_index_sel = request.form.getlist("padre_index[]")
-
-                def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
+               def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
                 def safe_int_or_none(val):
                     v = (val or "").strip()
                     return int(v) if v and v.lower() != "null" and v != "0" and v.isdigit() else None
@@ -474,7 +472,9 @@ def nuevo_pedido():
                     subtotal = precio_unit * cant
                     total_bruto += subtotal
 
-                    padre_idx = safe_int_or_none(safe_get(padre_index_sel, i, ""))
+                    # CORRECCIÓN: Leemos el índice del padre permitiendo que sea 0
+                    p_idx_raw = safe_get(padre_index_sel, i, "").strip()
+                    padre_idx = int(p_idx_raw) if p_idx_raw.isdigit() else None
 
                     items.append({
                         "original_index": i,
