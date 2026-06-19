@@ -256,18 +256,11 @@
     actualizarTimers();
     setInterval(actualizarTimers, 60000);
 
-    /* --- LÓGICA DE OCULTAR PEDIDO HORIZONTAL --- */
+    /* --- LÓGICA DE OCULTAR PEDIDO HORIZONTAL (DESACTIVADA) --- */
     function revisarPedidoCompletado(pedidoCard) {
-        let botones = pedidoCard.querySelectorAll('.btn-item-cocina');
-        let todosListos = Array.from(botones).every(b => b.getAttribute('data-estado') === '1');
-        
-        if (todosListos && botones.length > 0) {
-            pedidoCard.style.transform = "scale(0.95)";
-            pedidoCard.style.opacity = "0";
-            setTimeout(() => {
-                pedidoCard.style.display = "none";
-            }, 500); 
-        }
+        // Esta función originalmente ocultaba la tarjeta completa. 
+        // Se ha comentado la lógica para que los pedidos se queden en pantalla
+        // aunque todos los platillos estén entregados.
     }
 
     /* --- LÓGICA DEL BOTÓN AJAX --- */
@@ -315,6 +308,8 @@
                         }
                     }
 
+                    // Se sigue llamando por si en el futuro quieres añadir efectos visuales al completar, 
+                    // pero ya no lo oculta.
                     let pedidoCard = this.closest('.kds-card');
                     revisarPedidoCompletado(pedidoCard);
 
