@@ -1,0 +1,121 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-cash-register"></i> Corte de Caja</h2>
+    <hr>
+
+    <form method="GET" action="{{ url_for('corte_caja') }}" class="row g-3 mb-4 align-items-center">
+        <div class="col-auto">
+            <label for="fecha" class="col-form-label">Fecha del Corte:</label>
+        </div>
+        <div class="col-auto">
+            <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-secondary">Ver Resumen</button>
+        </div>
+    </form>
+
+    {% if pedidos_abiertos > 0 %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Tienes {{ pedidos_abiertos }} pedido(s) abierto(s) del día {{ fecha }}. Es recomendable cerrarlos antes de guardar tu corte.
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Resumen del Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush text-end">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <strong>Total Ventas Cerradas:</strong> 
+                            <span>{{ ventas_totales | money }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-success">
+                            <span>Ventas en Efectivo:</span> 
+                            <span>+ {{ efectivo_sistema | money }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-info">
+                            <span>Ventas en Tarjeta:</span> 
+                            <span>+ {{ tarjeta_sistema | money }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-primary">
+                            <span>Ventas por Transferencia:</span> 
+                            <span>+ {{ transferencia_sistema | money }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-secondary">
+                            <span>Otras Plataformas (Uber, etc):</span> 
+                            <span>+ {{ otros_sistema | money }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-danger">
+                            <strong>Gastos Registrados del Día:</strong> 
+                            <span>- {{ total_gastos | money }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Cierre Físico y Cuadre</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('corte_caja', fecha=fecha) }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Fondo de Caja (Con lo que iniciaste el día):</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" class="form-control" name="fondo_caja" 
+                                       value="{{ corte_guardado.fondo_caja if corte_guardado else '0.00' }}">
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 d-flex justify-content-between">
+                            <strong>Efectivo Esperado en Caja:</strong>
+                            <strong class="fs-5">{{ efectivo_esperado | money }}</strong>
+                        </div>
+                        <small class="text-muted d-block mb-3">(Fondo Inicial + Ventas Efectivo - Gastos Registrados)</small>
+
+                        <div class="mb-3">
+                            <label class="form-label text-success fw-bold">Efectivo Físico Real (Billetes y monedas):</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" class="form-control form-control-lg border-success" name="efectivo_fisico" required
+                                       value="{{ corte_guardado.efectivo_fisico if corte_guardado else '' }}"
+                                       placeholder="Cuenta tu caja...">
+                            </div>
+                        </div>
+
+                        {% if corte_guardado %}
+                            {% set dif = corte_guardado.diferencia %}
+                            <div class="alert {% if dif == 0 %}alert-success{% elif dif > 0 %}alert-warning{% else %}alert-danger{% endif %} py-2">
+                                <strong>Diferencia Guardada:</strong> 
+                                {{ dif | money }} 
+                                {% if dif == 0 %}(Caja Cuadrada Perfecta 🎯)
+                                {% elif dif > 0 %}(Sobrante ⬆️)
+                                {% else %}(Faltante ⬇️){% endif %}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Notas / Observaciones:</label>
+                            <textarea class="form-control" name="notas" rows="2" placeholder="Ej. El faltante de $50 fue para propinas...">{{ corte_guardado.notas if corte_guardado else '' }}</textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                {% if corte_guardado %}Actualizar Corte{% else %}Guardar Corte de Caja{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
