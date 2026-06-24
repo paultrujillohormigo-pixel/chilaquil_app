@@ -103,11 +103,14 @@
             <tr>
               <th>Fecha</th>
               <th>Efectivo Real</th>
-              <th style="text-align: right;">Banco Real</th>
+              <th>Banco Real</th>
+              <th style="text-align: right;">Total Real</th>
             </tr>
           </thead>
           <tbody>
             {% for corte in cortes %}
+              {% set total_real = corte.efectivo_fisico + corte.tarjeta_fisico %}
+              {% set total_diferencia = corte.diferencia + corte.diferencia_tarjeta %}
               <tr>
                 <td style="font-weight: 500; font-size: 0.85rem; color:#475569;">{{ corte.fecha }}</td>
                 <td>
@@ -116,10 +119,16 @@
                     Dif: {% if corte.diferencia > 0 %}+{% endif %}{{ corte.diferencia | money }}
                   </small>
                 </td>
-                <td style="text-align: right;">
+                <td>
                   <strong>{{ corte.tarjeta_fisico | money }}</strong><br>
                   <small class="{% if corte.diferencia_tarjeta < 0 %}text-red{% elif corte.diferencia_tarjeta > 0 %}text-blue{% else %}text-green{% endif %}" style="font-weight: 600;">
                     Dif: {% if corte.diferencia_tarjeta > 0 %}+{% endif %}{{ corte.diferencia_tarjeta | money }}
+                  </small>
+                </td>
+                <td style="text-align: right; background-color: #f8fafc;">
+                  <strong style="color: #0f172a;">{{ total_real | money }}</strong><br>
+                  <small class="{% if total_diferencia < 0 %}text-red{% elif total_diferencia > 0 %}text-blue{% else %}text-green{% endif %}" style="font-weight: 700;">
+                    Dif: {% if total_diferencia > 0 %}+{% endif %}{{ total_diferencia | money }}
                   </small>
                 </td>
               </tr>
