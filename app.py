@@ -2296,6 +2296,139 @@ def campanas():
 
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
 
+
+
+# =========================================================
+# ================== CORTE DE CAJA ========================
+# =========================================================
+
+@app.route("/corte_caja", methods=["GET", "POST"])
+def corte_caja():
+    # Obtener la fecha seleccionada del GET, por defecto hoy
+    fecha_str = request.args.get("fecha")
+    if not fecha_str:
+        fecha_str = datetime.now().strftime("%Y-%m-%d")
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            
+            # 1. Verificar si hay pedidos ABIERTOS en esta fecha
+            cursor.execute("""
+                SELECT COUNT(*) as abiertos 
+                FROM pedidos 
+                WHERE DATE(fecha) = %s AND estado = 'abierto'
+            """, (fecha_str,))
+            pedidos_abiertos = cursor.fetchone()["abiertos"]
+
+            # 2. Obtener resumen de ventas del día por método de pago (solo cerrados)
+            cursor.execute("""
+                SELECT COALESCE(metodo_pago, 'Otro') as metodo_pago, SUM(total) as total_ventas 
+                FROM pedidos 
+                WHERE DATE(fecha) = %s AND estado = 'cerrado'
+                GROUP BY metodo_pago
+            """, (fecha_str,))
+            ventas_dia = cursor.fetchall()
+
+            # 3. Obtener el total de gastos (insumos_compras) del día
+            cursor.execute("""
+                SELECT SUM(costo) as total_gastos 
+                FROM insumos_compras 
+                WHERE DATE(fecha) = %s
+            """, (fecha_str,))
+            gastos_row = cursor.fetchone()
+            total_gastos = Decimal(str(gastos_row["total_gastos"] or 0))
+
+            # Organizar variables del sistema
+            ventas_totales = Decimal("0")
+            efectivo_sistema = Decimal("0")
+            tarjeta_sistema = Decimal("0")
+            transferencia_sistema = Decimal("0")
+            otros_sistema = Decimal("0")
+
+            for v in ventas_dia:
+                monto = Decimal(str(v["total_ventas"] or 0))
+                ventas_totales += monto
+                metodo = v["metodo_pago"].lower()
+                
+                if "efectivo" in metodo:
+                    efectivo_sistema += monto
+                elif "tarjeta" in metodo:
+                    tarjeta_sistema += monto
+                elif "transferencia" in metodo:
+                    transferencia_sistema += monto
+                else:
+                    otros_sistema += monto
+
+            # Verificar si ya existe un corte guardado para este día
+            cursor.execute("SELECT * FROM cortes_caja WHERE fecha_corte = %s", (fecha_str,))
+            corte_guardado = cursor.fetchone()
+
+            # --- PROCESAR EL GUARDADO DEL CORTE (POST) ---
+            if request.method == "POST":
+                if pedidos_abiertos > 0:
+                    flash(f"¡Cuidado! Aún tienes {pedidos_abiertos} pedido(s) abierto(s). Ciérralos antes de hacer el corte.", "error")
+                    return redirect(url_for("corte_caja", fecha=fecha_str))
+
+                fondo_caja = parse_decimal_mx(request.form.get("fondo_caja", "0")) or Decimal("0")
+                efectivo_fisico = parse_decimal_mx(request.form.get("efectivo_fisico", "0")) or Decimal("0")
+                notas = request.form.get("notas", "")
+                
+                # Cálculo de diferencia: (Lo que hay físicamente) - (Lo que debería haber)
+                # Lo que debería haber = Fondo Inicial + Ventas en Efectivo - Gastos del Día
+                efectivo_esperado = fondo_caja + efectivo_sistema - total_gastos
+                diferencia = efectivo_fisico - efectivo_esperado
+
+                if corte_guardado:
+                    # Actualizar
+                    cursor.execute("""
+                        UPDATE cortes_caja 
+                        SET fondo_caja=%s, ventas_totales=%s, efectivo_sistema=%s, tarjeta_sistema=%s, 
+                            transferencia_sistema=%s, otros_sistema=%s, gastos_dia=%s, efectivo_fisico=%s, 
+                            diferencia=%s, notas=%s
+                        WHERE fecha_corte=%s
+                    """, (str(fondo_caja), str(ventas_totales), str(efectivo_sistema), str(tarjeta_sistema), 
+                          str(transferencia_sistema), str(otros_sistema), str(total_gastos), str(efectivo_fisico), 
+                          str(diferencia), notas, fecha_str))
+                    flash("Corte de caja actualizado correctamente.", "success")
+                else:
+                    # Insertar
+                    cursor.execute("""
+                        INSERT INTO cortes_caja (fecha_corte, fondo_caja, ventas_totales, efectivo_sistema, 
+                                                 tarjeta_sistema, transferencia_sistema, otros_sistema, 
+                                                 gastos_dia, efectivo_fisico, diferencia, notas)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (fecha_str, str(fondo_caja), str(ventas_totales), str(efectivo_sistema), 
+                          str(tarjeta_sistema), str(transferencia_sistema), str(otros_sistema), 
+                          str(total_gastos), str(efectivo_fisico), str(diferencia), notas))
+                    flash("Corte de caja guardado exitosamente.", "success")
+                
+                conn.commit()
+                return redirect(url_for("corte_caja", fecha=fecha_str))
+
+    finally:
+        conn.close()
+
+    # Calcular efectivo esperado actual para mostrarlo en pantalla
+    fondo_mostrar = Decimal(str(corte_guardado["fondo_caja"])) if corte_guardado else Decimal("0")
+    efectivo_esperado = fondo_mostrar + efectivo_sistema - total_gastos
+
+    return render_template(
+        "corte_caja.html",
+        fecha=fecha_str,
+        pedidos_abiertos=pedidos_abiertos,
+        ventas_totales=ventas_totales,
+        efectivo_sistema=efectivo_sistema,
+        tarjeta_sistema=tarjeta_sistema,
+        transferencia_sistema=transferencia_sistema,
+        otros_sistema=otros_sistema,
+        total_gastos=total_gastos,
+        efectivo_esperado=efectivo_esperado,
+        corte_guardado=corte_guardado
+    )
+
+
+
 # ================== RUN ==================
 if __name__ == "__main__":
     app.run(debug=True)
