@@ -2298,6 +2298,10 @@ def campanas():
 
 
 
+# =========================================================
+# ================== CORTE DE CAJA ========================
+# =========================================================
+
 @app.route("/corte_caja", methods=["GET", "POST"])
 def corte_caja():
     fecha_str = request.args.get("fecha")
@@ -2324,12 +2328,14 @@ def corte_caja():
             """, (fecha_str,))
             ventas_dia = cursor.fetchall()
 
-            # 3. Gastos del día que salieron de la caja (Efectivo)
+            # 3. CORREGIDO: Obtener el TOTAL de gastos de la fecha (sin filtrar por texto 'efectivo')
             cursor.execute("""
-                SELECT SUM(costo) as total_gastos FROM insumos_compras 
-                WHERE DATE(fecha) = %s AND LOWER(tipo_costo) = 'efectivo'
+                SELECT SUM(costo) as total_gastos 
+                FROM insumos_compras 
+                WHERE DATE(fecha) = %s
             """, (fecha_str,))
-            total_gastos = Decimal(str(cursor.fetchone()["total_gastos"] or 0))
+            gastos_row = cursor.fetchone()
+            total_gastos = Decimal(str(gastos_row["total_gastos"] or 0))
 
             # Organizar variables del sistema
             ventas_totales = Decimal("0")
@@ -2352,16 +2358,17 @@ def corte_caja():
                 else:
                     otros_sistema += monto
 
-            # Tarjeta Esperada Sistema = Tarjeta + Transferencia
+            # Banco Esperado Sistema = Tarjeta + Transferencia
             banco_esperado_sistema = tarjeta_sistema + transferencia_sistema
 
+            # Ver si ya existe un corte guardado para hoy
             cursor.execute("SELECT * FROM cortes_caja WHERE fecha_corte = %s", (fecha_str,))
             corte_guardado = cursor.fetchone()
 
-            # --- PROCESAR EL POST ---
+            # --- PROCESAR EL GUARDADO DEL CORTE (POST) ---
             if request.method == "POST":
                 if pedidos_abiertos > 0:
-                    flash(f"¡Cuidado! Hay {pedidos_abiertos} pedido(s) abierto(s).", "error")
+                    flash(f"¡Cuidado! Hay {pedidos_abiertos} pedido(s) abierto(s). Ciérralos primero.", "error")
                     return redirect(url_for("corte_caja", fecha=fecha_str))
 
                 fondo_caja = parse_decimal_mx(request.form.get("fondo_caja", "0")) or Decimal("0")
@@ -2384,7 +2391,7 @@ def corte_caja():
                     """, (str(fondo_caja), str(ventas_totales), str(efectivo_sistema), str(tarjeta_sistema), 
                           str(transferencia_sistema), str(otros_sistema), str(total_gastos), str(efectivo_fisico), 
                           str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas, fecha_str))
-                    flash("Corte de caja actualizado.", "success")
+                    flash("Corte de caja actualizado correctamente.", "success")
                 else:
                     cursor.execute("""
                         INSERT INTO cortes_caja (fecha_corte, fondo_caja, ventas_totales, efectivo_sistema, 
@@ -2394,10 +2401,19 @@ def corte_caja():
                     """, (fecha_str, str(fondo_caja), str(ventas_totales), str(efectivo_sistema), 
                           str(tarjeta_sistema), str(transferencia_sistema), str(otros_sistema), 
                           str(total_gastos), str(efectivo_fisico), str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas))
-                    flash("Corte de caja guardado con éxito.", "success")
+                    flash("Corte de caja guardado exitosamente.", "success")
                 
                 conn.commit()
                 return redirect(url_for("corte_caja", fecha=fecha_str))
+
+            # 4. NUEVO: Traer el historial de los últimos 15 cortes realizados para mostrar abajo
+            cursor.execute("""
+                SELECT fecha_corte AS fecha, fondo_caja, efectivo_fisico, tarjeta_fisico, 
+                       diferencia, diferencia_tarjeta, notas 
+                FROM cortes_caja 
+                ORDER BY fecha_corte DESC LIMIT 15
+            """)
+            historial_cortes = cursor.fetchall()
 
     finally:
         conn.close()
@@ -2417,9 +2433,9 @@ def corte_caja():
         otros_sistema=otros_sistema,
         total_gastos=total_gastos,
         efectivo_esperado=efectivo_esperado,
-        corte_guardado=corte_guardado
+        corte_guardado=corte_guardado,
+        cortes=historial_cortes # Enviamos la lista a la vista
     )
-
 
 # ================== RUN ==================
 if __name__ == "__main__":
