@@ -2298,13 +2298,8 @@ def campanas():
 
 
 
-# =========================================================
-# ================== CORTE DE CAJA ========================
-# =========================================================
-
 @app.route("/corte_caja", methods=["GET", "POST"])
 def corte_caja():
-    # Obtener la fecha seleccionada del GET, por defecto hoy
     fecha_str = request.args.get("fecha")
     if not fecha_str:
         fecha_str = datetime.now().strftime("%Y-%m-%d")
@@ -2313,15 +2308,14 @@ def corte_caja():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             
-            # 1. Verificar si hay pedidos ABIERTOS en esta fecha
+            # 1. Verificar si hay pedidos ABIERTOS
             cursor.execute("""
-                SELECT COUNT(*) as abiertos 
-                FROM pedidos 
+                SELECT COUNT(*) as abiertos FROM pedidos 
                 WHERE DATE(fecha) = %s AND estado = 'abierto'
             """, (fecha_str,))
             pedidos_abiertos = cursor.fetchone()["abiertos"]
 
-            # 2. Obtener resumen de ventas del día por método de pago (solo cerrados)
+            # 2. Resumen de ventas por método de pago (solo cerrados)
             cursor.execute("""
                 SELECT COALESCE(metodo_pago, 'Otro') as metodo_pago, SUM(total) as total_ventas 
                 FROM pedidos 
@@ -2330,14 +2324,12 @@ def corte_caja():
             """, (fecha_str,))
             ventas_dia = cursor.fetchall()
 
-            # 3. Obtener el total de gastos (insumos_compras) del día
+            # 3. Gastos del día que salieron de la caja (Efectivo)
             cursor.execute("""
-                SELECT SUM(costo) as total_gastos 
-                FROM insumos_compras 
-                WHERE DATE(fecha) = %s
+                SELECT SUM(costo) as total_gastos FROM insumos_compras 
+                WHERE DATE(fecha) = %s AND LOWER(tipo_costo) = 'efectivo'
             """, (fecha_str,))
-            gastos_row = cursor.fetchone()
-            total_gastos = Decimal(str(gastos_row["total_gastos"] or 0))
+            total_gastos = Decimal(str(cursor.fetchone()["total_gastos"] or 0))
 
             # Organizar variables del sistema
             ventas_totales = Decimal("0")
@@ -2360,48 +2352,49 @@ def corte_caja():
                 else:
                     otros_sistema += monto
 
-            # Verificar si ya existe un corte guardado para este día
+            # Tarjeta Esperada Sistema = Tarjeta + Transferencia
+            banco_esperado_sistema = tarjeta_sistema + transferencia_sistema
+
             cursor.execute("SELECT * FROM cortes_caja WHERE fecha_corte = %s", (fecha_str,))
             corte_guardado = cursor.fetchone()
 
-            # --- PROCESAR EL GUARDADO DEL CORTE (POST) ---
+            # --- PROCESAR EL POST ---
             if request.method == "POST":
                 if pedidos_abiertos > 0:
-                    flash(f"¡Cuidado! Aún tienes {pedidos_abiertos} pedido(s) abierto(s). Ciérralos antes de hacer el corte.", "error")
+                    flash(f"¡Cuidado! Hay {pedidos_abiertos} pedido(s) abierto(s).", "error")
                     return redirect(url_for("corte_caja", fecha=fecha_str))
 
                 fondo_caja = parse_decimal_mx(request.form.get("fondo_caja", "0")) or Decimal("0")
                 efectivo_fisico = parse_decimal_mx(request.form.get("efectivo_fisico", "0")) or Decimal("0")
+                tarjeta_fisico = parse_decimal_mx(request.form.get("tarjeta_fisico", "0")) or Decimal("0")
                 notas = request.form.get("notas", "")
                 
-                # Cálculo de diferencia: (Lo que hay físicamente) - (Lo que debería haber)
-                # Lo que debería haber = Fondo Inicial + Ventas en Efectivo - Gastos del Día
+                # Cálculos de diferencias
                 efectivo_esperado = fondo_caja + efectivo_sistema - total_gastos
-                diferencia = efectivo_fisico - efectivo_esperado
+                diferencia_efectivo = efectivo_fisico - efectivo_esperado
+                diferencia_tarjeta = tarjeta_fisico - banco_esperado_sistema
 
                 if corte_guardado:
-                    # Actualizar
                     cursor.execute("""
                         UPDATE cortes_caja 
                         SET fondo_caja=%s, ventas_totales=%s, efectivo_sistema=%s, tarjeta_sistema=%s, 
                             transferencia_sistema=%s, otros_sistema=%s, gastos_dia=%s, efectivo_fisico=%s, 
-                            diferencia=%s, notas=%s
+                            tarjeta_fisico=%s, diferencia=%s, diferencia_tarjeta=%s, notas=%s
                         WHERE fecha_corte=%s
                     """, (str(fondo_caja), str(ventas_totales), str(efectivo_sistema), str(tarjeta_sistema), 
                           str(transferencia_sistema), str(otros_sistema), str(total_gastos), str(efectivo_fisico), 
-                          str(diferencia), notas, fecha_str))
-                    flash("Corte de caja actualizado correctamente.", "success")
+                          str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas, fecha_str))
+                    flash("Corte de caja actualizado.", "success")
                 else:
-                    # Insertar
                     cursor.execute("""
                         INSERT INTO cortes_caja (fecha_corte, fondo_caja, ventas_totales, efectivo_sistema, 
                                                  tarjeta_sistema, transferencia_sistema, otros_sistema, 
-                                                 gastos_dia, efectivo_fisico, diferencia, notas)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                                 gastos_dia, efectivo_fisico, tarjeta_fisico, diferencia, diferencia_tarjeta, notas)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (fecha_str, str(fondo_caja), str(ventas_totales), str(efectivo_sistema), 
                           str(tarjeta_sistema), str(transferencia_sistema), str(otros_sistema), 
-                          str(total_gastos), str(efectivo_fisico), str(diferencia), notas))
-                    flash("Corte de caja guardado exitosamente.", "success")
+                          str(total_gastos), str(efectivo_fisico), str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas))
+                    flash("Corte de caja guardado con éxito.", "success")
                 
                 conn.commit()
                 return redirect(url_for("corte_caja", fecha=fecha_str))
@@ -2409,7 +2402,6 @@ def corte_caja():
     finally:
         conn.close()
 
-    # Calcular efectivo esperado actual para mostrarlo en pantalla
     fondo_mostrar = Decimal(str(corte_guardado["fondo_caja"])) if corte_guardado else Decimal("0")
     efectivo_esperado = fondo_mostrar + efectivo_sistema - total_gastos
 
@@ -2421,12 +2413,12 @@ def corte_caja():
         efectivo_sistema=efectivo_sistema,
         tarjeta_sistema=tarjeta_sistema,
         transferencia_sistema=transferencia_sistema,
+        banco_esperado_sistema=banco_esperado_sistema,
         otros_sistema=otros_sistema,
         total_gastos=total_gastos,
         efectivo_esperado=efectivo_esperado,
         corte_guardado=corte_guardado
     )
-
 
 
 # ================== RUN ==================
