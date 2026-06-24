@@ -1,121 +1,264 @@
-{% extends "base.html" %} {% block content %}
-<div class="container mt-4">
-    <h2><i class="fas fa-cash-register"></i> Corte de Caja</h2>
-    <hr>
+{% extends "base.html" %}
+{% block content %}
 
-    <form method="GET" action="{{ url_for('corte_caja') }}" class="row g-3 mb-4 align-items-center">
-        <div class="col-auto">
-            <label for="fecha" class="col-form-label">Fecha del Corte:</label>
+<header class="mobile-header">
+  <button id="menuBtn">☰</button>
+  <h2>Cierre de Caja</h2>
+</header>
+
+<nav id="mobileMenu" class="mobile-menu">
+  <a href="#">Dashboard</a>
+  <a href="#">Inventario</a>
+  <a href="#">Compras</a>
+  <a href="#">Corte de Caja</a>
+</nav>
+
+<div class="layout">
+
+  <div class="dashboard-grid">
+    <div class="kpi-card">
+      <span class="kpi-label">💰 Fondo de Caja</span>
+      <strong class="kpi-value text-blue">{{ fondo_caja | money }}</strong>
+    </div>
+    
+    <div class="kpi-card">
+      <span class="kpi-label">📈 Ventas en Efectivo</span>
+      <strong class="kpi-value text-green">+ {{ ventas_efectivo | money }}</strong>
+    </div>
+    
+    <div class="kpi-card">
+      <span class="kpi-label">📉 Gastos / Compras (Efectivo)</span>
+      <strong class="kpi-value text-red">- {{ total_gastos | money }}</strong>
+    </div>
+
+    <div class="kpi-card total-card">
+      <span class="kpi-label">🧮 Efectivo Esperado en Caja</span>
+      <strong class="kpi-value">{{ efectivo_esperado | money }}</strong>
+      <small class="kpi-hint">Fondo + Ventas - Gastos</small>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="card-title">Registar Efectivo Real</div>
+    
+    <form method="post" id="corteForm" class="form-container">
+      
+      <div class="input-grid">
+        <div>
+          <label class="form-label">Fecha del Corte</label>
+          <input type="date" name="fecha" id="fechaCorte" class="form-input" required>
         </div>
-        <div class="col-auto">
-            <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha }}">
+        
+        <div>
+          <label class="form-label">Efectivo Real en Caja ($)</label>
+          <input type="number" name="efectivo_real" id="efectivoReal" class="form-input efectivo-input" placeholder="0.00" step="0.01" required>
         </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-secondary">Ver Resumen</button>
-        </div>
+      </div>
+
+      <div id="statusBox" class="status-box box-neutral mt-3">
+        Introduce el efectivo real para calcular la diferencia.
+      </div>
+
+      <button type="submit" class="cta-button">Guardar y Cerrar Caja</button>
     </form>
+  </div>
 
-    {% if pedidos_abiertos > 0 %}
-    <div class="alert alert-warning">
-        <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Tienes {{ pedidos_abiertos }} pedido(s) abierto(s) del día {{ fecha }}. Es recomendable cerrarlos antes de guardar tu corte.
-    </div>
+  <div class="form-card mt-4">
+    <div class="card-title" style="border:none; margin-bottom:0;">Historial de Cortes</div>
+    {% if cortes %}
+      <div class="table-responsive">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Esperado</th>
+              <th>Real</th>
+              <th style="text-align: right;">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for corte in cortes %}
+              <tr>
+                <td>{{ corte.fecha }}</td>
+                <td>{{ corte.efectivo_esperado | money }}</td>
+                <td>{{ corte.efectivo_real | money }}</td>
+                <td style="text-align: right; font-weight: bold;" class="{% if corte.diferencia < 0 %}text-red{% elif corte.diferencia > 0 %}text-blue{% else %}text-green{% endif %}">
+                  {{ corte.diferencia | money }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: #777; font-size: 0.9rem; margin-top: 10px;">No hay registros de cortes anteriores.</p>
     {% endif %}
+  </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Resumen del Sistema</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush text-end">
-                        <li class="list-group-item d-flex justify-content-between">
-                            <strong>Total Ventas Cerradas:</strong> 
-                            <span>{{ ventas_totales | money }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between text-success">
-                            <span>Ventas en Efectivo:</span> 
-                            <span>+ {{ efectivo_sistema | money }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between text-info">
-                            <span>Ventas en Tarjeta:</span> 
-                            <span>+ {{ tarjeta_sistema | money }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between text-primary">
-                            <span>Ventas por Transferencia:</span> 
-                            <span>+ {{ transferencia_sistema | money }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between text-secondary">
-                            <span>Otras Plataformas (Uber, etc):</span> 
-                            <span>+ {{ otros_sistema | money }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between text-danger">
-                            <strong>Gastos Registrados del Día:</strong> 
-                            <span>- {{ total_gastos | money }}</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100 border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Cierre Físico y Cuadre</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('corte_caja', fecha=fecha) }}">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Fondo de Caja (Con lo que iniciaste el día):</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" step="0.01" class="form-control" name="fondo_caja" 
-                                       value="{{ corte_guardado.fondo_caja if corte_guardado else '0.00' }}">
-                            </div>
-                        </div>
-
-                        <div class="alert alert-info py-2 d-flex justify-content-between">
-                            <strong>Efectivo Esperado en Caja:</strong>
-                            <strong class="fs-5">{{ efectivo_esperado | money }}</strong>
-                        </div>
-                        <small class="text-muted d-block mb-3">(Fondo Inicial + Ventas Efectivo - Gastos Registrados)</small>
-
-                        <div class="mb-3">
-                            <label class="form-label text-success fw-bold">Efectivo Físico Real (Billetes y monedas):</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" step="0.01" class="form-control form-control-lg border-success" name="efectivo_fisico" required
-                                       value="{{ corte_guardado.efectivo_fisico if corte_guardado else '' }}"
-                                       placeholder="Cuenta tu caja...">
-                            </div>
-                        </div>
-
-                        {% if corte_guardado %}
-                            {% set dif = corte_guardado.diferencia %}
-                            <div class="alert {% if dif == 0 %}alert-success{% elif dif > 0 %}alert-warning{% else %}alert-danger{% endif %} py-2">
-                                <strong>Diferencia Guardada:</strong> 
-                                {{ dif | money }} 
-                                {% if dif == 0 %}(Caja Cuadrada Perfecta 🎯)
-                                {% elif dif > 0 %}(Sobrante ⬆️)
-                                {% else %}(Faltante ⬇️){% endif %}
-                            </div>
-                        {% endif %}
-
-                        <div class="mb-3">
-                            <label class="form-label">Notas / Observaciones:</label>
-                            <textarea class="form-control" name="notas" rows="2" placeholder="Ej. El faltante de $50 fue para propinas...">{{ corte_guardado.notas if corte_guardado else '' }}</textarea>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                {% if corte_guardado %}Actualizar Corte{% else %}Guardar Corte de Caja{% endif %}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+
+<style>
+/* SISTEMA DE DISEÑO UNIFICADO */
+:root {
+  --primary: #b32417;
+  --primary-hover: #8e1c12;
+  --bg-color: #f4f6f8;
+  --card-bg: #ffffff;
+  --border: #e2e8f0;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --radius: 12px;
+}
+
+body { 
+  background: var(--bg-color); 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+  color: var(--text-main); 
+  margin: 0; 
+  padding-bottom: 80px; 
+}
+
+* { box-sizing: border-box; }
+
+/* HEADER & NAV */
+.mobile-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.mobile-header h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); }
+#menuBtn { font-size: 24px; border: none; background: none; cursor: pointer; color: var(--text-main); padding: 0; }
+.mobile-menu { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: var(--card-bg); padding: 20px; display: flex; flex-direction: column; gap: 15px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+.mobile-menu.active { left: 0; }
+
+.layout { padding: 15px; max-width: 800px; margin: 0 auto; }
+
+/* GRID DE TARJETAS INDICADORAS (KPIs) */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.kpi-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 15px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+}
+.kpi-label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
+.kpi-value { font-size: 1.2rem; font-weight: 700; }
+
+/* Estilos de colores para los indicadores */
+.text-green { color: #10b981; }
+.text-red { color: #ef4444; }
+.text-blue { color: #3b82f6; }
+
+/* Tarjeta Destacada de Efectivo Esperado */
+.total-card {
+  grid-column: 1 / -1; /* Ocupa todo el ancho */
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  text-align: center;
+  padding: 20px;
+}
+.total-card .kpi-label { color: #94a3b8; }
+.total-card .kpi-value { font-size: 1.8rem; color: #ffffff; margin: 2px 0; }
+.kpi-hint { font-size: 0.75rem; color: #64748b; }
+
+/* CONTENEDOR DE FORMULARIO */
+.form-card { 
+  background: var(--card-bg); 
+  border-radius: var(--radius); 
+  padding: 20px; 
+  margin-bottom: 15px; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+  border: 1px solid var(--border); 
+}
+.card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+/* INPUTS */
+.input-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+.form-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+.form-input { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 8px; transition: border 0.2s; background: #fff; }
+.form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(179,36,23,0.1); }
+.efectivo-input { font-size: 1.4rem; font-weight: bold; color: #0f172a; text-align: center; }
+
+/* CAJA DE STATUS DINÁMICO */
+.status-box { padding: 12px; border-radius: 8px; text-align: center; font-size: 0.95rem; font-weight: 500; transition: 0.2s; }
+.box-neutral { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; }
+.box-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.box-danger { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+
+/* BOTÓN CTA */
+.cta-button { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 6px rgba(179,36,23,0.2); margin-top: 15px; }
+.cta-button:hover { background: var(--primary-hover); }
+
+/* TABLAS */
+.table-responsive { overflow-x: auto; }
+.modern-table { width: 100%; border-collapse: collapse; }
+.modern-table th { background: #f8fafc; padding: 10px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border); text-align: left; }
+.modern-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+
+/* RESPONSIVE TABLET/PC */
+.mt-3 { margin-top: 15px; } .mt-4 { margin-top: 25px; }
+@media(min-width: 768px) {
+  .dashboard-grid { grid-template-columns: repeat(3, 1fr); }
+  .total-card { grid-column: span 3; }
+  .input-grid { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width: 767px) {
+  .cta-button { position: fixed; bottom: 0; left: 0; border-radius: 0; z-index: 90; margin-top: 0; }
+  .form-container { padding-bottom: 45px; }
+}
+</style>
+
+<script>
+function qs(id){ return document.getElementById(id); }
+
+/* AUTO-SELECCIONAR FECHA DE HOY */
+const hoy = new Date();
+const offset = hoy.getTimezoneOffset() * 60000;
+const localISOTime = (new Date(hoy - offset)).toISOString().split('T')[0];
+qs("fechaCorte").value = localISOTime;
+
+/* MENÚ MÓVIL */
+qs("menuBtn").addEventListener("click", () => {
+  qs("mobileMenu").classList.toggle("active");
+});
+
+/* JAVASCRIPT DINÁMICO: CÁLCULO DE DIFERENCIA EN TIEMPO REAL */
+// Pasamos el valor esperado desde Flask/Python de forma segura
+const efectivoEsperado = parseFloat("{{ efectivo_esperado }}") || 0;
+const efectivoRealInput = qs("efectivoReal");
+const statusBox = qs("statusBox");
+
+efectivoRealInput.addEventListener("input", () => {
+  const real = parseFloat(efectivoRealInput.value);
+  
+  if (isNaN(real)) {
+    statusBox.className = "status-box box-neutral mt-3";
+    statusBox.innerHTML = "Introduce el efectivo real para calcular la diferencia.";
+    return;
+  }
+  
+  const diferencia = real - efectivoEsperado;
+  
+  if (Math.abs(diferencia) < 0.01) {
+    statusBox.className = "status-box box-success mt-3";
+    statusBox.innerHTML = "🎉 <strong>¡Caja Cuadrada!</strong> Todo coincide perfectamente.";
+  } else if (diferencia < 0) {
+    statusBox.className = "status-box box-danger mt-3";
+    statusBox.innerHTML = "⚠️ <strong>Faltante en caja:</strong> -$ " + Math.abs(diferencia).toFixed(2);
+  } else {
+    statusBox.className = "status-box box-neutral mt-3"; // O cambia a color azul si quieres las sobras
+    statusBox.style.background = "#eff6ff"; 
+    statusBox.style.borderColor = "#bfdbfe";
+    statusBox.style.color = "#1e40af";
+    statusBox.innerHTML = "ℹ️ <strong>Sobrante en caja:</strong> +$ " + diferencia.toFixed(2);
+  }
+});
+</script>
+
 {% endblock %}
