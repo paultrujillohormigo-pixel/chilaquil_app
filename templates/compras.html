@@ -16,7 +16,12 @@
   <form method="post" id="compraForm" class="form-container">
     
     <div class="form-card">
-      <div class="card-title">1. ¿Qué compraste?</div>
+      <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span>1. ¿Qué compraste?</span>
+        <div class="search-container">
+          <input type="text" id="buscadorItems" class="form-input search-input" placeholder="🔍 Buscar insumo o gasto...">
+        </div>
+      </div>
       
       <div class="cards-grid" id="itemsGrid">
         {% for ins in insumos %}
@@ -30,7 +35,7 @@
             <span class="badge badge-insumo">Insumo ({{ ins.unidad_base }})</span>
           </div>
           <button type="button" class="btn-delete" title="Ocultar insumo"
-                  onclick="event.stopPropagation(); if(confirm('¿Desactivar {{ ins.nombre }}?')) { qs('delInsumoId').value='{{ ins.id }}'; qs('delInsumoForm').submit(); }">
+                  onclick="event.stopPropagation(); if(confirm('¿Desactivar el insumo \'{{ ins.nombre }}\'?\n\nEsto lo ocultará de tu lista de opciones.')) { qs('delInsumoId').value='{{ ins.id }}'; qs('delInsumoForm').submit(); }">
             🗑️
           </button>
         </div>
@@ -47,7 +52,7 @@
             <span class="badge badge-gasto">Gasto / Otro</span>
           </div>
           <button type="button" class="btn-delete" title="Ocultar concepto"
-                  onclick="event.stopPropagation(); if(confirm('¿Ocultar {{ concepto }}?')) { qs('delConceptoVal').value='{{ concepto }}'; qs('delConceptoForm').submit(); }">
+                  onclick="event.stopPropagation(); if(confirm('¿Ocultar el concepto \'{{ concepto }}\'?\n\nDesaparecerá de esta lista rápida, pero tus finanzas quedarán intactas.')) { qs('delConceptoVal').value='{{ concepto }}'; qs('delConceptoForm').submit(); }">
             🗑️
           </button>
         </div>
@@ -63,7 +68,7 @@
 
       <div id="nuevoConceptoWrap" class="mt-3" style="display:none;">
         <label class="form-label">Escribe el nuevo concepto:</label>
-        <input type="text" id="nuevoConceptoTxt" class="form-input" placeholder="Ej. Escobas, Papelería, Reparación...">
+        <input type="text" id="nuevoConceptoTxt" class="form-input" placeholder="Ej. Escobas, Papelería, Reparación de fuga...">
       </div>
     </div>
 
@@ -94,7 +99,7 @@
       </div>
 
       <div class="unit-cost-box mt-3" id="cajaCostoUnitario" style="display: none;">
-        Costo por unidad: <strong id="costoUnitarioTxt">$0.00</strong>
+        Costo estimado por unidad: <strong id="costoUnitarioTxt">$0.00</strong>
       </div>
     </div>
 
@@ -102,20 +107,20 @@
       <div class="card-title">3. Detalles del ticket</div>
       <div class="input-grid">
         <div>
-          <label class="form-label">Fecha</label>
+          <label class="form-label">Fecha de compra</label>
           <input type="date" name="fecha" id="fechaInput" class="form-input" required>
         </div>
         <div>
-          <label class="form-label">Categoría</label>
+          <label class="form-label">Categoría de Gasto</label>
           <select name="tipo_costo" id="tipoCostoSelect" class="form-input" required>
             <option value="insumos">Insumos (Materia prima)</option>
             <option value="operativo">Operativo (Limpieza, empaques)</option>
-            <option value="servicios">Servicios (Luz, Agua, Gas)</option>
+            <option value="servicios">Servicios (Luz, Agua, Gas, Internet)</option>
           </select>
         </div>
         <div style="grid-column: 1 / -1;">
           <label class="form-label">Lugar de compra / Proveedor</label>
-          <input type="text" name="lugar" class="form-input" placeholder="Ej. Mercado, Costco, Sams..." required>
+          <input type="text" name="lugar" class="form-input" placeholder="Ej. Mercado Central, Costco, Sams, Proveedor de carnes..." required>
         </div>
       </div>
     </div>
@@ -132,14 +137,14 @@
   </form>
 
   <div class="form-card mt-4">
-    <h3 style="margin-top:0; font-size: 1.1rem; color:#444;">Historial de Hoy</h3>
+    <h3 style="margin-top:0; font-size: 1.1rem; color:#444;">Historial Reciente</h3>
     {% if compras %}
       <div class="table-responsive">
         <table class="modern-table">
           <thead>
             <tr>
               <th>Fecha</th>
-              <th>Concepto</th>
+              <th>Concepto / Lugar</th>
               <th style="text-align: right;">Costo</th>
             </tr>
           </thead>
@@ -147,15 +152,18 @@
             {% for c in compras %}
               <tr>
                 <td>{{ c.fecha }}</td>
-                <td>{{ c.concepto }} <br><small style="color:#888">{{ c.lugar }}</small></td>
-                <td style="text-align: right; font-weight: bold;">{{ c.costo | money }}</td>
+                <td>
+                  <strong>{{ c.concepto }}</strong>
+                  {% if c.lugar %}<br><small style="color:#777;">📍 {{ c.lugar }}</small>{% endif %}
+                </td>
+                <td style="text-align: right; font-weight: bold; color: #1e293b;">{{ c.costo | money }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <p style="color: #777; font-size: 0.9rem;">No has registrado compras todavía.</p>
+      <p style="color: #777; font-size: 0.9rem; margin: 0;">No has registrado compras todavía en este periodo.</p>
     {% endif %}
   </div>
 
@@ -169,7 +177,7 @@
 </form>
 
 <style>
-/* VARIABLES Y RESET */
+/* SISTEMA DE DISEÑO */
 :root {
   --primary: #b32417;
   --primary-hover: #8e1c12;
@@ -180,38 +188,111 @@
   --text-muted: #64748b;
   --radius: 12px;
 }
-body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text-main); margin: 0; padding-bottom: 80px; }
+
+body { 
+  background: var(--bg-color); 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+  color: var(--text-main); 
+  margin: 0; 
+  padding-bottom: 80px; 
+}
+
 * { box-sizing: border-box; }
 
-/* HEADER & MENU */
-.mobile-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+/* MENÚ Y CORRECCIONES MÓVILES */
+.mobile-header { 
+  display: flex; 
+  align-items: center; 
+  gap: 15px; 
+  padding: 15px 20px; 
+  background: var(--card-bg); 
+  border-bottom: 1px solid var(--border); 
+  position: sticky; 
+  top: 0; 
+  z-index: 100; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+}
 .mobile-header h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); }
 #menuBtn { font-size: 24px; border: none; background: none; cursor: pointer; color: var(--text-main); padding: 0; }
-.mobile-menu { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: var(--card-bg); padding: 20px; display: flex; flex-direction: column; gap: 15px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+
+.mobile-menu { 
+  position: fixed; 
+  top: 0; 
+  left: -100%; 
+  width: 280px; 
+  height: 100%; 
+  background: var(--card-bg); 
+  padding: 20px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 15px; 
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  z-index: 1000; 
+  box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
+}
 .mobile-menu.active { left: 0; }
 
-/* LAYOUT & CARDS */
+/* DISEÑO DE CONTENEDORES */
 .layout { padding: 15px; max-width: 800px; margin: 0 auto; }
-.form-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid var(--border); }
-.card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-.mt-3 { margin-top: 15px; } .mt-4 { margin-top: 25px; } .text-center { text-align: center; }
+.form-card { 
+  background: var(--card-bg); 
+  border-radius: var(--radius); 
+  padding: 20px; 
+  margin-bottom: 15px; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+  border: 1px solid var(--border); 
+}
+.card-title { 
+  font-weight: 600; 
+  font-size: 1.1rem; 
+  margin-bottom: 15px; 
+  color: var(--text-main); 
+  border-bottom: 1px solid var(--border); 
+  padding-bottom: 10px; 
+}
 
-/* CARDS DE CONCEPTOS (PASO 1) */
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding-right: 5px; }
-.item-card { position: relative; border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; background: #fff; display: flex; flex-direction: column; justify-content: center; min-height: 70px; }
+/* BUSCADOR */
+.search-container { width: 100%; max-width: 250px; }
+.search-input { padding: 6px 12px !important; font-size: 0.9rem !important; border-radius: 20px !important; }
+
+/* GRID DE OPCIONES (PASO 1) */
+.cards-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+  gap: 10px; 
+  max-height: 250px; 
+  overflow-y: auto; 
+  padding-right: 5px; 
+}
+.item-card { 
+  position: relative; 
+  border: 1px solid var(--border); 
+  border-radius: 8px; 
+  padding: 12px; 
+  cursor: pointer; 
+  transition: all 0.2s; 
+  background: #fff; 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  min-height: 70px; 
+}
 .item-card:hover { border-color: #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .item-card.active { border-color: var(--primary); background: #fef2f2; box-shadow: 0 0 0 1px var(--primary); }
 .item-info { display: flex; flex-direction: column; gap: 4px; }
 .item-info strong { font-size: 0.9rem; line-height: 1.2; }
-.badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; width: fit-content; }
+
+/* BADGES DE ESTADO */
+.badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; width: fit-content; font-weight: 500; }
 .badge-insumo { background: #e0f2fe; color: #0369a1; }
 .badge-gasto { background: #f1f5f9; color: #475569; }
 .new-card { border: 2px dashed #cbd5e1; color: var(--text-muted); background: #f8fafc; }
 .new-card.active { border-color: var(--primary); color: var(--primary); }
-.btn-delete { position: absolute; top: 4px; right: 4px; background: none; border: none; font-size: 14px; cursor: pointer; opacity: 0.5; padding: 4px; }
+
+.btn-delete { position: absolute; top: 4px; right: 4px; background: none; border: none; font-size: 14px; cursor: pointer; opacity: 0.4; padding: 4px; transition: 0.2s; }
 .btn-delete:hover { opacity: 1; transform: scale(1.1); }
 
-/* INPUTS (PASOS 2 Y 3) */
+/* INPUTS FORM */
 .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .form-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
 .form-input { width: 100%; padding: 10px 12px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 8px; transition: border 0.2s; background: #fff; }
@@ -219,45 +300,46 @@ body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFo
 .form-input:read-only { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
 .costo-input { font-size: 1.2rem; font-weight: bold; color: #0f172a; }
 
-/* TOGGLE SWITCH (INVENTARIO) */
+/* TOGGLE SWITCH ESTILO CELULAR */
 .toggle-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .toggle-switch input { display: none; }
 .slider { position: relative; width: 44px; height: 24px; background-color: #cbd5e1; border-radius: 24px; transition: .4s; }
 .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
-.toggle-switch input:checked + .slider { background-color: #10b981; /* Verde éxito */ }
+.toggle-switch input:checked + .slider { background-color: #10b981; }
 .toggle-switch input:checked + .slider:before { transform: translateX(20px); }
 .toggle-label { font-size: 0.85rem; font-weight: 500; color: var(--text-main); }
 
-/* COSTO UNITARIO BOX */
+/* CAJA DE COSTO ESTIMADO */
 .unit-cost-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; font-size: 0.9rem; color: #475569; }
 .unit-cost-box strong { color: var(--primary); font-size: 1rem; }
 
-/* BOTÓN GUARDAR (CTA) */
-.cta-button { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 6px rgba(179,36,23,0.2); }
+/* BOTÓN ENVIAR */
+.cta-button { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 6px rgba(179,36,23,0.2); margin-top: 10px; }
 .cta-button:hover { background: var(--primary-hover); }
 
-/* TABLA MODERNIZADA */
+/* TABLAS */
 .table-responsive { overflow-x: auto; }
 .modern-table { width: 100%; border-collapse: collapse; }
 .modern-table th { background: #f8fafc; padding: 10px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border); text-align: left; }
 .modern-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.95rem; vertical-align: middle; }
 
-/* RESPONSIVE PANTALLAS GRANDES */
+/* REGLAS RESPONSIVE */
+.mt-3 { margin-top: 15px; } .mt-4 { margin-top: 25px; } .text-center { text-align: center; }
 @media(min-width: 768px) {
   .input-grid { grid-template-columns: 1fr 1fr 1fr; }
-  .input-grid > div:nth-child(3) { grid-column: auto; } /* Rompe el grid-column full del costo */
+  .input-grid > div:nth-child(3) { grid-column: auto; }
 }
-
-/* RESPONSIVE MOBILE FIX */
 @media(max-width: 767px) {
+  .search-container { max-width: 100%; }
   .cta-button { position: fixed; bottom: 0; left: 0; border-radius: 0; z-index: 90; }
+  .form-container { padding-bottom: 40px; }
 }
 </style>
 
 <script>
 function qs(id){ return document.getElementById(id); }
 
-/* VARIABLES DEL DOM */
+/* CAPTURA DE ELEMENTOS */
 const cards = document.querySelectorAll(".item-card");
 const conceptoOculto = qs("conceptoOculto");
 const insumoIdOculto = qs("insumoIdOculto");
@@ -270,26 +352,42 @@ const costoTot = qs("costoTotal");
 const tipoSelect = qs("tipoCostoSelect");
 const esInsumoCheck = qs("esInsumoCheck");
 
-/* INICIALIZAR FECHA DE HOY */
+/* INICIALIZAR LA FECHA DE HOY DE FORMA AUTOMÁTICA */
 const hoy = new Date();
 const offset = hoy.getTimezoneOffset() * 60000;
 const localISOTime = (new Date(hoy - offset)).toISOString().split('T')[0];
 qs("fechaInput").value = localISOTime;
 
-/* ABRIR/CERRAR MENÚ */
+/* ENLAZAR APERTURA DE MENÚ MÓVIL */
 qs("menuBtn").addEventListener("click", () => {
   qs("mobileMenu").classList.toggle("active");
 });
 
-/* SELECCIÓN DE TARJETAS (PASO 1) */
+/* BUSCADOR EN TIEMPO REAL */
+const buscador = qs("buscadorItems");
+buscador.addEventListener("input", function() {
+  const termino = buscador.value.toLowerCase().trim();
+  
+  cards.forEach(card => {
+    if (card.id === "cardNuevo") return; // Mantener siempre visible "+ Concepto Nuevo"
+    const nombreItem = card.dataset.nombre.toLowerCase();
+    
+    if (nombreItem.includes(termino)) {
+      card.style.display = "flex";
+    } else {
+      card.style.display = "none";
+    }
+  });
+});
+
+/* EVENTOS DE SELECCIÓN PARA LAS TARJETAS */
 cards.forEach(card => {
   card.addEventListener("click", () => {
-    // Quitar active a todas
     cards.forEach(c => c.classList.remove("active"));
     card.classList.add("active");
 
     if (card.id === "cardNuevo") {
-      // Configuracion para NUEVO CONCEPTO
+      nuevoWrap.style.with = "block";
       nuevoWrap.style.display = "block";
       nuevoTxt.focus();
       
@@ -297,23 +395,19 @@ cards.forEach(card => {
       insumoIdOculto.value = "";
       
       unidadVis.value = "";
-      unidadVis.readOnly = false; // Permite escribir la unidad
+      unidadVis.readOnly = false;
       
       esInsumoCheck.checked = false;
       tipoSelect.value = "operativo";
-
     } else {
-      // Configuración para INSUMO o CONCEPTO EXISTENTE
       nuevoWrap.style.display = "none";
       
       conceptoOculto.value = card.dataset.nombre;
       insumoIdOculto.value = card.dataset.id || "";
       
       unidadVis.value = card.dataset.unidad;
-      // Si es un insumo con ID, bloqueamos la unidad para que no la cambien
       unidadVis.readOnly = card.dataset.id ? true : false;
       
-      // Auto-seleccionar si es insumo
       if (card.dataset.id) {
         esInsumoCheck.checked = true;
         tipoSelect.value = card.dataset.tipo || "insumos";
@@ -322,22 +416,19 @@ cards.forEach(card => {
         tipoSelect.value = card.dataset.tipo || "operativo";
       }
       
-      // Enfocar automáticamente la cantidad para agilizar
       setTimeout(() => cantidadVis.focus(), 100);
     }
-    
     calcularCostoUnitario();
   });
 });
 
-/* ACTUALIZAR NOMBRE SI ESCRIBE EN NUEVO */
 nuevoTxt.addEventListener("input", () => {
   if(qs("cardNuevo").classList.contains("active")) {
     conceptoOculto.value = nuevoTxt.value.trim() || "Otro";
   }
 });
 
-/* CÁLCULO DE COSTO UNITARIO (PASO 2) */
+/* CÁLCULO DE COSTO ESTIMADO */
 function calcularCostoUnitario() {
   const costo = parseFloat(costoTot.value || 0);
   const cant = parseFloat(cantidadVis.value || 0);
@@ -359,13 +450,10 @@ cantidadVis.addEventListener("input", calcularCostoUnitario);
 costoTot.addEventListener("input", calcularCostoUnitario);
 unidadVis.addEventListener("input", calcularCostoUnitario);
 
-
-/* PREPARAR DATOS ANTES DE ENVIAR (Para compatibilidad con tu Python) */
+/* INTERCEPCIÓN DEL ENVÍO DEL FORMULARIO PARA CORRECCIÓN DE CAMPOS PARA PYTHON */
 qs("compraForm").addEventListener("submit", function(e) {
-  
-  // Validar si es nuevo que tenga nombre
   if (qs("cardNuevo").classList.contains("active") && !nuevoTxt.value.trim()) {
-    alert("Por favor escribe el nombre del nuevo concepto que estás comprando.");
+    alert("Por favor escribe el nombre del nuevo concepto.");
     nuevoTxt.focus();
     e.preventDefault();
     return;
@@ -375,16 +463,13 @@ qs("compraForm").addEventListener("submit", function(e) {
     conceptoOculto.value = "Compra General";
   }
 
-  // MAGIA DE COMPATIBILIDAD CON TU APP.PY:
-  // Si el usuario marcó "Sumar a Stock", tu backend pide 'cantidad_base' y 'unidad_base'.
-  // Si no lo marcó, tu backend pide 'cantidad' y 'unidad'.
-  
-  // Limpiamos los 4 primero
+  // Reseteo preventivo de campos
   qs("h_cantidad").value = "";
   qs("h_unidad").value = "";
   qs("h_cantidad_base").value = "";
   qs("h_unidad_base").value = "";
 
+  // Mapeo dinámico e inteligente según lo que tu app.py requiere
   if (esInsumoCheck.checked) {
     qs("h_cantidad_base").value = cantidadVis.value;
     qs("h_unidad_base").value = unidadVis.value;
@@ -393,7 +478,6 @@ qs("compraForm").addEventListener("submit", function(e) {
     qs("h_unidad").value = unidadVis.value;
   }
 });
-
 </script>
 
 {% endblock %}
