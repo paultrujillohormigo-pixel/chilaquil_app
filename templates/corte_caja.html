@@ -15,18 +15,18 @@
 
 <div class="layout">
 
-  <div class="dashboard-grid">
-    <div class="kpi-card text-center" style="grid-column: span 2; background: #fafafa; border-bottom: 2px solid #ddd;">
-      <span class="kpi-label">📅 Fecha de Consulta</span>
-      <strong class="kpi-value" style="font-size: 1.1rem; color:#444;">{{ fecha }}</strong>
-    </div>
+  <form method="GET" action="{{ url_for('corte_caja') }}" class="form-card py-2 mb-3" style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+    <span style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">Consultar Día:</span>
+    <input type="date" name="fecha" value="{{ fecha }}" class="form-input" style="width: auto; padding: 6px 12px; font-size: 0.9rem;" onchange="this.form.submit()">
+  </form>
 
+  <div class="dashboard-grid">
     <div class="kpi-card">
       <span class="kpi-label">💰 Fondo Inicial</span>
       <strong class="kpi-value text-blue">{{ corte_guardado.fondo_caja | money if corte_guardado else "$0.00" }}</strong>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">📉 Gastos (Efectivo)</span>
+      <span class="kpi-label">📉 Compras / Gastos</span>
       <strong class="kpi-value text-red">- {{ total_gastos | money }}</strong>
     </div>
 
@@ -39,7 +39,7 @@
     <div class="kpi-card total-card bg-bank">
       <span class="kpi-label">💳 Banco Esperado (Tarjeta/Transf)</span>
       <strong class="kpi-value">{{ banco_esperado_sistema | money }}</strong>
-      <small class="kpi-hint">Suma de Tarjetas y Transferencias</small>
+      <small class="kpi-hint">Ventas con Tarjeta y Transferencia</small>
     </div>
   </div>
 
@@ -56,7 +56,7 @@
       
       {% if not corte_guardado %}
       <div class="mb-3">
-        <label class="form-label fw-bold">Fondo Inicial de Caja ($)</label>
+        <label class="form-label fw-bold">Establecer Fondo Inicial de Caja ($)</label>
         <input type="number" name="fondo_caja" class="form-input" placeholder="0.00" step="0.01" value="0.00">
       </div>
       {% endif %}
@@ -64,7 +64,7 @@
       <div class="input-grid">
         <div>
           <label class="form-label text-green fw-bold">1. Efectivo Real en Caja ($)</label>
-          <input type="number" name="efectivo_physical" id="efectivoReal" class="form-input efectivo-input border-cash" 
+          <input type="number" name="efectivo_fisico" id="efectivoReal" class="form-input efectivo-input border-cash" 
                  placeholder="0.00" step="0.01" required
                  value="{{ corte_guardado.efectivo_fisico if corte_guardado else '' }}">
           <div id="statusEfectivo" class="status-box box-neutral mt-2">
@@ -85,17 +85,57 @@
 
       <div class="mb-3 mt-3">
         <label class="form-label">Notas / Observaciones del día</label>
-        <textarea class="form-input" name="notas" rows="2" placeholder="Ej. El faltante de tarjeta fue una doble comisión o propina pagada...">{{ corte_guardado.notas if corte_guardado else '' }}</textarea>
+        <textarea class="form-input" name="notas" rows="2" placeholder="Ej. Faltaron $20 de efectivo por un cambio mal dado...">{{ corte_guardado.notas if corte_guardado else '' }}</textarea>
       </div>
 
-      <button type="submit" class="cta-button">Guardar y Cerrar Caja</button>
+      <button type="submit" class="cta-button">
+        {% if corte_guardado %}🔄 Actualizar Reporte Diario{% else %}💾 Guardar y Cerrar Caja{% endif %}
+      </button>
     </form>
+  </div>
+
+  <div class="form-card mt-4">
+    <div class="card-title" style="border:none; margin-bottom:5px;">Historial de Cortes Recientes</div>
+    {% if cortes %}
+      <div class="table-responsive">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Efectivo Real</th>
+              <th style="text-align: right;">Banco Real</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for corte in cortes %}
+              <tr>
+                <td style="font-weight: 500; font-size: 0.85rem; color:#475569;">{{ corte.fecha }}</td>
+                <td>
+                  <strong>{{ corte.efectivo_fisico | money }}</strong><br>
+                  <small class="{% if corte.diferencia < 0 %}text-red{% elif corte.diferencia > 0 %}text-blue{% else %}text-green{% endif %}" style="font-weight: 600;">
+                    Dif: {% if corte.diferencia > 0 %}+{% endif %}{{ corte.diferencia | money }}
+                  </small>
+                </td>
+                <td style="text-align: right;">
+                  <strong>{{ corte.tarjeta_fisico | money }}</strong><br>
+                  <small class="{% if corte.diferencia_tarjeta < 0 %}text-red{% elif corte.diferencia_tarjeta > 0 %}text-blue{% else %}text-green{% endif %}" style="font-weight: 600;">
+                    Dif: {% if corte.diferencia_tarjeta > 0 %}+{% endif %}{{ corte.diferencia_tarjeta | money }}
+                  </small>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: #777; font-size: 0.9rem; margin: 10px 0 0 0;">No hay historial de cortes registrados todavía.</p>
+    {% endif %}
   </div>
 
 </div>
 
 <style>
-/* SISTEMA DE DISEÑO UNIFICADO */
+/* VARIABLES Y RESET DE DISEÑO */
 :root {
   --primary: #b32417;
   --primary-hover: #8e1c12;
@@ -113,14 +153,14 @@ body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFo
 .mobile-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .mobile-header h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); }
 #menuBtn { font-size: 24px; border: none; background: none; cursor: pointer; color: var(--text-main); padding: 0; }
-.mobile-menu { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: var(--card-bg); padding: 20px; display: flex; flex-direction: column; gap: 15px; transition: 0.3s z-index: 1000; }
+.mobile-menu { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: var(--card-bg); padding: 20px; display: flex; flex-direction: column; gap: 15px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
 .mobile-menu.active { left: 0; }
 
 .layout { padding: 15px; max-width: 800px; margin: 0 auto; }
 
-/* DASHBOARD CARDS */
+/* DASHBOARD GRID KPIs */
 .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-.kpi-card { background: var(--card-bg); border-radius: var(--radius); padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.kpi-card { background: var(--card-bg); border-radius: var(--radius); padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
 .kpi-label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }
 .kpi-value { font-size: 1.1rem; font-weight: 700; }
 
@@ -128,28 +168,29 @@ body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFo
 .text-red { color: #ef4444; }
 .text-blue { color: #3b82f6; }
 
-/* MASTER TOTAL CARDS */
-.total-card { color: #ffffff; border: none; text-align: center; padding: 16px; }
+/* TOTAL MASTER CARDS */
+.total-card { color: #ffffff; border: none; text-align: center; padding: 15px; }
 .total-card .kpi-label { color: rgba(255,255,255,0.7); }
-.total-card .kpi-value { font-size: 1.5rem; color: #ffffff; }
-.kpi-hint { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+.total-card .kpi-value { font-size: 1.4rem; color: #ffffff; }
+.kpi-hint { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
 
-.bg-cash { background: #1e293b; } /* Azul oscuro elegante para efectivo */
-.bg-bank { background: #0f172a; border-left: 3px solid #3b82f6; } /* Banco oscuro con acento azul */
+.bg-cash { background: #1e293b; }
+.bg-bank { background: #0f172a; border-left: 4px solid #3b82f6; }
 
-/* FORM */
+/* FORM CONTAINER */
 .form-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid var(--border); }
 .card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-.input-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.input-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
 .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
 
-.form-input { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 8px; }
-.efectivo-input { font-size: 1.5rem; font-weight: bold; color: #0f172a; text-align: center; }
+.form-input { width: 100%; padding: 10px 12px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+.form-input:focus { outline: none; border-color: var(--primary); }
+.efectivo-input { font-size: 1.4rem; font-weight: bold; color: #0f172a; text-align: center; }
 .border-cash:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
 .border-bank:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
 
-/* STATUS BOXES */
-.status-box { padding: 10px; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 500; }
+/* STATUS DE CUADRE */
+.status-box { padding: 8px; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 500; }
 .box-neutral { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; }
 .box-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
 .box-danger { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
@@ -158,7 +199,14 @@ body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFo
 .alert-warning-box { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 0.9rem; }
 .cta-button { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; font-size: 1.1rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px rgba(179,36,23,0.2); }
 
-.mt-2 { margin-top: 8px; } .mt-3 { margin-top: 15px; } .mb-3 { margin-bottom: 15px; }
+/* TABLAS */
+.table-responsive { overflow-x: auto; }
+.modern-table { width: 100%; border-collapse: collapse; }
+.modern-table th { background: #f8fafc; padding: 10px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border); text-align: left; }
+.modern-table td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }
+
+.py-2 { padding-top: 8px; padding-bottom: 8px; } .py-3 { padding-top: 12px; padding-bottom: 12px; }
+.mt-2 { margin-top: 8px; } .mt-3 { margin-top: 15px; } .mt-4 { margin-top: 20px; } .mb-3 { margin-bottom: 15px; }
 
 @media(min-width: 768px) {
   .input-grid { grid-template-columns: 1fr 1fr; }
@@ -172,7 +220,7 @@ body { background: var(--bg-color); font-family: -apple-system, BlinkMacSystemFo
 <script>
 function qs(id){ return document.getElementById(id); }
 
-// Valores esperados desde Python
+// Constantes enviadas de forma segura desde Flask
 const efectivoEsperado = parseFloat("{{ efectivo_esperado }}") || 0;
 const bancoEsperado = parseFloat("{{ banco_esperado_sistema }}") || 0;
 
@@ -182,7 +230,7 @@ const inputTarjeta = qs("tarjetaReal");
 const statusEfectivo = qs("statusEfectivo");
 const statusTarjeta = qs("statusTarjeta");
 
-/* ESCUCHADOR DE ENTRADA PARA EFECTIVO */
+// Escuchar cambios en la caja de efectivo
 inputEfectivo.addEventListener("input", () => {
   const real = parseFloat(inputEfectivo.value);
   if (isNaN(real)) {
@@ -203,7 +251,7 @@ inputEfectivo.addEventListener("input", () => {
   }
 });
 
-/* ESCUCHADOR DE ENTRADA PARA TARJETAS / BANCO */
+// Escuchar cambios en la caja de tarjetas bancarias
 inputTarjeta.addEventListener("input", () => {
   const real = parseFloat(inputTarjeta.value);
   if (isNaN(real)) {
@@ -224,7 +272,7 @@ inputTarjeta.addEventListener("input", () => {
   }
 });
 
-// Forzar el cálculo al cargar si ya hay datos guardados
+// Forzar el cálculo al cargar si ya tiene datos guardados en la BD
 if(inputEfectivo.value) inputEfectivo.dispatchEvent(new Event('input'));
 if(inputTarjeta.value) inputTarjeta.dispatchEvent(new Event('input'));
 </script>
