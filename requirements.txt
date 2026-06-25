@@ -3,3 +3,4 @@ pymysql
 gunicorn
 python-dotenv
 cryptography>=42.0.0
+requests
