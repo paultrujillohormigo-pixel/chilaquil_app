@@ -978,16 +978,13 @@ def ver_pedido(pedido_id):
             """, (pedido_id,))
             items_raw = cursor.fetchall()
 
-            # Mapeamos item_padre_id al índice secuencial del arreglo (padre_index) esperado por el JS
+            # Mapeamos item_padre_id al índice absoluto del arreglo (padre_index) esperado por el JS
             items = []
             id_to_index_map = {}
             
-            # Primero mapeamos los padres
-            idx = 0
-            for row in items_raw:
-                if not row.get("item_padre_id"):
-                    id_to_index_map[row["id"]] = idx
-                    idx += 1
+            # Primero registramos la posición absoluta de TODOS los elementos
+            for idx, row in enumerate(items_raw):
+                id_to_index_map[row["id"]] = idx
 
             # Armamos el listado definitivo inyectando el valor correcto de padre_index
             for row in items_raw:
@@ -1013,7 +1010,6 @@ def ver_pedido(pedido_id):
         salsas=salsas,
         proteinas=proteinas
     )
-
 
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
 def actualizar_whatsapp_pedido(pedido_id):
