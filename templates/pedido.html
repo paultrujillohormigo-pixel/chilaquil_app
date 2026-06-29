@@ -1,530 +1,337 @@
 {% extends "base.html" %}
 {% block content %}
 
-<style>
-  :root {
-    --pos-primary: #2563eb;
-    --pos-primary-hover: #1d4ed8;
-    --pos-bg: #f8fafc;
-    --pos-card-bg: #ffffff;
-    --pos-text-main: #0f172a;
-    --pos-text-muted: #64748b;
-    --pos-border: #e2e8f0;
-    --pos-radius: 12px;
-    --pos-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  }
+<h2 class="pos-title">🧾 Editar Pedido #{{ pedido.id }}</h2>
 
-  body { 
-    background-color: var(--pos-bg); 
-    color: var(--pos-text-main); 
-  }
-  
-  /* Utilidades */
-  .m-0 { margin: 0; }
-  .mt-1 { margin-top: 4px; }
-  .mt-2 { margin-top: 8px; }
-  .mt-3 { margin-top: 12px; }
-  .mt-4 { margin-top: 16px; }
-  .mb-3 { margin-bottom: 12px; }
-  .mb-4 { margin-bottom: 16px; }
-  .p-4 { padding: 16px; }
-  .w-100 { width: 100%; }
-  .text-center { text-align: center; }
-  .text-right { text-align: right; }
-  .fw-bold { font-weight: 700; }
-  .d-flex { display: flex; }
-  .align-items-center { align-items: center; }
-  .justify-content-between { justify-content: space-between; }
-  .flex-wrap { flex-wrap: wrap; }
-  .gap-2 { gap: 8px; }
-  .gap-3 { gap: 12px; }
+<form method="post" id="pedidoForm" class="pos-layout">
 
-  /* HEADER & CARDS */
-  .pos-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: flex-start; 
-    margin-bottom: 24px; 
-    flex-wrap: wrap; 
-    gap: 16px; 
-  }
-  .pos-card { 
-    background: var(--pos-card-bg); 
-    border-radius: var(--pos-radius); 
-    padding: 20px; 
-    box-shadow: var(--pos-shadow); 
-    border: 1px solid var(--pos-border); 
-  }
-  .total-display { 
-    font-size: 2.5rem; 
-    font-weight: 900; 
-    color: var(--pos-primary); 
-    line-height: 1; 
-    letter-spacing: -1px; 
-  }
+  <input type="hidden" name="enviar_wa" id="enviarWaHidden" value="0">
 
-  /* BOTONES PRO */
-  .btn-pos { 
-    padding: 12px 20px; 
-    border-radius: 8px; 
-    font-weight: 600; 
-    font-size: 0.95rem; 
-    cursor: pointer; 
-    border: none; 
-    transition: all 0.2s ease; 
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 8px; 
-  }
-  .btn-pos:active { transform: scale(0.98); }
-  .btn-primary { background: var(--pos-primary); color: white; box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39); }
-  .btn-primary:hover { background: var(--pos-primary-hover); }
-  .btn-wa { background: #25D366; color: white; box-shadow: 0 4px 14px 0 rgba(37, 211, 102, 0.39); }
-  .btn-wa:hover { background: #1da851; }
-  .btn-outline { background: transparent; border: 1px solid var(--pos-border); color: var(--pos-text-main); }
-  .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
-  .btn-danger-ghost { background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; }
-  .btn-danger-ghost:hover { background: #fef2f2; }
+  <section class="pos-left">
 
-  /* LAYOUT POS */
-  .pos-grid { 
-    display: grid; 
-    grid-template-columns: 1fr 380px; 
-    gap: 24px; 
-    align-items: start; 
-  }
-  @media (max-width: 1024px) { 
-    .pos-grid { grid-template-columns: 1fr; } 
-  }
-
-  /* TABLAS */
-  .pos-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  .pos-table th { 
-    text-align: left; 
-    padding: 12px 16px; 
-    font-size: 0.75rem; 
-    text-transform: uppercase; 
-    color: var(--pos-text-muted); 
-    border-bottom: 2px solid var(--pos-border); 
-  }
-  .pos-table td { 
-    padding: 16px; 
-    border-bottom: 1px solid var(--pos-border); 
-    vertical-align: top; 
-  }
-  .item-row:last-child td { border-bottom: none; }
-
-  /* MODIFICADORES (TAGS) */
-  .pos-modifiers { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pos-tag { 
-    display: inline-flex; 
-    align-items: center; 
-    padding: 4px 10px; 
-    border-radius: 20px; 
-    font-size: 0.75rem; 
-    font-weight: 600; 
-    background: #f1f5f9; 
-    color: #334155; 
-    border: 1px solid #e2e8f0; 
-  }
-  .pos-tag-warn { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-  .pos-note { 
-    width: 100%; 
-    font-size: 0.8rem; 
-    color: #64748b; 
-    background: #f8fafc; 
-    padding: 8px 12px; 
-    border-radius: 6px; 
-    border-left: 3px solid #cbd5e1; 
-  }
-
-  /* CATÁLOGO PRODUCTOS */
-  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-  .product-btn { 
-    background: #fff; 
-    border: 1px solid var(--pos-border); 
-    border-radius: 10px; 
-    padding: 16px 12px; 
-    text-align: center; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: space-between; 
-    min-height: 100px; 
-  }
-  .product-btn:hover { border-color: var(--pos-primary); box-shadow: 0 4px 12px rgba(37,99,235,0.1); transform: translateY(-2px); }
-  .product-name { font-weight: 600; font-size: 0.9rem; color: var(--pos-text-main); margin-bottom: 8px; line-height: 1.2; }
-  .product-price { font-weight: 800; color: var(--pos-primary); font-size: 0.95rem; }
-
-  /* CONTROLES CANTIDAD */
-  .qty-ctrl { display: inline-flex; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 2px; }
-  .qty-btn { 
-    width: 28px; 
-    height: 28px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    border: none; 
-    background: #fff; 
-    border-radius: 6px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    color: var(--pos-text-main); 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
-  }
-  .qty-val { width: 32px; text-align: center; font-weight: 700; font-size: 0.9rem; }
-
-  /* ESTADOS WHATSAPP Y MODALES */
-  .wa-badge { 
-    display: inline-flex; 
-    align-items: center; 
-    gap: 6px; 
-    padding: 8px 16px; 
-    border-radius: 20px; 
-    font-size: 0.85rem; 
-    font-weight: 600; 
-    background: #ecfdf5; 
-    color: #059669; 
-    border: 1px solid #a7f3d0; 
-  }
-  .wa-badge.empty { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
-
-  .wa-input-group { display: flex; gap: 8px; margin-top: 12px; }
-  .wa-input { flex: 1; padding: 10px 14px; border: 2px solid var(--pos-border); border-radius: 8px; font-size: 1rem; outline: none; }
-  .wa-input:focus { border-color: var(--pos-primary); }
-
-  .modal-overlay { 
-    position: fixed; 
-    inset: 0; 
-    background: rgba(15, 23, 42, 0.6); 
-    backdrop-filter: blur(4px); 
-    display: none; 
-    place-items: center; 
-    z-index: 9999; 
-    padding: 16px; 
-  }
-  .modal-overlay.active { display: grid; animation: fadeIn 0.2s ease-out; }
-  .modal-content { 
-    background: #fff; 
-    border-radius: 16px; 
-    width: 100%; 
-    max-width: 500px; 
-    max-height: 90vh; 
-    overflow-y: auto; 
-    padding: 24px; 
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-  /* OPCIONES CUSTOM (MODAL) */
-  .custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
-  .custom-pill { 
-    position: relative; 
-    display: flex; 
-    align-items: center; 
-    padding: 12px; 
-    border: 2px solid var(--pos-border); 
-    border-radius: 10px; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    font-weight: 500; 
-    font-size: 0.9rem; 
-  }
-  .custom-pill:hover { background: #f8fafc; }
-  .custom-pill input { position: absolute; opacity: 0; }
-  .custom-pill input:checked + span { color: var(--pos-primary); font-weight: 700; }
-  .custom-pill:has(input:checked) { border-color: var(--pos-primary); background: #eff6ff; }
-  textarea.custom-note { 
-    width: 100%; 
-    padding: 12px; 
-    border: 2px solid var(--pos-border); 
-    border-radius: 10px; 
-    resize: vertical; 
-    min-height: 80px; 
-    font-family: inherit; 
-    margin-top: 8px; 
-    outline: none; 
-  }
-</style>
-
-<div class="pos-header">
-  <div>
-    <h2 class="m-0" style="color: #64748b; font-size: 1.1rem; font-weight: 600;">🧾 Pedido #{{ pedido.id }}</h2>
-    <div class="total-display mt-1" id="totalFinalGlobal">{{ pedido.total | money }}</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 4px;">Total a Pagar</div>
-  </div>
-
-  <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-    
-    {% if pedido.estado == 'abierto' %}
-    <div class="pos-card" style="padding: 16px; min-width: 180px;">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Descuento ($)</span>
-      </div>
-      <input type="number" id="inputDescuentoGlobal" class="wa-input" style="width: 100%; margin-top:0; padding: 8px 12px;" step="0.01" min="0" value="{{ pedido.descuento or 0 }}" oninput="PosApp.actualizarDescuento()">
-      <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Aplica al cerrar/guardar</div>
-    </div>
-    {% endif %}
-
-    <div class="pos-card" style="padding: 16px; min-width: 260px;">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Cliente / WhatsApp</span>
-        {% if pedido.estado == 'abierto' %}
-          <button class="btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border:none; color: var(--pos-primary);" onclick="PosApp.toggleWaEdit()">✏️ Editar</button>
-        {% endif %}
+    <div class="card">
+      <div class="card-head">
+        <h3>Datos del pedido</h3>
       </div>
 
-      <div id="waDisplayBadge">
-        {% if pedido.telefono_whatsapp %}
-          <div class="wa-badge">✅ {{ pedido.telefono_whatsapp }}</div>
-        {% else %}
-          <div class="wa-badge empty">⚠️ No registrado</div>
-        {% endif %}
-      </div>
+      <div class="form-grid">
 
-      {% if pedido.estado == 'abierto' %}
-      <form id="waEditMode" style="display:none;" method="post" action="{{ url_for('actualizar_whatsapp_pedido', pedido_id=pedido.id) }}">
-        <div class="wa-input-group">
-          <input type="tel" name="telefono_whatsapp" class="wa-input" placeholder="Ej. 449..." value="{{ pedido.telefono_whatsapp or '' }}">
-          <button type="submit" class="btn-primary" style="padding: 0 16px; border-radius: 8px;">OK</button>
+        <div>
+          <label>Fecha</label>
+          {# Formateamos la fecha si existe para datetime-local (YYYY-MM-DDTHH:MM) #}
+          <input type="datetime-local" name="fecha" value="{{ pedido.fecha.strftime('%Y-%m-%dT%H:%M') if pedido.fecha else '' }}">
+          <small>Vacío = ahora</small>
         </div>
-        <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">Necesario para ganar totopos.</div>
-      </form>
-      {% endif %}
-    </div>
-  </div>
-</div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap">
-  <button type="button" class="btn-pos btn-outline" onclick="PosApp.abrirTicketPreview({{ pedido.id }})">
-    🖨️ Ver ticket
-  </button>
+        <div>
+          <label>Origen</label>
+          <select name="origen" id="origenSelect">
+            <option value="mostrador" {% if pedido.origen == 'mostrador' %}selected{% endif %}>Mostrador</option>
+            <option value="uber" {% if pedido.origen == 'uber' %}selected{% endif %}>Uber</option>
+            <option value="didi" {% if pedido.origen == 'didi' %}selected{% endif %}>Didi</option>
+            <option value="otro" {% if pedido.origen == 'otro' %}selected{% endif %}>Otro</option>
+          </select>
+        </div>
 
-  {% if pedido.estado == 'abierto' %}
-    <button type="button" class="btn-pos btn-outline" onclick="PosApp.abrirVistaCocina()">
-      👨‍🍳 Vista cocina
-    </button>
+        <div>
+          <label>Mesa / Destino</label>
+          <select name="mesa">
+            <option value="Envío/Recoger" {% if pedido.mesa == 'Envío/Recoger' %}selected{% endif %}>Envío / Recoger</option>
+            <option value="Mesa 1" {% if pedido.mesa == 'Mesa 1' %}selected{% endif %}>Mesa 1</option>
+            <option value="Mesa 2" {% if pedido.mesa == 'Mesa 2' %}selected{% endif %}>Mesa 2</option>
+            <option value="Mesa 3" {% if pedido.mesa == 'Mesa 3' %}selected{% endif %}>Mesa 3</option>
+            <option value="Mesa 4" {% if pedido.mesa == 'Mesa 4' %}selected{% endif %}>Mesa 4</option>
+            <option value="Mesa 5" {% if pedido.mesa == 'Mesa 5' %}selected{% endif %}>Mesa 5</option>
+            <option value="Mesa 6" {% if pedido.mesa == 'Mesa 6' %}selected{% endif %}>Mesa 6</option>
+          </select>
+        </div> 
 
-    <form method="post" action="{{ url_for('cerrar_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
-      <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
-      <button type="submit" class="btn-pos btn-outline" onclick="return confirm('¿Cerrar sin enviar WhatsApp?')">
-        🔒 Cerrar (Sin enviar)
-      </button>
-    </form>
+        <div>
+          <label>Mesero</label>
+          <input type="text" name="mesero" placeholder="Nombre" value="{{ pedido.mesero or '' }}">
+        </div>
 
-    <form method="post" action="{{ url_for('cerrar_pedido_whatsapp', pedido_id=pedido.id) }}" style="margin: 0;">
-      <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
-      <button type="submit" class="btn-pos btn-wa" onclick="return PosApp.confirmarCierreWa('{{ pedido.telefono_whatsapp or '' }}')">
-        📲 Cerrar y Mandar WhatsApp
-      </button>
-    </form>
-  {% else %}
-    <div class="wa-badge" style="background:#e2e8f0; color:#475569; border:none;">Este pedido ya está cerrado</div>
-  {% endif %}
-</div>
+        <div style="position: relative; grid-column: 1 / -1;">
+          <label>Buscar Cliente / WhatsApp</label>
+          
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o número (ej. 449...)" inputmode="numeric" autocomplete="off" style="flex: 1;" value="{{ pedido.telefono_whatsapp or '' }}">
+            <button type="button" class="btn-primary" onclick="buscarClienteManual()" style="padding: 0 16px; border-radius: 8px;">
+              🔍 Buscar
+            </button>
+          </div>
+          
+          <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
+          </div>
+          <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
 
-<div class="pos-grid">
+          {# Si el pedido ya tiene cliente, mostramos su tarjeta de detalles de inmediato #}
+          <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;">{{ pedido.cliente_nombre or 'Cliente Registrado' }}</strong>
+              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;">✕ Limpiar</button>
+            </div>
+            <div id="detalle_tel" style="font-size:0.9rem; color:#555; margin-top:4px;">📞 {{ pedido.telefono_whatsapp or 'Sin teléfono' }}</div>
+            <div id="detalle_extra" style="font-size:0.9rem; color:#555; margin-top:4px;"></div>
+          </div>
 
-  <div>
-    <div class="pos-card mb-4" style="padding: 0; overflow: hidden;">
-      <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--pos-border);">
-        <h3 class="m-0" style="font-size: 1.1rem;">Artículos Confirmados en Comanda</h3>
+        </div>
+
+        <div>
+          <label>Método de pago</label>
+          <select name="metodo_pago">
+            <option value="efectivo" {% if pedido.metodo_pago == 'efectivo' %}selected{% endif %}>Efectivo</option>
+            <option value="tarjeta" {% if pedido.metodo_pago == 'tarjeta' %}selected{% endif %}>Tarjeta</option>
+            <option value="transfer" {% if pedido.metodo_pago == 'transfer' %}selected{% endif %}>Transferencia</option>
+            <option value="otro" {% if pedido.metodo_pago == 'otro' %}selected{% endif %}>Otro</option>
+          </select>
+        </div>
+
+        <div class="uber-box" id="uberBox" style="{% if pedido.origen == 'uber' %}display:block;{% else %}display:none;{% endif %}">
+          <label>Monto Uber</label>
+          <input type="number" name="monto_uber" step="0.01" value="{{ pedido.monto_uber or '0' }}">
+          <small>Negativo = comisión</small>
+        </div>
+
       </div>
-      
-      {% if items %}
-      <div style="overflow-x: auto;">
-        <table class="pos-table">
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Productos</h3>
+        <div class="hint">Toca para agregar (+1)</div>
+      </div>
+
+      <div class="productos-grid" id="productosGrid">
+        {% for p in productos %}
+          <button
+            type="button"
+            class="producto-card js-add"
+            data-id="{{ p.id }}"
+            data-nombre="{{ p.nombre }}"
+            data-precio="{{ p.precio }}"
+            data-categoria="{{ p.categoria or '' }}"
+          >
+            <div class="producto-nombre">{{ p.nombre }}</div>
+            <div class="producto-meta">
+              <span class="categoria">{{ p.categoria }}</span>
+              <span class="precio">{{ p.precio | money }}</span>
+            </div>
+          </button>
+        {% endfor %}
+      </div>
+
+    </div>
+
+  </section>
+
+  <aside class="pos-right">
+
+    <div class="card card-sticky">
+
+      <div class="card-head carrito-head">
+        <div>
+          <h3 class="carrito-title">Carrito</h3>
+          <div class="hint">+ / – para ajustar</div>
+        </div>
+
+        <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
+      </div>
+
+      <div class="carrito-wrap">
+        <table id="carritoTable">
           <thead>
             <tr>
               <th>Producto</th>
-              <th class="text-center">Cant.</th>
-              <th class="text-right">Precio</th>
-              {% if pedido.estado == 'abierto' %}<th></th>{% endif %}
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+              <th></th>
             </tr>
           </thead>
-          <tbody>
-            {% for it in items %}
-            <tr class="item-row">
-              <td>
-                <div class="fw-bold" style="color: #0f172a;">{{ it.nombre }}</div>
-                
-                {% if it.salsa_id or it.proteina or it.sin or it.nota %}
-                <div class="pos-modifiers mt-2">
-                  {% if it.salsa_id %}
-                    {% for s in salsas %}
-                      {% if s.id == it.salsa_id %}
-                        <span class="pos-tag">🌶️ {{ s.nombre }}</span>
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                  {% if it.proteina %}
-                    <span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 {{ it.proteina }}</span>
-                  {% endif %}
-                  {% if it.sin %}
-                    <span class="pos-tag pos-tag-warn">🚫 Sin {{ it.sin }}</span>
-                  {% endif %}
-                  {% if it.nota %}
-                    <div class="pos-note mt-1">📝 {{ it.nota }}</div>
-                  {% endif %}
-                </div>
-                {% endif %}
-              </td>
-              <td class="text-center fw-bold" style="vertical-align: middle;">x{{ it.cantidad }}</td>
-              <td class="text-right text-gray-600" style="vertical-align: middle; color: #475569;">{{ it.precio_unitario | money }}</td>
-              {% if pedido.estado == 'abierto' %}
-              <td class="text-right" style="vertical-align: middle;">
-                <form method="post" action="{{ url_for('eliminar_item_pedido', pedido_id=pedido.id, item_id=it.id) }}" style="margin: 0;">
-                  <button type="submit" class="btn-danger-ghost" onclick="return confirm('¿Eliminar este platillo de la base de datos?')" title="Eliminar">🗑️</button>
-                </form>
-              </td>
-              {% endif %}
-            </tr>
-            {% endfor %}
-          </tbody>
+          <tbody></tbody>
         </table>
-      </div>
-      {% else %}
-      <div class="p-4 text-center" style="color: var(--pos-text-muted);">
-        No hay artículos guardados todavía.
-      </div>
-      {% endif %}
-    </div>
 
-    {% if pedido.estado == 'abierto' %}
-    <div class="pos-card">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="font-size: 1.1rem;">Agregar Nuevos Productos</h3>
-        <span class="pos-tag" style="background:#e0e7ff; color:#4338ca; border:none;">Catálogo</span>
-      </div>
-      
-      <div class="catalog-grid">
-        {% for p in productos %}
-        <button type="button" class="product-btn js-add" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-categoria="{{ p.categoria or '' }}" onclick='PosApp.seleccionarProducto({{ p.id }}, {{ p.nombre|tojson }}, {{ p.precio }}, {{ (p.categoria or "")|tojson }})'>
-          <div class="product-name">{{ p.nombre }}</div>
-          <div class="product-price">{{ p.precio | money }}</div>
-        </button>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-  </div>
+        <div class="total-box" style="display:flex; flex-direction:column; gap:10px;">
 
-  {% if pedido.estado == 'abierto' %}
-  <div>
-    <div class="pos-card" style="position: sticky; top: 24px; padding: 0; overflow: hidden; border: 2px solid var(--pos-primary);">
-      <div style="padding: 16px; background: var(--pos-primary); color: white;">
-        <h3 class="m-0" style="font-size: 1.1rem; display: flex; justify-content: space-between;">
-          <span>Nuevos a agregar</span>
-          <span id="cartBadge" style="background: white; color: var(--pos-primary); padding: 2px 8px; border-radius: 12px; font-size: 0.85rem;">0</span>
-        </h3>
-      </div>
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <div>Subtotal</div>
+            <div class="total-amount" id="subtotalPedido">$0.00</div>
+          </div>
 
-      <form method="post" id="newItemsForm" action="{{ url_for('ver_pedido', pedido_id=pedido.id) }}" style="margin: 0;">
-        <input type="hidden" name="descuento" class="hidden-descuento" value="{{ pedido.descuento or 0 }}">
-        
-        <div id="cartContainer" style="max-height: 400px; overflow-y: auto; padding: 16px;">
-          <div id="emptyCartMsg" class="text-center" style="color: #94a3b8; padding: 20px 0;">Selecciona productos del catálogo para agregarlos aquí.</div>
-          <div id="cartItemsList" style="display: flex; flex-direction: column; gap: 16px;"></div>
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-end;">
+            <div>
+              <label style="font-weight:800;">Descuento ($)</label>
+              <input
+                type="number"
+                id="descuentoInput"
+                step="0.01"
+                min="0"
+                value="{{ pedido.descuento or '0.00' }}"
+                inputmode="decimal"
+                style="width:140px; margin-top:6px; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:16px;"
+                placeholder="0.00"
+              >
+              <div class="hint" style="margin-top:4px;">Se aplica al total</div>
+            </div>
+
+            <div style="text-align:right;">
+              <div class="hint">Descuento</div>
+              <div style="font-weight:900;" id="descuentoMostrado">-$0.00</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px dashed #ddd; padding-top:10px;">
+            <div style="font-size:1.05rem; font-weight:900;">Total</div>
+            <div class="total-amount" id="totalPedido">$0.00</div>
+          </div>
+
         </div>
 
-        <div style="padding: 16px; background: #f8fafc; border-top: 1px solid var(--pos-border);">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span style="font-weight: 600; color: var(--pos-text-muted);">Total Extra:</span>
-            <span id="cartTotal" style="font-size: 1.4rem; font-weight: 900; color: var(--pos-text-main);">$0.00</span>
-          </div>
-          <div id="inputsHidden"></div>
-          <button type="submit" id="btnSaveItems" class="btn-pos btn-primary w-100" style="opacity: 0.5; pointer-events: none;">
-            💾 Guardar Cambios en Pedido
+        <div id="inputsHidden"></div>
+        <input type="hidden" name="descuento" id="descuentoHidden" value="{{ pedido.descuento or '0' }}">
+        
+        <input type="hidden" name="totopos_ganados" value="1">
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+            💬 Guardar y Enviar WhatsApp
+          </button>
+          
+          <button type="submit" class="btn-guardar" style="padding: 12px;">
+            💾 Actualizar Pedido
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-  {% endif %}
 
-</div>
-
-<div id="modalCustom" class="modal-overlay">
-  <div class="modal-content">
-    <div class="d-flex justify-content-between align-items-start mb-3">
-      <div>
-        <h3 class="m-0" style="font-size: 1.25rem;">Personalizar</h3>
-        <p class="m-0 mt-1 fw-bold text-primary" id="mcProductName" style="color: var(--pos-primary);"></p>
       </div>
-      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCustom')">✕</button>
+
     </div>
 
-    <div class="mt-4">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Preparación del Huevo (De cajón)</label>
-      <div id="mcProteinas" class="custom-grid"></div>
-    </div>
+  </aside>
 
-    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Proteínas Extra (Opcional)</label>
-      <div id="mcExtras" class="custom-grid"></div>
-    </div>
+</form>
 
-    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Salsa (Máx. 2)</label>
-      <div id="mcSalsas" class="custom-grid"></div>
-      <p class="hint" style="margin:6px 0 0; font-size: 0.8rem; color: #64748b;">Puedes elegir 1 o mitad y mitad.</p>
+{# (Los modales customModal y cocinaModal junto con el bloque <style> se mantienen idénticos al original) #}
+<div id="customModal" class="modal">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
+    <h3 style="margin-top:0;" id="customModalTitle">Personalizar</h3>
+    <p class="hint" id="customProductoNombre" style="margin-top:-8px; font-weight:bold;"></p>
+    <div class="custom-section">
+      <label><strong>Preparación del Huevo (De cajón)</strong></label>
+      <div id="proteinaRadios" class="custom-grid"></div>
     </div>
-
-    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Quitar Ingredientes</label>
-      <div id="mcSin" class="custom-grid"></div>
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px; margin-top: 12px;">
+      <label><strong>Proteínas Extra (Opcional)</strong></label>
+      <div id="extrasChecks" class="custom-grid"></div>
     </div>
-
-    <div class="mt-4" style="border-top: 1px dashed var(--pos-border); padding-top: 12px;">
-      <label class="fw-bold" style="font-size: 0.9rem; color: var(--pos-text-muted); text-transform: uppercase;">Notas Extra</label>
-      <textarea id="mcNota" class="custom-note" placeholder="Ej. bien dorados, etc."></textarea>
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
+      <label><strong>Salsa (Máx. 2)</strong></label>
+      <div id="salsaRadios" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Puedes elegir 1 o mitad y mitad.</p>
     </div>
-
-    <div class="d-flex gap-2 mt-4">
-      <button type="button" class="btn-pos btn-outline w-100" onclick="PosApp.cerrarModal('modalCustom')">Cancelar</button>
-      <button type="button" class="btn-pos btn-primary w-100" onclick="PosApp.confirmarCustomizacion()">Confirmar</button>
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
+      <label><strong>Quitar ingredientes</strong></label>
+      <div id="sinChecks" class="custom-grid"></div>
+      <p class="hint" style="margin:6px 0 0;">Déjalo vacío si va normal.</p>
+    </div>
+    <div class="custom-section" style="border-top: 1px dashed #eee; padding-top: 12px;">
+      <label><strong>Notas Adicionales</strong></label>
+      <textarea id="notaInput" rows="3" style="width:100%; margin-top:8px;" placeholder="Ej. bien dorados, etc."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="cerrarCustomModal()">Cancelar</button>
+      <button type="button" class="btn-primary" onclick="confirmarCustom()">Guardar</button>
     </div>
   </div>
 </div>
 
-<div id="modalTicket" class="modal-overlay">
-  <div class="modal-content" style="background: #fdfbf7;">
-    <div class="d-flex justify-content-between align-items-start mb-3">
-      <h3 class="m-0">Vista previa del Ticket</h3>
-      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalTicket')">✕</button>
+<div id="cocinaModal" class="modal">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="cerrarVistaCocina()">✕</button>
+    <h3 style="margin-top:0;">Comanda (Vista cocina)</h3>
+    <p class="hint">Se imprime/visualiza con los modificadores seleccionados.</p>
+    <div id="cocinaBody"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-gray" onclick="window.print()">Imprimir</button>
+      <button type="button" class="btn-primary" onclick="cerrarVistaCocina()">Cerrar</button>
     </div>
-    <pre id="ticketText" style="font-family: monospace; background: white; padding: 16px; border: 1px dashed #cbd5e1; border-radius: 8px; white-space: pre-wrap; font-size: 0.85rem; color: #334155;"></pre>
-    <a id="btnSendWaModal" href="#" target="_blank" class="btn-pos btn-wa w-100 mt-3" style="text-decoration: none;">
-      📲 Abrir en WhatsApp
-    </a>
   </div>
 </div>
 
-<div id="modalCocina" class="modal-overlay">
-  <div class="modal-content">
-    <div class="d-flex justify-content-between align-items-start mb-3">
-      <div>
-        <h3 class="m-0">Comanda (Nuevos Artículos)</h3>
-        <p class="m-0 mt-1" style="color: var(--pos-text-muted); font-size: 0.85rem;">Imprime o visualiza lo que está en el carrito derecho.</p>
-      </div>
-      <button type="button" class="btn-outline" style="border:none; border-radius:50%; width:32px; height:32px; display:grid; place-items:center;" onclick="PosApp.cerrarModal('modalCocina')">✕</button>
-    </div>
-    <div id="cocinaBody" class="mt-4"></div>
-    <div class="d-flex gap-2 mt-4">
-      <button type="button" class="btn-pos btn-outline w-100" onclick="window.print()">🖨️ Imprimir</button>
-      <button type="button" class="btn-pos btn-primary w-100" onclick="PosApp.cerrarModal('modalCocina')">Cerrar</button>
-    </div>
-  </div>
-</div>
+<style>
+html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+*, *::before, *::after{ box-sizing: border-box; }
+@media (max-width: 1100px){
+  .pos-layout{ display:flex; flex-direction:column; gap:12px; }
+  .pos-left,.pos-right{ width:100%; }
+  .card-sticky{ position:static !important; top:auto !important; }
+  #carritoTable th, #carritoTable td{ font-size:.95rem; }
+}
+.carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.carrito-title{ margin:0; }
+.modal{
+  position:fixed; left:0; top:0; width:100vw; height:100vh; height:100dvh;
+  display:none; justify-content:center; align-items:center; background:rgba(0,0,0,.45);
+  z-index:2147483647; padding:14px; -webkit-overflow-scrolling:auto; overscroll-behavior:contain;
+}
+.modal.is-open{ display:flex; }
+.modal-box{
+  background:#fff; border-radius:14px; padding:16px; width:min(640px, 94vw);
+  box-shadow:0 10px 30px rgba(0,0,0,.25); max-height:calc(var(--vh, 1vh) * 88);
+  overflow:auto; -webkit-overflow-scrolling:touch; transform:translateZ(0);
+}
+.modal-close{
+  position:sticky; top:0; float:right; margin-left:auto; border:0;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(6px); font-size:18px;
+  cursor:pointer; padding:6px 10px; border-radius:10px;
+}
+.modal-box input, .modal-box textarea, .modal-box select{ font-size:16px; }
+@media (max-width: 1100px){
+  .modal{ align-items:flex-end; padding:10px; }
+  .modal-box{ width:100%; border-radius:18px 18px 14px 14px; max-height:calc(var(--vh, 1vh) * 92); }
+}
+.custom-section{ margin-top:12px; }
+.custom-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; align-items:stretch; }
+@media (max-width: 1100px){ .custom-grid{ grid-template-columns:1fr; } }
+.custom-pill{
+  border:1px solid #ddd; border-radius:12px; padding:12px; display:flex; gap:10px;
+  align-items:center; width:100%; min-height:48px; justify-content:flex-start;
+  line-height:1.2; background:#fff; cursor:pointer; overflow:hidden;
+}
+.custom-pill input[type="radio"], .custom-pill input[type="checkbox"]{ margin:0; flex:0 0 20px; width:20px; height:20px; }
+.custom-pill span{ flex:1; overflow-wrap:anywhere; word-break:break-word; white-space:normal; }
+.custom-pill:active{ transform:scale(.99); background:#f6f6f6; }
+.cocina-meta{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+.tag{ display:inline-block; padding:4px 8px; border-radius:8px; background:#f3f3f3; border:1px solid #ddd; font-weight:700; font-size:.85rem; }
+.tag-warn{ background:#fff3cd; border-color:#f0c36d; }
+.nota{ padding:6px 8px; border-radius:8px; border:1px dashed #bbb; background:#fff; font-size:.85rem; }
+.modal-actions{ position:sticky; bottom:0; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); padding-top:10px; display:flex; gap:10px; justify-content:flex-end; }
+.pos-layout,.card,.carrito-wrap,#carritoTable,.modal-box{ max-width:100%; }
+body{ overflow-x:hidden; }
+#carritoTable{ width:100%; table-layout:fixed; }
+#carritoTable th,#carritoTable td{ overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+#carritoTable td.td-left,#carritoTable td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+.qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+#lista_clientes div { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.95rem; }
+#lista_clientes div:hover { background-color: #f8f8f8; color: #b32417; }
+#lista_clientes strong { display: block; }
+</style>
 
 <script>
-const SALSAS_DB = {{ (salsas or [])|tojson }};
-const PROTEINAS_DB = {{ (proteinas or [])|tojson }};
+/* ================== FIX VH (iOS) ================== */
+function setVH(){
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+setVH();
+window.addEventListener('resize', setVH);
+window.addEventListener('orientationchange', setVH);
 
-// --- OPCIONES COMPARTIDAS CON "NUEVO PEDIDO" ---
+/* ================== DATA ================== */
+const SALSAS_DB = {{ salsas|tojson|safe }};
+
 const OPCIONES_HUEVO = ["Sin proteina", "Con huevo estrellado", "Huevo revuelto", "Huevo bien cocido"];
 const OPCIONES_EXTRAS = [
   { nombre: "Huevo", precio: 20 },
@@ -533,370 +340,609 @@ const OPCIONES_EXTRAS = [
   { nombre: "Chicharron Prensado", precio: 65 }
 ];
 
-const LISTA_SIN = ["Cebolla", "Crema", "Queso", "Aguacate"];
-const NO_MOD_CATEGORIAS = ["bebidas", "bebida", "extras", "extra", "complementos", "postres"];
-const NO_MOD_KEYWORDS = ["coca","refresco","agua","café","cafe","chai","capuccino","capuchino","jugo","jarrito","boing"];
+const SIN_OPCIONES = ["Cebolla","Crema","Queso","Aguacate"];
+const NO_MOD_CATEGORIAS = ["bebidas", "extras", "extra", "complementos", "postres"];
+const NO_MOD_KEYWORDS = ["coca", "refresco", "agua", "café", "cafe", "chai", "capuccino", "capuchino", "jugo", "jarrito"];
 
-const PosApp = {
-  cart: {},
-  activeItem: null,
+let carrito = {};
+let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
+let editandoUid = null;
+let descuentoTotal = Number("{{ pedido.descuento or 0 }}"); // Inicializamos el descuento guardado
+
+/* ================== HELPERS ================== */
+function clampMin0(n){
+  n = Number(n);
+  return (isNaN(n) || n < 0) ? 0 : n;
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function uidLinea(producto_id){
+  return String(producto_id) + "_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+}
+
+function normaliza(str){
+  return (str || "").toString().trim().toLowerCase();
+}
+
+function productoTieneModificadores(nombre, categoria){
+  const cat = normaliza(categoria);
+  const nom = normaliza(nombre);
+  if (nom.includes("agua de sabor") || nom.includes("aguas de sabor")) return true;
+  if (NO_MOD_CATEGORIAS.includes(cat)) return false;
+  return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
+}
+
+function encontrarProductoExtraId(nombreBuscar) {
+  const botones = document.querySelectorAll('.js-add');
+  const nomNorm = normaliza(nombreBuscar);
   
-  // Sumamos el total actual guardado con el descuento para calcular limpio
-  subtotalBaseServer: {{ (pedido.subtotal) if pedido.subtotal else (pedido.total + (pedido.descuento or 0)) }},
-
-  init() {
-    this.renderCart();
-  },
-
-  actualizarDescuento() {
-    const val = parseFloat(document.getElementById('inputDescuentoGlobal').value) || 0;
-    document.querySelectorAll('.hidden-descuento').forEach(el => el.value = val);
-    this.renderCart();
-  },
-
-  toggleWaEdit() {
-    document.getElementById('waDisplayBadge').style.display = 'none';
-    const form = document.getElementById('waEditMode');
-    form.style.display = 'block';
-    form.querySelector('input').focus();
-  },
-
-  confirmarCierreWa(telefono) {
-    if (!telefono || telefono.trim() === '') {
-      alert("⚠️ No hay número de WhatsApp registrado.\n\nPor favor, haz clic en 'Editar' arriba a la derecha, ingresa el número y presiona OK antes de cerrar.");
-      this.toggleWaEdit();
-      return false;
+  for (let b of botones) {
+    const btnNorm = normaliza(b.dataset.nombre);
+    if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || normaliza(b.dataset.categoria).includes('extra'))) {
+      return b.dataset.id;
     }
-    return confirm("¿Estás seguro de cerrar el pedido y mandar el mensaje de WhatsApp con Totopos?");
-  },
-
-  generarUid() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  },
-
-  escapeHtml(str) {
-    return String(str || "").replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
-  },
-
-  normaliza(str) {
-    return (str || "").toString().trim().toLowerCase();
-  },
-
-  requiereModificadores(nombre, categoria) {
-    const cat = this.normaliza(categoria);
-    const nom = this.normaliza(nombre);
-    if (NO_MOD_CATEGORIAS.some(c => cat.includes(c))) return false;
-    if (NO_MOD_KEYWORDS.some(k => nom.includes(k))) return false;
-    return true;
-  },
-
-  mapSalsaId(nombre) {
-    const match = SALSAS_DB.find(s => s.nombre.toLowerCase() === String(nombre).toLowerCase());
-    return match ? match.id : "";
-  },
-
-  // 🤖 Escanea el catálogo dinámicamente para enlazar el ID del Extra a la DB
-  encontrarProductoExtraId(nombreBuscar) {
-    const botones = document.querySelectorAll('.js-add');
-    const nomNorm = this.normaliza(nombreBuscar);
-    
-    for (let b of botones) {
-      const btnNorm = this.normaliza(b.dataset.nombre);
-      if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || this.normaliza(b.dataset.categoria).includes('extra'))) {
-        return b.dataset.id;
-      }
+  }
+  for (let b of botones) {
+    if (normaliza(b.dataset.nombre).includes(nomNorm)) {
+      return b.dataset.id;
     }
-    for (let b of botones) {
-      if (this.normaliza(b.dataset.nombre).includes(nomNorm)) {
-        return b.dataset.id;
-      }
-    }
-    return null;
-  },
+  }
+  return null;
+}
 
-  seleccionarProducto(id, nombre, precio, categoria) {
-    if (!this.requiereModificadores(nombre, categoria)) {
-      const uid = this.generarUid();
-      this.cart[uid] = { id, nombre, precio: Number(precio), qty: 1, custom: { salsa: "", salsa_id: "", salsas_ids: [], proteina: "Sin proteina", extras: [], sin: [], nota: "" } };
-      this.renderCart();
-      return;
-    }
+/* ================== INIT ================== */
+document.addEventListener("DOMContentLoaded", () => {
+  // Inicialización de la fecha si no viene preestablecida
+  const fechaInput = document.querySelector('input[name="fecha"]');
+  if (fechaInput && !fechaInput.value) {
+    const now = new Date();
+    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    fechaInput.value = localNow.toISOString().slice(0, 16);
+  }
 
-    this.activeItem = { id, nombre, precio: Number(precio), uid: this.generarUid() };
-    this.abrirModalCustom();
-  },
+  toggleUberBox();
+  document.getElementById("origenSelect").addEventListener("change", toggleUberBox);
 
-  abrirModalCustom() {
-    document.getElementById('mcProductName').innerText = this.activeItem.nombre;
-    
-    let htmlProt = '';
-    OPCIONES_HUEVO.forEach(p => {
-      let checked = (p === "Sin proteina") ? "checked" : "";
-      htmlProt += `<label class="custom-pill"><input type="radio" name="mc_prot" value="${this.escapeHtml(p)}" ${checked}><span>${this.escapeHtml(p)}</span></label>`;
+  const grid = document.getElementById("productosGrid");
+  if (grid){
+    grid.addEventListener("click", (e) => {
+      const btn = e.target.closest(".js-add");
+      if (!btn) return;
+      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || "");
     });
-    document.getElementById('mcProteinas').innerHTML = htmlProt;
+  }
 
-    let htmlExt = '';
-    OPCIONES_EXTRAS.forEach(ext => {
-      htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${this.escapeHtml(ext.nombre)}"><span>${this.escapeHtml(ext.nombre)} (+$${ext.precio})</span></label>`;
-    });
-    document.getElementById('mcExtras').innerHTML = htmlExt;
+  // === PRECARGA DE DETALLES DEL CARRITO DESDE EL PEDIDO ABIERTO ===
+  // Recorremos los elementos enviados desde tu backend e inicializamos el objeto global 'carrito'
+  {% if pedido_detalles %}
+    {% for d in pedido_detalles %}
+      // Omitimos los extras directos en la carga inicial ya que se asocian al plato padre
+      {% if not d.padre_index and d.padre_index != 0 %}
+        (function() {
+          const uid = uidLinea("{{ d.producto_id }}");
+          
+          // Parseo seguro de listas separadas por comas desde el backend
+          let sinLista = [];
+          {% if d.sin %}
+            sinLista = "{{ d.sin }}".split(',').map(s => s.trim()).filter(Boolean);
+          {% endif %}
 
-    // AQUI CAMBIAMOS RADIO POR CHECKBOX PARA SALSAS
-    let htmlSalsas = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="mc_salsa_ninguna" checked><span>Ninguna</span></label>`;
-    SALSAS_DB.forEach(s => {
-      htmlSalsas += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${this.escapeHtml(s.nombre)}"><span>${this.escapeHtml(s.nombre)}</span></label>`;
-    });
-    document.getElementById('mcSalsas').innerHTML = htmlSalsas;
+          // Reconstrucción de extras asociados a este item específico
+          let extrasLista = [];
+          {% for sub in pedido_detalles %}
+            {% if sub.padre_index == loop.parentloop.index0 %}
+              // Extraemos el nombre del modificador quitando el prefijo informativo de la nota si existiera
+              let extName = "{{ sub.nombre or '' }}";
+              extrasLista.push(extName);
+            {% endif %}
+          {% endfor %}
 
-    // Eventos para restringir 2 salsas máximo
-    setTimeout(() => {
-      const checksSalsa = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna)');
-      const btnNinguna = document.getElementById('mc_salsa_ninguna');
-
-      btnNinguna.addEventListener('change', (e) => {
-        if(e.target.checked) checksSalsa.forEach(c => c.checked = false);
-      });
-
-      checksSalsa.forEach(chk => {
-        chk.addEventListener('change', (e) => {
-          if(e.target.checked) {
-            btnNinguna.checked = false;
-            const seleccionadas = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
-            if(seleccionadas.length > 2) {
-              e.target.checked = false;
-              alert("Solo puedes elegir hasta 2 salsas.");
-            }
-          } else {
-            const seleccionadas = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
-            if(seleccionadas.length === 0) btnNinguna.checked = true;
+          // Filtro para extraer notas adicionales limpiando metadatos agregados
+          let notaLimpia = "{{ d.nota or '' }}";
+          let saborDetectado = "";
+          if (notaLimpia.includes("💧 Sabor:")) {
+            const parts = notaLimpia.split('|');
+            saborDetectado = parts[0].replace("💧 Sabor:", "").trim();
+            notaLimpia = parts[1] ? parts[1].trim() : "";
           }
+
+          carrito[uid] = {
+            producto_id: "{{ d.producto_id }}",
+            nombre: "{{ d.nombre }}",
+            precio: Number("{{ d.precio_unitario or d.precio or 0 }}"),
+            cantidad: Number("{{ d.cantidad or 1 }}"),
+            custom: {
+              proteina: "{{ d.proteina or 'Sin proteina' }}",
+              salsa_id: "{{ d.salsa_id or '' }}",
+              salsas_ids: {% if d.salsa_id %} ["{{ d.salsa_id }}"] {% else %} [] {% endif %},
+              salsa: "{{ d.salsa_nombre or '' }}",
+              sin: sinLista,
+              extras: extrasLista,
+              nota: notaLimpia,
+              sabor: saborDetectado
+            }
+          };
+        })();
+      {% endif %}
+    {% endfor %}
+    renderCarrito(); // Ejecutamos la primera impresión del carrito con los datos históricos
+  {% endif %}
+
+  const inputBuscar = document.getElementById('buscador_cliente');
+  const divResultados = document.getElementById('resultados_busqueda');
+  const listaClientes = document.getElementById('lista_clientes');
+
+  if (inputBuscar) {
+    inputBuscar.addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') return; 
+      let query = inputBuscar.value;
+      if (query.length >= 3) {
+        fetch(`/api/buscar_cliente?q=${query}`)
+          .then(r => r.json())
+          .then(data => {
+            listaClientes.innerHTML = '';
+            if (data.length > 0) {
+              divResultados.style.display = 'block';
+              data.forEach(cliente => {
+                const item = document.createElement('div');
+                item.innerHTML = `<strong>${cliente.nombre}</strong> <small>${cliente.phone_e164 || ''}</small>`;
+                item.onclick = function() {
+                  inputBuscar.value = cliente.phone_e164 || query;
+                  divResultados.style.display = 'none';
+                  mostrarDetallesCliente(cliente);
+                };
+                listaClientes.appendChild(item);
+              });
+            } else {
+              divResultados.style.display = 'none';
+            }
+          });
+      } else {
+        divResultados.style.display = 'none';
+      }
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (inputBuscar && e.target !== inputBuscar) divResultados.style.display = 'none';
+  });
+
+  const descInput = document.getElementById("descuentoInput");
+  if (descInput){
+    descInput.addEventListener("input", () => {
+      descuentoTotal = clampMin0(descInput.value);
+      renderCarrito();
+    });
+    descInput.addEventListener("blur", () => {
+      descuentoTotal = clampMin0(descInput.value);
+      descInput.value = descuentoTotal.toFixed(2);
+      renderCarrito();
+    });
+  }
+});
+
+/* ================== DETALLES CLIENTE ================== */
+function buscarClienteManual() {
+  const query = document.getElementById('buscador_cliente').value.trim();
+  const divResultados = document.getElementById('resultados_busqueda');
+  if (query.length < 3) { alert("Ingresa al menos 3 caracteres."); return; }
+  divResultados.style.display = 'none';
+
+  fetch(`/api/buscar_cliente?q=${query}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.length > 0) mostrarDetallesCliente(data[0]);
+      else { alert("No se encontró el cliente."); limpiarCliente(false); }
+    });
+}
+
+function mostrarDetallesCliente(cliente) {
+  document.getElementById('detalle_nombre').innerText = cliente.nombre || 'Cliente sin nombre';
+  document.getElementById('detalle_tel').innerText = "📞 " + (cliente.phone_e164 || 'Sin teléfono');
+  document.getElementById('cliente_seleccionado_card').style.display = 'block';
+}
+
+function limpiarCliente(limpiarInput = true) {
+  if(limpiarInput) document.getElementById('buscador_cliente').value = '';
+  document.getElementById('cliente_seleccionado_card').style.display = 'none';
+}
+
+/* ================== CORE & CARRITO ================== */
+function agregarProducto(id, nombre, precio, category) {
+  const uid = uidLinea(id);
+  carrito[uid] = {
+    producto_id: id,
+    nombre: nombre,
+    precio: Number(precio),
+    cantidad: 1,
+    isNew: true, 
+    custom: {
+      proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: ""
+    }
+  };
+
+  if (productoTieneModificadores(nombre, category)){
+    editandoUid = uid;
+    modalState = { producto_id: id, nombre, precio: Number(precio), uid };
+    abrirCustomModal(); 
+  } else {
+    delete carrito[uid].isNew;
+    renderCarrito();
+  }
+}
+
+function cambiarCantidad(uid, delta) {
+  if (carrito[uid]) {
+    carrito[uid].cantidad += delta;
+    if (carrito[uid].cantidad <= 0) eliminarProducto(uid);
+    else renderCarrito();
+  }
+}
+
+function eliminarProducto(uid){
+  delete carrito[uid];
+  renderCarrito();
+}
+
+function renderCarrito(){
+  const tbody = document.querySelector("#carritoTable tbody");
+  const hidden = document.getElementById("inputsHidden");
+
+  tbody.innerHTML = "";
+  hidden.innerHTML = "";
+  let subtotalGeneral = 0;
+  let currentIndex = 0; 
+
+  Object.keys(carrito).forEach(uid => {
+    const item = carrito[uid];
+    
+    let precioExtrasAcumulado = 0;
+    item.custom.extras.forEach(extName => {
+      const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
+      if(target) precioExtrasAcumulado += target.precio;
+    });
+
+    const precioVentaTotal = item.precio + precioExtrasAcumulado;
+    const subtotal = precioVentaTotal * item.cantidad;
+    subtotalGeneral += subtotal;
+
+    let modsHtml = "";
+    if (item.custom.proteina && item.custom.proteina !== "Sin proteina") {
+      modsHtml += `<div class="tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 ${escapeHtml(item.custom.proteina)}</div>`;
+    }
+    if (item.custom.salsa) {
+      modsHtml += `<div class="tag">🌶️ ${escapeHtml(item.custom.salsa)}</div>`;
+    }
+    if (item.custom.sabor) {
+      modsHtml += `<div class="tag" style="background:#e0f2fe; color:#1e40af; border-color:#bae6fd;">💧 ${escapeHtml(item.custom.sabor)}</div>`;
+    }
+    if (item.custom.extras.length > 0) {
+      modsHtml += `<div class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${escapeHtml(item.custom.extras.join(', '))}</div>`;
+    }
+    if (item.custom.sin.length > 0) {
+      modsHtml += `<div class="tag tag-warn">🚫 Sin ${escapeHtml(item.custom.sin.join(', '))}</div>`;
+    }
+    if (item.custom.nota) {
+      modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
+    }
+
+    tbody.innerHTML += `
+      <tr>
+        <td class="td-left">
+          <b>${escapeHtml(item.nombre)}</b>
+          ${modsHtml ? `<div class="cocina-meta">${modsHtml}</div>` : ''}
+        </td>
+        <td class="qty-controls">
+          <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', -1)">-</button>
+          <span><b>${item.cantidad}</b></span>
+          <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', 1)">+</button>
+        </td>
+        <td>$${precioVentaTotal.toFixed(2)}</td>
+        <td><strong>$${subtotal.toFixed(2)}</strong></td>
+        <td style="text-align:right;">
+          <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:5px;" onclick="abrirCustomModal('${uid}')">✏️</button>
+          <button type="button" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem;" onclick="eliminarProducto('${uid}')">🗑️</button>
+        </td>
+      </tr>
+    `;
+
+    let notaParaBackend = item.custom.nota;
+    if (item.custom.sabor) {
+        notaParaBackend = `💧 Sabor: ${item.custom.sabor} | ` + notaParaBackend;
+    }
+    if (item.custom.salsas_ids && item.custom.salsas_ids.length > 1) {
+        notaParaBackend = `🌶️ Mitad y mitad: ${item.custom.salsa} | ` + notaParaBackend;
+    }
+
+    const parentIndex = currentIndex;
+
+    hidden.innerHTML += `
+      <input type="hidden" name="producto_id[]" value="${item.producto_id}">
+      <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+      <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
+      <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
+      <input type="hidden" name="sin[]" value="${item.custom.sin.join(',')}">
+      <input type="hidden" name="nota[]" value="${escapeHtml(notaParaBackend)}">
+      <input type="hidden" name="padre_index[]" value=""> 
+    `;
+    currentIndex++;
+
+    item.custom.extras.forEach(extName => {
+      const extraProdId = encontrarProductoExtraId(extName);
+      if (extraProdId) {
+        hidden.innerHTML += `
+          <input type="hidden" name="producto_id[]" value="${extraProdId}">
+          <input type="hidden" name="cantidad[]" value="${item.cantidad}">
+          <input type="hidden" name="proteina[]" value="">
+          <input type="hidden" name="salsa_id[]" value="">
+          <input type="hidden" name="sin[]" value="">
+          <input type="hidden" name="nota[]" value="👉 Para: ${escapeHtml(item.nombre)}">
+          <input type="hidden" name="padre_index[]" value="${parentIndex}">
+        `;
+        currentIndex++;
+      }
+    });
+  });
+
+  const descuentoAplicado = Math.min(descuentoTotal, subtotalGeneral);
+  const totalFinal = subtotalGeneral - descuentoAplicado;
+
+  document.getElementById("subtotalPedido").innerText = "$" + subtotalGeneral.toFixed(2);
+  document.getElementById("descuentoMostrado").innerText = "-$" + descuentoAplicado.toFixed(2);
+  document.getElementById("totalPedido").innerText = "$" + totalFinal.toFixed(2);
+  document.getElementById("descuentoHidden").value = descuentoAplicado.toFixed(2);
+}
+
+/* ================== MODAL PERSONALIZACIÓN ================== */
+function abrirCustomModal(uid = null) {
+  let customData = { proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: "" };
+  let productoNombre = "";
+  
+  if (uid && carrito[uid]) {
+    editandoUid = uid;
+    customData = carrito[uid].custom;
+    productoNombre = carrito[uid].nombre;
+    document.getElementById('customModalTitle').innerText = "Editar Personalización";
+    document.getElementById('customProductoNombre').innerText = productoNombre;
+  } else {
+    productoNombre = modalState.nombre;
+    document.getElementById('customModalTitle').innerText = "Personalizar";
+    document.getElementById('customProductoNombre').innerText = productoNombre;
+  }
+
+  const nomNorm = normaliza(productoNombre);
+  const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
+
+  const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
+  const contenedorSalsas = document.getElementById('salsaRadios').closest('.custom-section');
+  const contenedorSin = document.getElementById('sinChecks').closest('.custom-section');
+  const tituloExtras = document.getElementById('extrasChecks').closest('.custom-section').querySelector('label strong');
+
+  if (esAguaSabor) {
+    if (contenedorHuevo) contenedorHuevo.style.display = "none";
+    if (contenedorSalsas) contenedorSalsas.style.display = "none";
+    if (contenedorSin) contenedorSin.style.display = "none";
+    if (tituloExtras) tituloExtras.innerText = "Selecciona el sabor (Obligatorio)";
+
+    const SABORES_AGUA = ["Limón", "Guayaba", "Tamarindo", "Jamaica", "Otra"];
+    let htmlSabores = "";
+    SABORES_AGUA.forEach(sab => {
+      let checked = (customData.sabor === sab) ? "checked" : "";
+      if (!customData.sabor && sab === "Limón") checked = "checked";
+      htmlSabores += `<label class="custom-pill"><input type="radio" name="modal_sabor_agua" value="${sab}" ${checked}><span>${sab}</span></label>`;
+    });
+    document.getElementById('extrasChecks').innerHTML = htmlSabores;
+
+  } else {
+    if (contenedorHuevo) contenedorHuevo.style.display = "block";
+    if (contenedorSalsas) contenedorSalsas.style.display = "block";
+    if (contenedorSin) contenedorSin.style.display = "block";
+    if (tituloExtras) tituloExtras.innerText = "Proteínas Extra (Opcional)";
+
+    let htmlProt = "";
+    OPCIONES_HUEVO.forEach(opc => {
+      let checked = (opc === customData.proteina) ? "checked" : "";
+      htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${opc}" ${checked}><span>${opc}</span></label>`;
+    });
+    document.getElementById('proteinaRadios').innerHTML = htmlProt;
+
+    let htmlExt = "";
+    OPCIONES_EXTRAS.forEach(ext => {
+      let checked = (customData.extras && customData.extras.includes(ext.nombre)) ? "checked" : "";
+      htmlExt += `<label class="custom-pill"><input type="checkbox" class="check-extra" value="${ext.nombre}" ${checked}><span>${ext.nombre} (+$${ext.precio})</span></label>`;
+    });
+    document.getElementById('extrasChecks').innerHTML = htmlExt;
+
+    let htmlSal = `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="" id="salsa_ninguna" ${(!customData.salsas_ids || customData.salsas_ids.length === 0) ? 'checked' : ''}><span>Ninguna</span></label>`;
+    SALSAS_DB.forEach(s => {
+      let checked = (customData.salsas_ids && customData.salsas_ids.includes(String(s.id))) ? "checked" : "";
+      htmlSal += `<label class="custom-pill"><input type="checkbox" class="check-salsa" value="${s.id}" data-nombre="${s.nombre}" ${checked}><span>${s.nombre}</span></label>`;
+    });
+    document.getElementById('salsaRadios').innerHTML = htmlSal;
+
+    setTimeout(() => {
+      const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
+      const btnNinguna = document.getElementById('salsa_ninguna');
+      if (btnNinguna) {
+        btnNinguna.addEventListener('change', (e) => { if(e.target.checked) checksSalsa.forEach(c => c.checked = false); });
+        checksSalsa.forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            if(e.target.checked) {
+              btnNinguna.checked = false;
+              const sel = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+              if(sel.length > 2) { e.target.checked = false; alert("Solo puedes elegir hasta 2 salsas."); }
+            } else {
+              const sel = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+              if(sel.length === 0) btnNinguna.checked = true;
+            }
+          });
         });
-      });
+      }
     }, 50);
 
-    let htmlSin = '';
-    LISTA_SIN.forEach(s => {
-      htmlSin += `<label class="custom-pill"><input type="checkbox" name="mc_sin" value="${this.escapeHtml(s)}"><span>Sin ${this.escapeHtml(s)}</span></label>`;
+    let htmlSin = "";
+    SIN_OPCIONES.forEach(opc => {
+      let checked = customData.sin.includes(opc) ? "checked" : "";
+      htmlSin += `<label class="custom-pill"><input type="checkbox" class="check-sin" value="${opc}" ${checked}><span>Sin ${opc}</span></label>`;
     });
-    document.getElementById('mcSin').innerHTML = htmlSin;
-
-    document.getElementById('mcNota').value = "";
-    document.getElementById('modalCustom').classList.add('active');
-  },
-
-  cerrarModal(id) {
-    document.getElementById(id).classList.remove('active');
-    if (id === 'modalCustom') this.activeItem = null;
-  },
-
-  confirmarCustomizacion() {
-    // 1. Obtener la proteína
-    const protNode = document.querySelector('input[name="mc_prot"]:checked');
-    const proteina = protNode ? protNode.value : "Sin proteina";
-
-    // 2. Extraemos las salsas con la lógica de 2 salsas
-    const salNodos = document.querySelectorAll('#mcSalsas .check-salsa:not(#mc_salsa_ninguna):checked');
-    const salIdsArr = Array.from(salNodos).map(n => n.value);
-    const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
-
-    // Lógica DB: Si hay 1 manda ID, si hay 2 manda vacío y se une en nota
-    const salsa_id = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
-    const salsa = salNombresArr.join(' y ');
-
-    // 3. Obtener el resto de las cosas
-    const extraNodes = document.querySelectorAll('.check-extra:checked');
-    const extras = Array.from(extraNodes).map(n => n.value);
-
-    const sinNodes = document.querySelectorAll('input[name="mc_sin"]:checked');
-    const sin = Array.from(sinNodes).map(n => n.value);
-
-    const nota = document.getElementById('mcNota').value.trim();
-
-    this.cart[this.activeItem.uid] = {
-      id: this.activeItem.id,
-      nombre: this.activeItem.nombre,
-      precio: this.activeItem.precio,
-      qty: 1,
-      custom: { salsa, salsa_id, salsas_ids: salIdsArr, proteina, extras, sin, nota }
-    };
-
-    this.cerrarModal('modalCustom');
-    this.renderCart();
-  },
-
-  modQty(uid, delta) {
-    if (!this.cart[uid]) return;
-    this.cart[uid].qty += delta;
-    if (this.cart[uid].qty <= 0) delete this.cart[uid];
-    this.renderCart();
-  },
-
-  eliminarCart(uid) {
-    delete this.cart[uid];
-    this.renderCart();
-  },
-
-  renderCart() {
-    const container = document.getElementById('cartItemsList');
-    const emptyMsg = document.getElementById('emptyCartMsg');
-    const hiddenCont = document.getElementById('inputsHidden');
-    const btnSave = document.getElementById('btnSaveItems');
-    const badge = document.getElementById('cartBadge');
-    
-    let html = '';
-    let hidden = '';
-    let totalExtra = 0;
-    let count = 0;
-
-    Object.entries(this.cart).forEach(([uid, item]) => {
-      // 💸 Calculamos el precio total del item (Base + Extras)
-      let precioExtrasAcumulado = 0;
-      item.custom.extras.forEach(extName => {
-        const target = OPCIONES_EXTRAS.find(e => e.nombre === extName);
-        if(target) precioExtrasAcumulado += target.precio;
-      });
-
-      const precioVentaTotal = item.precio + precioExtrasAcumulado;
-      const sub = precioVentaTotal * item.qty;
-      totalExtra += sub;
-      count += item.qty;
-      const c = item.custom;
-
-      // Generar Tags Visuales
-      let meta = '';
-      if (c.salsa || (c.proteina && c.proteina !== "Sin proteina") || c.extras.length || c.sin.length || c.nota) {
-        meta += `<div class="pos-modifiers mt-2">`;
-        if(c.proteina && c.proteina !== "Sin proteina") meta += `<span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 ${this.escapeHtml(c.proteina)}</span>`;
-        if(c.salsa) meta += `<span class="pos-tag">🌶️ ${this.escapeHtml(c.salsa)}</span>`;
-        if(c.extras.length) meta += `<span class="pos-tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${this.escapeHtml(c.extras.join(', '))}</span>`;
-        if(c.sin.length) meta += `<span class="pos-tag pos-tag-warn">🚫 Sin ${this.escapeHtml(c.sin.join(', '))}</span>`;
-        if(c.nota) meta += `<div class="pos-note mt-1">📝 ${this.escapeHtml(c.nota)}</div>`;
-        meta += `</div>`;
-      }
-
-      html += `
-        <div style="border: 1px solid var(--pos-border); border-radius: 10px; padding: 12px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position:relative;">
-          <button type="button" class="btn-danger-ghost" style="position:absolute; top:8px; right:8px; padding:4px;" onclick="PosApp.eliminarCart('${uid}')">✕</button>
-          <div class="fw-bold" style="padding-right:24px;">${this.escapeHtml(item.nombre)}</div>
-          <div style="color: var(--pos-primary); font-weight:800; font-size:0.95rem; margin-top:2px;">$${precioVentaTotal.toFixed(2)}</div>
-          ${meta}
-          <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top:1px dashed var(--pos-border);">
-            <div class="qty-ctrl">
-              <button type="button" class="qty-btn" onclick="PosApp.modQty('${uid}', -1)">-</button>
-              <div class="qty-val">${item.qty}</div>
-              <button type="button" class="qty-btn" onclick="PosApp.modQty('${uid}', 1)">+</button>
-            </div>
-            <span style="font-size:0.8rem; color:var(--pos-text-muted);">${item.qty} x $${precioVentaTotal.toFixed(2)}</span>
-          </div>
-        </div>
-      `;
-
-      // Truco inteligente para backend: Inyectar las dos salsas a la nota si hay más de 1
-      let notaBackend = c.nota;
-      if (c.salsas_ids && c.salsas_ids.length > 1) {
-        notaBackend = `🌶️ Mitad y mitad: ${c.salsa} | ` + notaBackend;
-      }
-
-      // 1. INPUT OCULTO: Platillo Base
-      hidden += `
-        <input type="hidden" name="producto_id[]" value="${item.id}">
-        <input type="hidden" name="cantidad[]" value="${item.qty}">
-        <input type="hidden" name="proteina[]" value="${this.escapeHtml(c.proteina)}">
-        <input type="hidden" name="proteina_id[]" value="">
-        <input type="hidden" name="salsa_id[]" value="${c.salsa_id}">
-        <input type="hidden" name="sin[]" value="${this.escapeHtml(c.sin.join(','))}">
-        <input type="hidden" name="nota[]" value="${this.escapeHtml(notaBackend)}">
-      `;
-
-      // 2. INPUTS OCULTOS: Un registro por cada Extra seleccionado para cobrarlo en DB
-      if (c.extras) {
-        c.extras.forEach(extName => {
-          const extraProdId = this.encontrarProductoExtraId(extName);
-          if (extraProdId) {
-            hidden += `
-              <input type="hidden" name="producto_id[]" value="${extraProdId}">
-              <input type="hidden" name="cantidad[]" value="${item.qty}">
-              <input type="hidden" name="proteina[]" value="">
-              <input type="hidden" name="proteina_id[]" value="">
-              <input type="hidden" name="salsa_id[]" value="">
-              <input type="hidden" name="sin[]" value="">
-              <input type="hidden" name="nota[]" value="👉 Para: ${this.escapeHtml(item.nombre)}">
-            `;
-          }
-        });
-      }
-    });
-
-    container.innerHTML = html;
-    hiddenCont.innerHTML = hidden;
-    document.getElementById('cartTotal').innerText = `$${totalExtra.toFixed(2)}`;
-    badge.innerText = count;
-
-    // 🔥 CÁLCULO DEL GRAN TOTAL GLOBAL
-    const descuentoElement = document.getElementById('inputDescuentoGlobal');
-    const descuentoActual = descuentoElement ? (parseFloat(descuentoElement.value) || 0) : 0;
-    const granTotalGlobal = Math.max(0, this.subtotalBaseServer + totalExtra - descuentoActual);
-    document.getElementById('totalFinalGlobal').innerText = '$' + granTotalGlobal.toFixed(2);
-
-    if (count > 0) {
-      emptyMsg.style.display = 'none';
-      btnSave.style.opacity = '1';
-      btnSave.style.pointerEvents = 'auto';
-    } else {
-      emptyMsg.style.display = 'block';
-      btnSave.style.opacity = '0.5';
-      btnSave.style.pointerEvents = 'none';
-    }
-  },
-
-  abrirTicketPreview(id) {
-    fetch(`/pedido/${id}/ticket_preview`)
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('ticketText').innerText = data.texto;
-        document.getElementById('btnSendWaModal').href = data.whatsapp_url;
-        document.getElementById('modalTicket').classList.add('active');
-      })
-      .catch(err => alert("Error cargando ticket"));
-  },
-
-  abrirVistaCocina() {
-    const body = document.getElementById("cocinaBody");
-    const entries = Object.values(this.cart);
-
-    if (!entries.length) {
-      body.innerHTML = "<div class='text-center p-4' style='color: var(--pos-text-muted);'>No hay productos nuevos en el carrito para imprimir.</div>";
-      document.getElementById('modalCocina').classList.add('active');
-      return;
-    }
-
-    body.innerHTML = entries.map(it => {
-      const c = it.custom || {};
-      return `
-        <div style="border:1px solid var(--pos-border); border-radius:10px; padding:16px; margin-bottom:12px; background:#f8fafc;">
-          <div class="d-flex justify-content-between align-items-center">
-            <div style="font-size:1.1rem; font-weight:800; color: var(--pos-text-main);">${this.escapeHtml(it.nombre)}</div>
-            <div style="font-size:1.2rem; font-weight:900; background:white; padding:4px 12px; border:2px solid var(--pos-border); border-radius:8px;">x${it.qty}</div>
-          </div>
-          <div class="pos-modifiers mt-3">
-            ${c.proteina && c.proteina !== "Sin proteina" ? `<div><span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe;">🍳 PROT: ${this.escapeHtml(c.proteina)}</span></div>` : ''}
-            ${c.salsa ? `<div><span class="pos-tag">🌶️ SALSA: ${this.escapeHtml(c.salsa)}</span></div>` : ''}
-            ${c.extras.length ? `<div><span class="pos-tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ EXTRA: ${this.escapeHtml(c.extras.join(', '))}</span></div>` : ''}
-            ${c.sin.length ? `<div><span class="pos-tag pos-tag-warn">🚫 SIN: ${this.escapeHtml(c.sin.join(", "))}</span></div>` : ''}
-            ${c.nota ? `<div class="pos-note mt-2"><strong>NOTA:</strong> ${this.escapeHtml(c.nota)}</div>` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    document.getElementById('modalCocina').classList.add('active');
+    document.getElementById('sinChecks').innerHTML = htmlSin;
   }
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-  PosApp.init();
-});
+  document.getElementById('notaInput').value = customData.nota || "";
+  document.getElementById('customModal').classList.add('is-open');
+}
+
+function cerrarCustomModal() {
+  document.getElementById('customModal').classList.remove('is-open');
+  if(editandoUid && carrito[editandoUid] && carrito[editandoUid].isNew) eliminarProducto(editandoUid);
+  editandoUid = null;
+  renderCarrito();
+}
+
+function confirmarCustom() {
+  if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
+  
+  const nomNorm = normaliza(carrito[editandoUid].nombre);
+  const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
+
+  let protSelected = "Sin proteina";
+  let salIdParaDB = "";
+  let salIdsArr = [];
+  let salNombreUnido = "";
+  let sinArr = [];
+  let extraArr = [];
+  let saborAgua = "";
+
+  if (esAguaSabor) {
+    const saborRadio = document.querySelector('input[name="modal_sabor_agua"]:checked');
+    if (saborRadio) saborAgua = saborRadio.value;
+  } else {
+    const pSel = document.querySelector('input[name="modal_prot"]:checked');
+    if(pSel) protSelected = pSel.value;
+    
+    const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
+    salIdsArr = Array.from(salNodos).map(n => n.value);
+    const salNombresArr = Array.from(salNodos).map(n => n.dataset.nombre);
+    salIdParaDB = salIdsArr.length === 1 ? salIdsArr[0] : ""; 
+    salNombreUnido = salNombresArr.join(' y ');
+
+    const sinNodos = document.querySelectorAll('.check-sin:checked');
+    sinArr = Array.from(sinNodos).map(n => n.value);
+
+    const extraNodos = document.querySelectorAll('.check-extra:checked');
+    extraArr = Array.from(extraNodos).map(n => n.value);
+  }
+
+  carrito[editandoUid].custom = {
+    proteina: protSelected,
+    salsa_id: salIdParaDB,
+    salsas_ids: salIdsArr,
+    salsa: salNombreUnido,
+    sin: sinArr,
+    extras: extraArr,
+    sabor: saborAgua,
+    nota: document.getElementById('notaInput').value.trim()
+  };
+
+  delete carrito[editandoUid].isNew; 
+  editandoUid = null;
+  document.getElementById('customModal').classList.remove('is-open');
+  renderCarrito();
+}
+
+/* ================== VISTA COCINA ================== */
+function abrirVistaCocina() {
+  let html = "";
+  const keys = Object.keys(carrito);
+  if(keys.length === 0){
+    html = "<p style='text-align:center;'>El carrito está vacío</p>";
+  } else {
+    keys.forEach(uid => {
+      const item = carrito[uid];
+      html += `<div style="margin-bottom: 12px;">
+                 <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
+      if(item.custom.proteina && item.custom.proteina !== "Sin proteina") html += `<span class="tag">🍳 ${item.custom.proteina}</span> `;
+      if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
+      if(item.custom.sabor) html += `<span class="tag" style="background:#e0f2fe; color:#1e40af; border-color:#bae6fd;">💧 ${item.custom.sabor}</span> `;
+      if(item.custom.extras.length > 0) html += `<span class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${item.custom.extras.join(', ')}</span> `;
+      if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
+      if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
+      html += `</div><hr style="border: 0.5px dashed #ccc;">`;
+    });
+  }
+  document.getElementById('cocinaBody').innerHTML = html;
+  document.getElementById('cocinaModal').classList.add('is-open');
+}
+
+function cerrarVistaCocina() { document.getElementById('cocinaModal').classList.remove('is-open'); }
+
+/* ================== UI & WHATSAPP ================== */
+function toggleUberBox(){
+  const origen = document.getElementById("origenSelect").value;
+  document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
+}
+
+function guardarYEnviarWhatsApp() {
+  if (Object.keys(carrito).length === 0) { 
+    alert("⚠️ El carrito está vacío. Agrega productos primero."); 
+    return; 
+  }
+
+  let telefono = document.getElementById('buscador_cliente').value.trim();
+  let numeros = telefono.replace(/\D/g, '');
+
+  if (numeros.length < 10) {
+    alert("⚠️ Ingresa un teléfono de al menos 10 dígitos para enviar WhatsApp.");
+    return;
+  }
+
+  const waWindow = window.open('about:blank', '_blank');
+  document.getElementById('enviarWaHidden').value = "1";
+  
+  const form = document.getElementById('pedidoForm');
+  const formData = new FormData(form);
+
+  const btn = event.currentTarget;
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = "⏳ Generando...";
+  btn.style.pointerEvents = "none";
+
+  fetch(window.location.href, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: formData
+  })
+  .then(async res => {
+      const text = await res.text();
+      try { return JSON.parse(text); } 
+      catch(e) { throw new Error("Error interno del servidor. Revisa la consola."); }
+  })
+  .then(data => {
+      if(data && data.status === 'success') {
+          waWindow.location.href = data.wa_link;
+          window.location.href = data.redirect_url;
+      } else {
+          waWindow.close();
+          btn.innerHTML = textoOriginal;
+          btn.style.pointerEvents = "auto";
+          alert("⚠️ Hubo un problema al generar el enlace.");
+      }
+  })
+  .catch(err => {
+      waWindow.close();
+      btn.innerHTML = textoOriginal;
+      btn.style.pointerEvents = "auto";
+      alert("❌ " + err.message);
+  });
+}
 </script>
 
 {% endblock %}
