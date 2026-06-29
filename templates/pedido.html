@@ -212,7 +212,6 @@
 
 </form>
 
-{# (Los modales customModal y cocinaModal junto con el bloque <style> se mantienen idénticos al original) #}
 <div id="customModal" class="modal">
   <div class="modal-box">
     <button class="modal-close" type="button" onclick="cerrarCustomModal()">✕</button>
@@ -421,7 +420,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // === PRECARGA DE DETALLES DEL CARRITO DESDE EL PEDIDO ABIERTO ===
-  // Recorremos los elementos enviados desde tu backend e inicializamos el objeto global 'carrito'
   {% if pedido_detalles %}
     {% for d in pedido_detalles %}
       // Omitimos los extras directos en la carga inicial ya que se asocian al plato padre
@@ -429,7 +427,6 @@ document.addEventListener("DOMContentLoaded", () => {
         (function() {
           const uid = uidLinea("{{ d.producto_id }}");
           
-          // Parseo seguro de listas separadas por comas desde el backend
           let sinLista = [];
           {% if d.sin %}
             sinLista = "{{ d.sin }}".split(',').map(s => s.trim()).filter(Boolean);
@@ -437,15 +434,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
           // Reconstrucción de extras asociados a este item específico
           let extrasLista = [];
+          {% set outer_index = loop.index0 %}
           {% for sub in pedido_detalles %}
-            {% if sub.padre_index == loop.parentloop.index0 %}
-              // Extraemos el nombre del modificador quitando el prefijo informativo de la nota si existiera
+            {% if sub.padre_index == outer_index %}
               let extName = "{{ sub.nombre or '' }}";
               extrasLista.push(extName);
             {% endif %}
           {% endfor %}
 
-          // Filtro para extraer notas adicionales limpiando metadatos agregados
+          // Filtro para extraer notas adicionales
           let notaLimpia = "{{ d.nota or '' }}";
           let saborDetectado = "";
           if (notaLimpia.includes("💧 Sabor:")) {
@@ -473,7 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })();
       {% endif %}
     {% endfor %}
-    renderCarrito(); // Ejecutamos la primera impresión del carrito con los datos históricos
+    renderCarrito();
   {% endif %}
 
   const inputBuscar = document.getElementById('buscador_cliente');
