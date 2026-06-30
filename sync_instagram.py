@@ -52,6 +52,10 @@ def obtener_insights_pago():
         return []
 
 def sincronizar_bd_pago():
+    # Print de diagnóstico temporal
+    print(f"[DIAGNÓSTICO] TOKEN encontrado: {'SÍ' if ACCESS_TOKEN else 'NO'}")
+    print(f"[DIAGNÓSTICO] AD_ACCOUNT_ID encontrado: {'SÍ' if AD_ACCOUNT_ID else 'NO'}")
+
     if not ACCESS_TOKEN or not AD_ACCOUNT_ID:
         print("Faltan las credenciales de Meta Ads en las variables de entorno.")
         return
