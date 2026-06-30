@@ -19,7 +19,9 @@ def obtener_posts():
     try:
         res = requests.get(url, params=params)
         res.raise_for_status()
-        return res.json().get("data", [])
+        data = res.json().get("data", [])
+        print(f"Se encontraron {len(data)} posts en Instagram.")
+        return data
     except Exception as e:
         print(f"Error al obtener posts: {e}")
         return []
@@ -63,6 +65,7 @@ def sincronizar_bd():
     posts = obtener_posts()
     
     if not posts:
+        print("No hay posts para procesar.")
         return
 
     conn = get_connection()
@@ -91,9 +94,12 @@ def sincronizar_bd():
                 """
                 valores = (hora_pub, ig_id, tipo, stats["alcance"], stats["visualizaciones"], stats["me_gusta"], stats["comentarios"], stats["veces_compartido"], stats["veces_guardado"])
                 cursor.execute(sql, valores)
-                
+                print(f"Post {ig_id} preparado para insertar/actualizar.")
+            
+            # EL CAMBIO CLAVE: El commit se hace firmemente ANTES de salir del bloque del cursor
             conn.commit()
-            print("Sincronización exitosa.")
+            print("¡Sincronización guardada exitosamente en la base de datos!")
+            
     except Exception as e:
         conn.rollback()
         print(f"Error guardando en MySQL: {e}")
