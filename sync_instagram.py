@@ -10,10 +10,10 @@ IG_USER_ID = os.environ.get("META_IG_USER_ID")
 def obtener_posts():
     url = f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media"
     params = {
-        # ¡EL SECRETO!: Agregamos 'media_product_type' para saber si es Reel o Feed
-        "fields": "id,timestamp,media_type,media_product_type,like_count,comments_count",
+        # Campos estándar permitidos en la llamada raíz
+        "fields": "id,timestamp,media_type,media_product_type",
         "access_token": ACCESS_TOKEN,
-        "limit": 30
+        "limit": 30  # Traemos los últimos 30 para sobreescribir las filas que quedaron en 0
     }
     try:
         res = requests.get(url, params=params)
@@ -22,29 +22,44 @@ def obtener_posts():
         print(f"Se encontraron {len(data)} posts en Instagram.")
         return data
     except Exception as e:
-        print(f"Error al obtener posts: {e}")
+        print(f"Error al obtener lista de posts: {e}")
         return []
 
 def traducir_tipo_publicacion(media_type, product_type):
-    """Traduce correctamente tomando en cuenta si es Reel o Video Normal"""
+    """Traduce al formato manual idéntico al tuyo"""
     if product_type == "REELS":
         return "Reel de Instagram"
     elif media_type == "CAROUSEL_ALBUM":
         return "Secuencia de Instagram"
     elif media_type == "IMAGE":
         return "Imagen de Instagram"
-    elif media_type == "VIDEO" and product_type == "FEED":
-        return "Video de Instagram" # Era un video viejo normal, no un Reel
+    elif media_type == "VIDEO":
+        return "Video de Instagram"
     return media_type
 
+def obtener_likes_y_comentarios(media_id):
+    """Obtiene de forma segura los me gusta y comentarios individuales de cada objeto"""
+    url = f"https://graph.facebook.com/v19.0/{media_id}"
+    params = {
+        "fields": "like_count,comments_count",
+        "access_token": ACCESS_TOKEN
+    }
+    try:
+        res = requests.get(url, params=params)
+        if res.status_code == 200:
+            datos = res.json()
+            return datos.get("like_count", 0), datos.get("comments_count", 0)
+    except Exception as e:
+        print(f"Error al obtener interacciones del post {media_id}: {e}")
+    return 0, 0
+
 def obtener_estadisticas(media_id, media_type, product_type):
-    # Pedimos métricas según el tipo de producto exacto
+    # Definimos métricas exactas por tipo para evitar que Meta rechace la consulta
     if product_type == "REELS":
         metricas = "reach,plays,saved,shares"
     elif media_type == "CAROUSEL_ALBUM":
         metricas = "carousel_album_reach,carousel_album_impressions,carousel_album_saved"
     else: 
-        # Para Imágenes y Videos normales del Feed
         metricas = "reach,impressions,saved"
 
     url = f"https://graph.facebook.com/v19.0/{media_id}/insights"
@@ -57,10 +72,8 @@ def obtener_estadisticas(media_id, media_type, product_type):
     
     try:
         res = requests.get(url, params=params)
-        
-        # Si Meta se sigue quejando por alguna razón, ahora nos lo dirá en los logs
         if res.status_code != 200:
-            print(f"Meta rechazó insights de {media_id} ({media_type}/{product_type}): {res.text}")
+            print(f"Meta no otorgó insights para {media_id} ({media_type}): {res.text}")
             return stats
             
         data = res.json().get("data", [])
@@ -68,6 +81,7 @@ def obtener_estadisticas(media_id, media_type, product_type):
             name = item["name"]
             val = item["values"][0]["value"]
             
+            # Mapeo a tus columnas manuales
             if name in ["reach", "carousel_album_reach"]: 
                 stats["alcance"] = val
             elif name in ["impressions", "plays", "carousel_album_impressions"]: 
@@ -84,13 +98,14 @@ def obtener_estadisticas(media_id, media_type, product_type):
 
 def sincronizar_bd():
     if not ACCESS_TOKEN or not IG_USER_ID:
-        print("Faltan las credenciales.")
+        print("Faltan las credenciales de Meta en las variables de entorno.")
         return
 
     print("Iniciando sincronización con Instagram...")
     posts = obtener_posts()
     
     if not posts:
+        print("No se pudieron procesar posts debido a un error previo.")
         return
 
     conn = get_connection()
@@ -100,17 +115,14 @@ def sincronizar_bd():
                 ig_id = post["id"]
                 hora_pub = datetime.strptime(post["timestamp"], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
                 
-                # Rescatamos el tipo de media y el tipo de producto (Reel, Feed, etc.)
                 tipo_meta = post.get("media_type", "")
                 product_type = post.get("media_product_type", "FEED") 
                 
-                # Ahora sí, la traducción será exacta
+                # Traducimos de forma exacta
                 tipo_limpio = traducir_tipo_publicacion(tipo_meta, product_type)
                 
-                likes = post.get("like_count", 0)
-                comentarios = post.get("comments_count", 0)
-                
-                # Pedimos las estadísticas pasando todos los datos
+                # Consultas individuales para asegurar que los datos no vengan en 0
+                likes, comentarios = obtener_likes_y_comentarios(ig_id)
                 stats = obtener_estadisticas(ig_id, tipo_meta, product_type)
                 
                 sql = """
@@ -134,7 +146,7 @@ def sincronizar_bd():
                     likes, comentarios, stats["veces_compartido"], stats["veces_guardado"]
                 )
                 cursor.execute(sql, valores)
-                print(f"Post {ig_id} actualizado -> Tipo: {tipo_limpio}, Likes: {likes}, Alcance: {stats['alcance']}")
+                print(f"Post {ig_id} sincronizado -> Tipo: {tipo_limpio} | Alcance: {stats['alcance']} | Visualizaciones: {stats['visualizaciones']}")
             
             conn.commit()
             print("¡Sincronización guardada exitosamente en la base de datos!")
