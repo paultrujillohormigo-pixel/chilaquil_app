@@ -18,7 +18,6 @@
 
         <div>
           <label>Fecha</label>
-          {# Formateamos la fecha si existe para datetime-local (YYYY-MM-DDTHH:MM) #}
           <input type="datetime-local" name="fecha" value="{{ pedido.fecha.strftime('%Y-%m-%dT%H:%M') if pedido.fecha else '' }}">
           <small>Vacío = ahora</small>
         </div>
@@ -66,7 +65,6 @@
           </div>
           <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
 
-          {# Si el pedido ya tiene cliente, mostramos su tarjeta de detalles de inmediato #}
           <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;">{{ pedido.cliente_nombre or 'Cliente Registrado' }}</strong>
@@ -196,13 +194,28 @@
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
           <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-            💬 Guardar y Enviar WhatsApp
+            💬 Actualizar y Enviar WhatsApp
           </button>
           
           <button type="submit" class="btn-guardar" style="padding: 12px;">
-            💾 Actualizar Pedido
+            💾 Solo Actualizar Pedido
           </button>
         </div>
+
+        <!-- ================= BOTONES DE CERRAR PEDIDO ================= -->
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee;">
+          <h4 style="margin-top: 0; margin-bottom: 10px; color: #555; text-align: center;">Finalizar Pedido</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR este pedido y enviar ticket por WA? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrarWA').submit();" style="background-color: #128C7E; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
+              🔒 Cerrar y Enviar WA
+            </button>
+            
+            <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR el pedido sin enviar mensaje? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrar').submit();" style="background-color: #d9534f; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
+              🔒 Solo Cerrar
+            </button>
+          </div>
+        </div>
+        <!-- ============================================================ -->
 
       </div>
 
@@ -211,6 +224,11 @@
   </aside>
 
 </form>
+
+<!-- Formularios ocultos para las rutas de Cerrar Pedido -->
+<form id="formCerrar" action="/cerrar_pedido/{{ pedido.id }}" method="post" style="display: none;"></form>
+<form id="formCerrarWA" action="/cerrar_pedido_whatsapp/{{ pedido.id }}" method="post" style="display: none;"></form>
+
 
 <div id="customModal" class="modal">
   <div class="modal-box">
