@@ -7,13 +7,23 @@ from db import get_connection
 ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN")
 IG_USER_ID = os.environ.get("META_IG_USER_ID")
 
+def traducir_tipo_publicacion(media_type):
+    """Traduce el formato crudo de Meta al formato manual de tu tabla"""
+    if media_type == "VIDEO":
+        return "Reel de Instagram"
+    elif media_type == "IMAGE":
+        return "Imagen de Instagram"
+    elif media_type == "CAROUSEL_ALBUM":
+        return "Secuencia de Instagram"
+    return media_type
+
 def obtener_posts():
     url = f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media"
     params = {
-        # ¡EL CAMBIO!: Pedimos like_count y comments_count desde aquí
+        # ¡Clave! Aquí le pedimos likes y comments de una vez
         "fields": "id,timestamp,media_type,like_count,comments_count",
         "access_token": ACCESS_TOKEN,
-        "limit": 10
+        "limit": 30 # Aumenté a 30 para que corrija los posts recientes que se guardaron en ceros
     }
     try:
         res = requests.get(url, params=params)
@@ -26,11 +36,13 @@ def obtener_posts():
         return []
 
 def obtener_estadisticas(media_id, media_type):
-    # Ajustamos las métricas a lo que Meta realmente permite por tipo de post
-    if media_type in ["REELS_V2", "VIDEO"]:
+    # Cada tipo de publicación exige métricas con nombres diferentes en Meta
+    if media_type == "VIDEO":
         metricas = "reach,plays,saved,shares"
-    else:
-        # Las imágenes no soportan "shares" ni likes/comments por esta vía
+    elif media_type == "CAROUSEL_ALBUM":
+        # Los carruseles tienen nombres de métrica exclusivos
+        metricas = "carousel_album_reach,carousel_album_impressions,carousel_album_saved"
+    else: # IMAGE
         metricas = "reach,impressions,saved"
 
     url = f"https://graph.facebook.com/v19.0/{media_id}/insights"
@@ -43,22 +55,28 @@ def obtener_estadisticas(media_id, media_type):
     
     try:
         res = requests.get(url, params=params)
-        
-        # Si Meta arroja un error en los insights, ahora lo veremos en los logs
         if res.status_code != 200:
-            print(f"Alerta de Meta en Insights del post {media_id}: {res.text}")
+            print(f"Alerta de Meta en Insights de {media_id} ({media_type}): {res.text}")
             return stats
-
+            
         data = res.json().get("data", [])
         for item in data:
             name = item["name"]
             val = item["values"][0]["value"]
-            if name == "reach": stats["alcance"] = val
-            elif name in ["impressions", "plays"]: stats["visualizaciones"] = val
-            elif name == "shares": stats["veces_compartido"] = val
-            elif name == "saved": stats["veces_guardado"] = val
+            
+            # Unificamos los nombres sin importar si es carrusel o post normal
+            if name in ["reach", "carousel_album_reach"]: 
+                stats["alcance"] = val
+            elif name in ["impressions", "plays", "carousel_album_impressions"]: 
+                stats["visualizaciones"] = val
+            elif name == "shares": 
+                stats["veces_compartido"] = val
+            elif name in ["saved", "carousel_album_saved"]: 
+                stats["veces_guardado"] = val
+                
     except Exception as e:
         print(f"Error sacando insights de {media_id}: {e}")
+        
     return stats
 
 def sincronizar_bd():
@@ -79,21 +97,27 @@ def sincronizar_bd():
             for post in posts:
                 ig_id = post["id"]
                 hora_pub = datetime.strptime(post["timestamp"], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
-                tipo = post["media_type"]
                 
-                # Extraemos likes y comentarios que ahora vienen en el post principal
+                # 1. TRADUCIMOS EL TIPO DE PUBLICACIÓN
+                tipo_meta = post["media_type"]
+                tipo_limpio = traducir_tipo_publicacion(tipo_meta)
+                
+                # 2. SACAMOS LIKES Y COMENTARIOS DEL POST
                 likes = post.get("like_count", 0)
                 comentarios = post.get("comments_count", 0)
                 
-                # Buscamos el resto de las estadísticas
-                stats = obtener_estadisticas(ig_id, tipo)
+                # 3. SACAMOS INSIGHTS (alcance, visualizaciones, etc.)
+                stats = obtener_estadisticas(ig_id, tipo_meta)
                 
+                # 4. GUARDAMOS EN MYSQL
+                # Incluí 'seguimientos' (con valor 0) para empatar 100% con tu esquema
                 sql = """
                     INSERT INTO organic_instagram_performance 
                         (hora_publicacion, identificador_publicacion, tipo_publicacion, 
-                         alcance, visualizaciones, me_gusta, comentarios, veces_compartido, veces_guardado, fecha_importacion)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                         alcance, visualizaciones, me_gusta, comentarios, veces_compartido, seguimientos, veces_guardado, fecha_importacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, NOW())
                     ON DUPLICATE KEY UPDATE
+                        tipo_publicacion = VALUES(tipo_publicacion),
                         alcance = VALUES(alcance),
                         visualizaciones = VALUES(visualizaciones),
                         me_gusta = VALUES(me_gusta),
@@ -103,12 +127,12 @@ def sincronizar_bd():
                         fecha_importacion = NOW()
                 """
                 valores = (
-                    hora_pub, ig_id, tipo, 
+                    hora_pub, ig_id, tipo_limpio, 
                     stats["alcance"], stats["visualizaciones"], 
                     likes, comentarios, stats["veces_compartido"], stats["veces_guardado"]
                 )
                 cursor.execute(sql, valores)
-                print(f"Post {ig_id} - Likes: {likes}, Alcance: {stats['alcance']}")
+                print(f"Post {ig_id} actualizado -> Tipo: {tipo_limpio}, Alcance: {stats['alcance']}")
             
             conn.commit()
             print("¡Sincronización guardada exitosamente en la base de datos!")
