@@ -774,11 +774,51 @@ def ver_pedido(pedido_id):
 
             # 3. Procesar la actualización del pedido completo (POST)
             if request.method == "POST":
-                if pedido.get("estado") != "abierto":
-                    flash("No se puede modificar un pedido cerrado", "error")
-                    return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+                enviar_wa = request.form.get("enviar_wa") == "1"
+                tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
+                telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else pedido.get("telefono_whatsapp")
 
-                # Recolección de metadatos del pedido de forma idéntica a nuevo_pedido
+                # =========================================================
+                # EXCEPCIÓN: Si está cerrado pero quieren reenviar WhatsApp
+                # =========================================================
+                if pedido.get("estado") != "abierto":
+                    if enviar_wa:
+                        if not telefono_e164:
+                            return jsonify({"status": "error", "message": "Ingresa un número válido para enviar el WhatsApp."})
+                        
+                        # Actualizamos el teléfono en caso de que lo hayan corregido en la interfaz
+                        if telefono_e164 != pedido.get("telefono_whatsapp"):
+                            cursor.execute("UPDATE pedidos SET telefono_whatsapp = %s WHERE id = %s", (telefono_e164, pedido_id))
+                            conn.commit()
+
+                        ticket_text = generar_ticket_texto(pedido_id, cursor)
+                        
+                        # Obtenemos los totopos actuales sin sumar nuevos (porque el pedido ya está cerrado)
+                        balance = 0
+                        cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164 = %s", (telefono_e164,))
+                        c_row = cursor.fetchone()
+                        if c_row:
+                            cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id = %s", (c_row["id"],))
+                            acc = cursor.fetchone()
+                            if acc: balance = acc["totopos_balance"]
+                            
+                        # earned=0 porque no sumamos puntos extra en reenvíos
+                        msg_loyalty = loyalty_message(balance, 0, pedido_id, Decimal(str(pedido["total"])), telefono_e164)
+                        full_message = ticket_text + "\n\n" + msg_loyalty
+                        wa_link = wa_me_link(telefono_e164, full_message)
+                        
+                        return jsonify({
+                            "status": "success",
+                            "wa_link": wa_link,
+                            "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
+                        })
+                    else:
+                        flash("No se puede modificar un pedido que ya está cerrado.", "error")
+                        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+                # =========================================================
+                # --- Lógica normal de pedido abierto sigue a partir de aquí ---
+                # =========================================================
                 fecha = request.form.get("fecha") or pedido.get("fecha")
                 origen = (request.form.get("origen") or "").strip().lower()
                 mesero = request.form.get("mesero", "")
@@ -792,8 +832,6 @@ def ver_pedido(pedido_id):
                     descuento = Decimal("0")
                 if descuento < 0: descuento = Decimal("0")
 
-                tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
-                telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
                 totopos_ganados = request.form.get("totopos_ganados")
 
                 # Recolección de las listas dinámicas del carrito
@@ -930,7 +968,6 @@ def ver_pedido(pedido_id):
                         customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                         loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, totopos_int)
 
-                enviar_wa = request.form.get("enviar_wa") == "1"
                 if enviar_wa and telefono_e164:
                     conn.commit()
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
