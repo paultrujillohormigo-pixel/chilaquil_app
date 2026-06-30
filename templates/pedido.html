@@ -195,7 +195,7 @@
       <div style="pointer-events: auto; opacity: 1;">
       {% if pedido.estado == 'abierto' %}
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
             💬 Actualizar y Enviar WhatsApp
           </button>
           
@@ -221,7 +221,7 @@
           <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
             🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
           </div>
-          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
             💬 Reenviar Ticket por WhatsApp
           </button>
         </div>
@@ -911,7 +911,7 @@ function toggleUberBox(){
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
 
-function guardarYEnviarWhatsApp() {
+function guardarYEnviarWhatsApp(btnElement) {
   // Si está abierto, requerimos carrito. Si está cerrado, dejamos pasar la petición para enviar WA
   const esAbierto = "{{ pedido.estado }}" === "abierto";
   if (esAbierto && Object.keys(carrito).length === 0) { 
@@ -933,10 +933,13 @@ function guardarYEnviarWhatsApp() {
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
 
-  const btn = event.currentTarget;
-  const textoOriginal = btn.innerHTML;
-  btn.innerHTML = "⏳ Generando...";
-  btn.style.pointerEvents = "none";
+  // Manejo seguro del botón para evitar errores en consola
+  let textoOriginal = "";
+  if (btnElement) {
+    textoOriginal = btnElement.innerHTML;
+    btnElement.innerHTML = "⏳ Generando...";
+    btnElement.style.pointerEvents = "none";
+  }
 
   fetch(window.location.href, {
       method: 'POST',
@@ -954,16 +957,20 @@ function guardarYEnviarWhatsApp() {
           window.location.href = data.redirect_url;
       } else {
           waWindow.close();
-          btn.innerHTML = textoOriginal;
-          btn.style.pointerEvents = "auto";
+          if (btnElement) {
+            btnElement.innerHTML = textoOriginal;
+            btnElement.style.pointerEvents = "auto";
+          }
           // Muestra el mensaje exacto enviado desde el backend (error de número, etc.)
           alert(data.message ? "⚠️ " + data.message : "⚠️ Hubo un problema al generar el enlace.");
       }
   })
   .catch(err => {
       waWindow.close();
-      btn.innerHTML = textoOriginal;
-      btn.style.pointerEvents = "auto";
+      if (btnElement) {
+        btnElement.innerHTML = textoOriginal;
+        btnElement.style.pointerEvents = "auto";
+      }
       alert("❌ " + err.message);
   });
 }
