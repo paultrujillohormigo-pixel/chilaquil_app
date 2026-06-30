@@ -4,159 +4,105 @@ import pymysql
 from datetime import datetime
 from db import get_connection
 
+# === CREDENCIALES DESDE RAILWAY ===
 ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN")
-IG_USER_ID = os.environ.get("META_IG_USER_ID")
+AD_ACCOUNT_ID = os.environ.get("META_AD_ACCOUNT_ID") # Ejemplo: act_123456789
+# ==================================
 
-def obtener_posts():
-    url = f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media"
+def obtener_insights_pago():
+    if not AD_ACCOUNT_ID.startswith("act_"):
+        # Nos aseguramos de que tenga el prefijo correcto que exige Meta
+        cuenta_id = f"act_{AD_ACCOUNT_ID}"
+    else:
+        cuenta_id = AD_ACCOUNT_ID
+
+    url = f"https://graph.facebook.com/v19.0/{cuenta_id}/insights"
+    
     params = {
-        "fields": "id,timestamp,media_type,media_product_type",
+        "level": "ad",  # Trae los datos detallados a nivel de anuncio
+        "fields": "date_start,campaign_id,campaign_name,ad_name,reach,impressions,frequency,spend",
+        "time_increment": 1,  # ¡CLAVE! Nos desglosa la info día por día
+        "date_preset": "last_30d",  # Revisa los últimos 30 días para actualizar cambios de atribución
         "access_token": ACCESS_TOKEN,
-        "limit": 30  
+        "limit": 150
     }
+    
+    lista_insights = []
+    
     try:
+        print(f"Consultando la API de Marketing para la cuenta {cuenta_id}...")
         res = requests.get(url, params=params)
         res.raise_for_status()
-        data = res.json().get("data", [])
-        print(f"Se encontraron {len(data)} posts en Instagram.")
-        return data
+        
+        datos_json = res.json()
+        lista_insights.extend(datos_json.get("data", []))
+        
+        # Lógica de paginación por si tienes muchísimos anuncios circulando
+        while "paging" in datos_json and "next" in datos_json["paging"]:
+            res = requests.get(datos_json["paging"]["next"])
+            res.raise_for_status()
+            datos_json = res.json()
+            lista_insights.extend(datos_json.get("data", []))
+            
+        print(f"Se obtuvieron {len(lista_insights)} registros diarios de rendimiento pagado.")
+        return lista_insights
+
     except Exception as e:
-        print(f"Error al obtener lista de posts: {e}")
+        print(f"Error al obtener insights de pago: {e}")
         return []
 
-def traducir_tipo_publicacion(media_type, product_type):
-    if product_type == "REELS":
-        return "Reel de Instagram"
-    elif media_type == "CAROUSEL_ALBUM":
-        return "Secuencia de Instagram"
-    elif media_type == "IMAGE":
-        return "Imagen de Instagram"
-    elif media_type == "VIDEO":
-        return "Video de Instagram"
-    return media_type
-
-def obtener_likes_y_comentarios(media_id):
-    url = f"https://graph.facebook.com/v19.0/{media_id}"
-    params = {
-        "fields": "like_count,comments_count",
-        "access_token": ACCESS_TOKEN
-    }
-    try:
-        res = requests.get(url, params=params)
-        if res.status_code == 200:
-            datos = res.json()
-            return datos.get("like_count", 0), datos.get("comments_count", 0)
-    except Exception as e:
-        print(f"Error al obtener interacciones del post {media_id}: {e}")
-    return 0, 0
-
-def obtener_estadisticas(media_id, media_type, product_type):
-    # ========================================================
-    # ¡NUEVAS REGLAS DE META APLICADAS AQUÍ!
-    # ========================================================
-    if product_type == "REELS" or media_type == "VIDEO":
-        # Meta cambió 'plays' por 'views'
-        metricas = "reach,views,saved,shares"
-    elif media_type == "CAROUSEL_ALBUM":
-        # Meta eliminó los prefijos 'carousel_album_'
-        metricas = "reach,impressions,saved,shares"
-    else: 
-        # IMAGE: Meta eliminó 'impressions' para imágenes
-        metricas = "reach,saved,shares"
-
-    url = f"https://graph.facebook.com/v19.0/{media_id}/insights"
-    params = {
-        "metric": metricas,
-        "access_token": ACCESS_TOKEN
-    }
-    
-    stats = {"alcance": 0, "visualizaciones": 0, "veces_compartido": 0, "veces_guardado": 0}
-    
-    try:
-        res = requests.get(url, params=params)
-        if res.status_code != 200:
-            print(f"Meta no otorgó insights para {media_id} ({media_type}): {res.text}")
-            return stats
-            
-        data = res.json().get("data", [])
-        for item in data:
-            name = item["name"]
-            val = item["values"][0]["value"]
-            
-            # Asignación inteligente basada en lo nuevo que nos manda Meta
-            if name == "reach": 
-                stats["alcance"] = val
-                # Si es una Imagen, usamos el 'alcance' como 'visualizaciones' para no tener ceros
-                if media_type == "IMAGE":
-                    stats["visualizaciones"] = val
-            elif name in ["impressions", "views"]: 
-                stats["visualizaciones"] = val
-            elif name == "shares": 
-                stats["veces_compartido"] = val
-            elif name == "saved": 
-                stats["veces_guardado"] = val
-                
-    except Exception as e:
-        print(f"Error sacando insights de {media_id}: {e}")
-        
-    return stats
-
-def sincronizar_bd():
-    if not ACCESS_TOKEN or not IG_USER_ID:
-        print("Faltan las credenciales de Meta.")
+def sincronizar_bd_pago():
+    if not ACCESS_TOKEN or not AD_ACCOUNT_ID:
+        print("Faltan las credenciales de Meta Ads en las variables de entorno.")
         return
 
-    print("Iniciando sincronización con Instagram...")
-    posts = obtener_posts()
-    
-    if not posts:
+    records = obtener_insights_pago()
+    if not records:
+        print("No hay datos de pago para procesar.")
         return
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            for post in posts:
-                ig_id = post["id"]
-                hora_pub = datetime.strptime(post["timestamp"], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
+            for item in records:
+                # Meta nos entrega strings, los formateamos al tipo de dato de tu MySQL
+                dia = item.get("date_start")
+                campana_id = item.get("campaign_id")
+                campana_nombre = item.get("campaign_name")
+                anuncio_nombre = item.get("ad_name")
                 
-                tipo_meta = post.get("media_type", "")
-                product_type = post.get("media_product_type", "FEED") 
+                alcance = int(item.get("reach", 0))
+                impresiones = int(item.get("impressions", 0))
+                frecuencia = float(item.get("frequency", 0.00))
+                importe_gastado = float(item.get("spend", 0.00))
                 
-                tipo_limpio = traducir_tipo_publicacion(tipo_meta, product_type)
-                likes, comentarios = obtener_likes_y_comentarios(ig_id)
-                stats = obtener_estadisticas(ig_id, tipo_meta, product_type)
-                
+                # SQL adaptado exactamente a las columnas de tu nueva tabla
                 sql = """
-                    INSERT INTO organic_instagram_performance 
-                        (hora_publicacion, identificador_publicacion, tipo_publicacion, 
-                         alcance, visualizaciones, me_gusta, comentarios, veces_compartido, seguimientos, veces_guardado, fecha_importacion)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, NOW())
+                    INSERT INTO tu_nombre_de_tabla_pagada 
+                        (dia, identificador_campana, nombre_campana, nombre_anuncio, 
+                         alcance, impresiones, frecuencia, importe_gastado, fecha_importacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
                     ON DUPLICATE KEY UPDATE
-                        tipo_publicacion = VALUES(tipo_publicacion),
+                        nombre_campana = VALUES(nombre_campana),
+                        nombre_anuncio = VALUES(nombre_anuncio),
                         alcance = VALUES(alcance),
-                        visualizaciones = VALUES(visualizaciones),
-                        me_gusta = VALUES(me_gusta),
-                        comentarios = VALUES(comentarios),
-                        veces_compartido = VALUES(veces_compartido),
-                        veces_guardado = VALUES(veces_guardado),
+                        impresiones = VALUES(impresiones),
+                        frecuencia = VALUES(frecuencia),
+                        importe_gastado = VALUES(importe_gastado),
                         fecha_importacion = NOW()
                 """
-                valores = (
-                    hora_pub, ig_id, tipo_limpio, 
-                    stats["alcance"], stats["visualizaciones"], 
-                    likes, comentarios, stats["veces_compartido"], stats["veces_guardado"]
-                )
+                
+                valores = (dia, campana_id, campana_nombre, anuncio_nombre, alcance, impresiones, frecuencia, importe_gastado)
                 cursor.execute(sql, valores)
-                print(f"Post sincronizado -> Tipo: {tipo_limpio} | Alcance: {stats['alcance']} | Visualizaciones: {stats['visualizaciones']}")
             
             conn.commit()
-            print("¡Sincronización guardada exitosamente en la base de datos!")
+            print("¡Sincronización de campañas de pago guardada exitosamente!")
             
     except Exception as e:
         conn.rollback()
-        print(f"Error guardando en MySQL: {e}")
+        print(f"Error guardando datos de pago en MySQL: {e}")
     finally:
         conn.close()
 
 if __name__ == "__main__":
-    sincronizar_bd()
+    sincronizar_bd_pago()
