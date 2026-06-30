@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 class="pos-title">🧾 Editar Pedido #{{ pedido.id }}</h2>
+<h2 class="pos-title">🧾 Pedido #{{ pedido.id }} {% if pedido.estado != 'abierto' %} (Cerrado) {% endif %}</h2>
 
 <form method="post" id="pedidoForm" class="pos-layout">
 
   <input type="hidden" name="enviar_wa" id="enviarWaHidden" value="0">
 
-  <section class="pos-left">
+  <section class="pos-left" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
 
     <div class="card">
       <div class="card-head">
@@ -50,7 +50,7 @@
           <input type="text" name="mesero" placeholder="Nombre" value="{{ pedido.mesero or '' }}">
         </div>
 
-        <div style="position: relative; grid-column: 1 / -1;">
+        <div style="position: relative; grid-column: 1 / -1; {% if pedido.estado != 'abierto' %} pointer-events: auto; opacity: 1; {% endif %}">
           <label>Buscar Cliente / WhatsApp</label>
           
           <div style="display: flex; gap: 8px;">
@@ -68,7 +68,7 @@
           <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;">{{ pedido.cliente_nombre or 'Cliente Registrado' }}</strong>
-              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;">✕ Limpiar</button>
+              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;" {% if pedido.estado != 'abierto' %} disabled {% endif %}>✕ Limpiar</button>
             </div>
             <div id="detalle_tel" style="font-size:0.9rem; color:#555; margin-top:4px;">📞 {{ pedido.telefono_whatsapp or 'Sin teléfono' }}</div>
             <div id="detalle_extra" style="font-size:0.9rem; color:#555; margin-top:4px;"></div>
@@ -137,7 +137,7 @@
         <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
       </div>
 
-      <div class="carrito-wrap">
+      <div class="carrito-wrap" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
         <table id="carritoTable">
           <thead>
             <tr>
@@ -189,9 +189,11 @@
 
         <div id="inputsHidden"></div>
         <input type="hidden" name="descuento" id="descuentoHidden" value="{{ pedido.descuento or '0' }}">
-        
         <input type="hidden" name="totopos_ganados" value="1">
+      </div>
 
+      <div style="pointer-events: auto; opacity: 1;">
+      {% if pedido.estado == 'abierto' %}
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
           <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
             💬 Actualizar y Enviar WhatsApp
@@ -202,7 +204,6 @@
           </button>
         </div>
 
-        <!-- ================= BOTONES DE CERRAR PEDIDO ================= -->
         <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee;">
           <h4 style="margin-top: 0; margin-bottom: 10px; color: #555; text-align: center;">Finalizar Pedido</h4>
           <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -215,17 +216,23 @@
             </button>
           </div>
         </div>
-        <!-- ============================================================ -->
-
+      {% else %}
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+          <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
+            🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
+          </div>
+          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+            💬 Reenviar Ticket por WhatsApp
+          </button>
+        </div>
+      {% endif %}
       </div>
-
-    </div>
+      </div>
 
   </aside>
 
 </form>
 
-<!-- Formularios ocultos para las rutas de Cerrar Pedido -->
 <form id="formCerrar" action="/cerrar_pedido/{{ pedido.id }}" method="post" style="display: none;"></form>
 <form id="formCerrarWA" action="/cerrar_pedido_whatsapp/{{ pedido.id }}" method="post" style="display: none;"></form>
 
@@ -417,7 +424,6 @@ function encontrarProductoExtraId(nombreBuscar) {
 
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
-  // Inicialización de la fecha si no viene preestablecida
   const fechaInput = document.querySelector('input[name="fecha"]');
   if (fechaInput && !fechaInput.value) {
     const now = new Date();
@@ -906,7 +912,9 @@ function toggleUberBox(){
 }
 
 function guardarYEnviarWhatsApp() {
-  if (Object.keys(carrito).length === 0) { 
+  // Si está abierto, requerimos carrito. Si está cerrado, dejamos pasar la petición para enviar WA
+  const esAbierto = "{{ pedido.estado }}" === "abierto";
+  if (esAbierto && Object.keys(carrito).length === 0) { 
     alert("⚠️ El carrito está vacío. Agrega productos primero."); 
     return; 
   }
@@ -948,7 +956,8 @@ function guardarYEnviarWhatsApp() {
           waWindow.close();
           btn.innerHTML = textoOriginal;
           btn.style.pointerEvents = "auto";
-          alert("⚠️ Hubo un problema al generar el enlace.");
+          // Muestra el mensaje exacto enviado desde el backend (error de número, etc.)
+          alert(data.message ? "⚠️ " + data.message : "⚠️ Hubo un problema al generar el enlace.");
       }
   })
   .catch(err => {
