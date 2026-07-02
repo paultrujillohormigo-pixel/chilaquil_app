@@ -65,7 +65,7 @@
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
-          <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
+          <small>Asocia un cliente para registrar sus <strong>totopos</strong> acumulados.</small>
 
           <div id="cliente_seleccionado_card" class="nota" style="display:none; margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -195,12 +195,9 @@
         <input type="hidden" name="totopos_ganados" value="1">
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp()" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-            💬 Guardar y Enviar WhatsApp
-          </button>
-          
-          <button type="submit" class="btn-guardar" style="padding: 12px;">
-            💾 Solo Guardar
+          <!-- Único botón limpio de guardado para la comanda abierta -->
+          <button type="submit" class="btn-guardar" style="padding: 14px; font-size: 1.05rem; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%;">
+            💾 Abrir / Guardar Pedido
           </button>
         </div>
 
@@ -208,10 +205,11 @@
 
     </div>
 
-  </aside>
+  </section>
 
 </form>
 
+<!-- MODAL PERSONALIZACIÓN -->
 <div id="customModal" class="modal">
   <div class="modal-box">
 
@@ -254,6 +252,7 @@
   </div>
 </div>
 
+<!-- MODAL COCINA -->
 <div id="cocinaModal" class="modal">
   <div class="modal-box">
 
@@ -437,7 +436,6 @@ window.addEventListener('orientationchange', setVH);
 /* ================== DATA ================== */
 const SALSAS_DB = {{ salsas|tojson|safe }};
 
-// Opciones estáticas requeridas por el usuario
 const OPCIONES_HUEVO = ["Sin proteina", "Con huevo estrellado", "Huevo revuelto", "Huevo bien cocido"];
 const OPCIONES_EXTRAS = [
   { nombre: "Huevo", precio: 20 },
@@ -650,8 +648,6 @@ function renderCarrito(){
   tbody.innerHTML = "";
   hidden.innerHTML = "";
   let subtotalGeneral = 0;
-  
-  // MAGIA AQUI: Creamos un contador para saber en qué posición va cada platillo
   let currentIndex = 0; 
 
   Object.keys(carrito).forEach(uid => {
@@ -715,12 +711,11 @@ function renderCarrito(){
         notaParaBackend = `🌶️ Mitad y mitad: ${item.custom.salsa} | ` + notaParaBackend;
     }
 
-    // Guardamos el número de índice que le toca al platillo principal ("El Papá")
     const parentIndex = currentIndex;
 
-    // 1. Mandamos el platillo base (Su padre_index va vacío porque él es el jefe)
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
+      <input type="hidden" name="user_id" value="0">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
@@ -728,9 +723,8 @@ function renderCarrito(){
       <input type="hidden" name="nota[]" value="${escapeHtml(notaParaBackend)}">
       <input type="hidden" name="padre_index[]" value=""> 
     `;
-    currentIndex++; // Avanzamos el contador
+    currentIndex++;
 
-    // 2. Mandamos Extras separados amarrándolos a "El Papá"
     item.custom.extras.forEach(extName => {
       const extraProdId = encontrarProductoExtraId(extName);
       if (extraProdId) {
@@ -743,7 +737,7 @@ function renderCarrito(){
           <input type="hidden" name="nota[]" value="👉 Para: ${escapeHtml(item.nombre)}">
           <input type="hidden" name="padre_index[]" value="${parentIndex}">
         `;
-        currentIndex++; // Avanzamos el contador por cada extra
+        currentIndex++;
       }
     });
   });
@@ -922,84 +916,33 @@ function abrirVistaCocina() {
   if(keys.length === 0){
     html = "<p style='text-align:center;'>El carrito está vacío</p>";
   } else {
-    keys.forEach(uid => {
-      const item = carrito[uid];
-      html += `<div style="margin-bottom: 12px;">
-                 <strong style="font-size: 1.1rem;">[ ${item.cantidad} ] x ${item.nombre}</strong><br>`;
-      if(item.custom.proteina && item.custom.proteina !== "Sin proteina") html += `<span class="tag">🍳 ${item.custom.proteina}</span> `;
-      if(item.custom.salsa) html += `<span class="tag">🌶️ ${item.custom.salsa}</span> `;
-      if(item.custom.sabor) html += `<span class="tag" style="background:#e0f2fe; color:#1e40af; border-color:#bae6fd;">💧 ${item.custom.sabor}</span> `;
-      if(item.custom.extras.length > 0) html += `<span class="tag" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">➕ Extra: ${item.custom.extras.join(', ')}</span> `;
-      if(item.custom.sin.length > 0) html += `<span class="tag tag-warn">🚫 Sin ${item.custom.sin.join(', ')}</span> `;
-      if(item.custom.nota) html += `<div class="nota" style="margin-top:4px;">📝 ${item.custom.nota}</div>`;
-      html += `</div><hr style="border: 0.5px dashed #ccc;">`;
-    });
+    for (const key of keys) {
+      let item = carritoTable.querySelector(`[data-id="${key}"]`);
+    }
   }
-  document.getElementById('cocinaBody').innerHTML = html;
-  document.getElementById('cocinaModal').classList.add('is-open');
-}
-
-function cerrarVistaCocina() { document.getElementById('cocinaModal').classList.remove('is-open'); }
-
-/* ================== UI & WHATSAPP ================== */
-function toggleUberBox(){
-  const origen = document.getElementById("origenSelect").value;
-  document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
-}
-
-function guardarYEnviarWhatsApp() {
-  if (Object.keys(carrito).length === 0) { 
-    alert("⚠️ El carrito está vacío. Agrega productos primero."); 
-    return; 
-  }
-
-  let telefono = document.getElementById('buscador_cliente').value.trim();
-  let numeros = telefono.replace(/\D/g, '');
-
-  if (numeros.length < 10) {
-    alert("⚠️ Ingresa un teléfono de al menos 10 dígitos para enviar WhatsApp.");
-    return;
-  }
-
-  const waWindow = window.open('about:blank', '_blank');
-  document.getElementById('enviarWaHidden').value = "1";
   
-  const form = document.getElementById('pedidoForm');
-  const formData = new FormData(form);
-
-  const btn = event.currentTarget;
-  const textoOriginal = btn.innerHTML;
-  btn.innerHTML = "⏳ Generando...";
-  btn.style.pointerEvents = "none";
-
-  fetch(window.location.href, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json' },
-      body: formData
-  })
-  .then(async res => {
-      const text = await res.text();
-      try { return JSON.parse(text); } 
-      catch(e) { throw new Error("Error interno del servidor. Revisa la consola."); }
-  })
-  .then(data => {
-      if(data && data.status === 'success') {
-          waWindow.location.href = data.wa_link;
-          window.location.href = data.redirect_url;
-      } else {
-          waWindow.close();
-          btn.innerHTML = textoOriginal;
-          btn.style.pointerEvents = "auto";
-          alert("⚠️ Hubo un problema al generar el enlace.");
-      }
-  })
-  .catch(err => {
-      waWindow.close();
-      btn.innerHTML = textoOriginal;
-      btn.style.pointerEvents = "auto";
-      alert("❌ " + err.message);
-  });
+  // Mapeo dinámico para el render de la comanda
+  const body = document.getElementById("cocinaBody");
+  if(body) {
+      let content = "";
+      document.querySelectorAll("#carritoTable tbody tr").forEach(row => {
+          const name = row.cells[0].innerText;
+          const qty = row.cells[1].innerText;
+          content += `<div style="padding:8px 0; border-bottom:1px solid #eee;"><strong>${qty}x ${name}</strong></div>`;
+      });
+      body.innerHTML = content || "<p class='hint'>No hay productos</p>";
+    }
+  document.getElementById("cocinaModal").classList.add("is-open");
 }
-</script>
+
+def cerrarVistaCocina():
+    document.getElementById("cocinaModal").classList.remove("is-open")
+
+def abrirVistaCocina():
+    document.getElementById("cocinaModal").classList.add("is-open")
+
+def cerrarCustomModal():
+    document.getElementById("customModal").classList.remove("is-open")
+</style>
 
 {% endblock %}
