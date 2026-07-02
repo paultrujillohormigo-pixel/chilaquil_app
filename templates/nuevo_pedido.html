@@ -45,8 +45,6 @@
           </select>
         </div> 
 
-
-        
         <div>
           <label>Mesero</label>
           <input type="text" name="mesero" placeholder="Nombre">
@@ -195,7 +193,6 @@
         <input type="hidden" name="totopos_ganados" value="1">
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <!-- Único botón limpio de guardado para la comanda abierta -->
           <button type="submit" class="btn-guardar" style="padding: 14px; font-size: 1.05rem; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%;">
             💾 Abrir / Guardar Pedido
           </button>
@@ -436,6 +433,7 @@ window.addEventListener('orientationchange', setVH);
 /* ================== DATA ================== */
 const SALSAS_DB = {{ salsas|tojson|safe }};
 
+// Opciones estáticas requeridas por el usuario
 const OPCIONES_HUEVO = ["Sin proteina", "Con huevo estrellado", "Huevo revuelto", "Huevo bien cocido"];
 const OPCIONES_EXTRAS = [
   { nombre: "Huevo", precio: 20 },
@@ -715,7 +713,6 @@ function renderCarrito(){
 
     hidden.innerHTML += `
       <input type="hidden" name="producto_id[]" value="${item.producto_id}">
-      <input type="hidden" name="user_id" value="0">
       <input type="hidden" name="cantidad[]" value="${item.cantidad}">
       <input type="hidden" name="proteina[]" value="${escapeHtml(item.custom.proteina)}">
       <input type="hidden" name="salsa_id[]" value="${item.custom.salsa_id}">
@@ -758,7 +755,7 @@ function abrirCustomModal(uid = null) {
   
   if (uid && carrito[uid]) {
     editandoUid = uid;
-    customData = carrito[uid].custom;
+    customData = !!carrito[uid].custom ? carrito[uid].custom : customData;
     productoNombre = carrito[uid].nombre;
     document.getElementById('customModalTitle').innerText = "Editar Personalización";
     document.getElementById('customProductoNombre').innerText = productoNombre;
@@ -910,39 +907,27 @@ function confirmarCustom() {
 
 /* ================== VISTA COCINA ================== */
 function abrirVistaCocina() {
-  let html = "";
-  const keys = Object.keys(carrito);
-  
-  if(keys.length === 0){
-    html = "<p style='text-align:center;'>El carrito está vacío</p>";
-  } else {
-    for (const key of keys) {
-      let item = carritoTable.querySelector(`[data-id="${key}"]`);
-    }
-  }
-  
-  // Mapeo dinámico para el render de la comanda
   const body = document.getElementById("cocinaBody");
-  if(body) {
-      let content = "";
-      document.querySelectorAll("#carritoTable tbody tr").forEach(row => {
-          const name = row.cells[0].innerText;
-          const qty = row.cells[1].innerText;
-          content += `<div style="padding:8px 0; border-bottom:1px solid #eee;"><strong>${qty}x ${name}</strong></div>`;
-      });
-      body.innerHTML = content || "<p class='hint'>No hay productos</p>";
-    }
+  if (body) {
+    let content = "";
+    document.querySelectorAll("#carritoTable tbody tr").forEach(row => {
+      const name = row.cells[0].innerText;
+      const qty = row.cells[1].innerText;
+      content += `<div style="padding:8px 0; border-bottom:1px solid #eee;"><strong>${qty}x ${name}</strong></div>`;
+    });
+    body.innerHTML = content || "<p class='hint'>No hay productos</p>";
+  }
   document.getElementById("cocinaModal").classList.add("is-open");
 }
 
-def cerrarVistaCocina():
-    document.getElementById("cocinaModal").classList.remove("is-open")
+function cerrarVistaCocina() { 
+  document.getElementById("cocinaModal").classList.remove("is-open"); 
+}
 
-def abrirVistaCocina():
-    document.getElementById("cocinaModal").classList.add("is-open")
-
-def cerrarCustomModal():
-    document.getElementById("customModal").classList.remove("is-open")
-</style>
+function toggleUberBox(){
+  const origen = document.getElementById("origenSelect").value;
+  document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
+}
+</script>
 
 {% endblock %}
