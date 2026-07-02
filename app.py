@@ -8,9 +8,77 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from db import get_connection
 from costeo import costeo_bp
+import os  # <-- AGREGA ESTE IMPORT AL INICIO
+import requests
 
+# =========================================================
+# CONFIGURACIÓN DE META WHATSAPP API DESDE VARIABLES DE ENTORNO
+# =========================================================
+WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
+WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
+WA_VERSION = os.environ.get("WA_VERSION", "v20.0")  # Si no está, toma v20.0 por defecto
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
+
+def enviar_ticket_meta_api(telefono_e164: str, pedido_id: int, cursor) -> bool:
+    """
+    Envía una notificación de ticket automatizada usando la API Cloud de WhatsApp.
+    """
+    # CONTROL DE SEGURIDAD: Si no hay tokens configurados en Railway, no dispares la petición
+    if not WA_PHONE_NUMBER_ID or not WA_ACCESS_TOKEN:
+        print("⚠️ ERROR: Falta configurar WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN en las variables de Railway.")
+        return False
+
+    if not telefono_e164:
+        return False
+        
+    phone_clean = telefono_e164.replace("+", "")
+    
+    # 1. Recuperamos los datos del pedido que necesitamos
+    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
+    pedido = cursor.fetchone()
+    if not pedido:
+        return False
+
+    # 2. Buscamos el nombre del cliente
+    cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (telefono_e164,))
+    c_row = cursor.fetchone()
+    nombre_cliente = c_row["nombre"].split()[0] if c_row and c_row["nombre"] else "cliente"
+
+    # 3. Armamos la petición para los servidores de Meta
+    url = f"https://graph.facebook.com/{WA_VERSION}/{WA_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WA_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_clean,
+        "type": "template",
+        "template": {
+            "name": "ticket_compra",
+            "language": { "code": "es_MX" },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": str(nombre_cliente) },         # Variable {{1}}
+                        { "type": "text", "text": f"#{pedido_id}" },             # Variable {{2}}
+                        { "type": "text", "text": f"${float(pedido['total']):.2f}" } # Variable {{3}}
+                    ]
+                }
+            ]
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        return response.status_code in [200, 201]
+    except Exception as e:
+        print(f"❌ Error al conectar con la API de Meta: {e}")
+        return False
+
 
 # ================== COSTEO ==================
 app.register_blueprint(costeo_bp)
