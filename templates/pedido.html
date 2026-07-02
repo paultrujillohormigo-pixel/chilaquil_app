@@ -63,7 +63,7 @@
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
-          <small>Si agregas el número, al guardar se mandará el ticket y el <strong>totopo</strong> ganado.</small>
+          <small>Al activar el switch de enviar WhatsApp, se despachará la notificación automáticamente mediante la API Cloud.</small>
 
           <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -199,7 +199,7 @@
             💬 Actualizar y Enviar WhatsApp
           </button>
           
-          <button type="submit" class="btn-guardar" style="padding: 12px;">
+          <button type="submit" class="btn-guardar" style="padding: 12px; width: 100%;">
             💾 Solo Actualizar Pedido
           </button>
         </div>
@@ -235,7 +235,6 @@
 
 <form id="formCerrar" action="/cerrar_pedido/{{ pedido.id }}" method="post" style="display: none;"></form>
 <form id="formCerrarWA" action="/cerrar_pedido_whatsapp/{{ pedido.id }}" method="post" style="display: none;"></form>
-
 
 <div id="customModal" class="modal">
   <div class="modal-box">
@@ -371,7 +370,7 @@ const NO_MOD_KEYWORDS = ["coca", "refresco", "agua", "café", "cafe", "chai", "c
 let carrito = {};
 let modalState = { producto_id:null, nombre:"", precio:0, uid:null };
 let editandoUid = null;
-let descuentoTotal = Number("{{ pedido.descuento or 0 }}"); // Inicializamos el descuento guardado
+let descuentoTotal = Number("{{ pedido.descuento or 0 }}");
 
 /* ================== HELPERS ================== */
 function clampMin0(n){
@@ -446,7 +445,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // === PRECARGA DE DETALLES DEL CARRITO DESDE EL PEDIDO ABIERTO ===
   {% if pedido_detalles %}
     {% for d in pedido_detalles %}
-      // Omitimos los extras directos en la carga inicial ya que se asocian al plato padre
       {% if not d.padre_index and d.padre_index != 0 %}
         (function() {
           const uid = uidLinea("{{ d.producto_id }}");
@@ -456,7 +454,6 @@ document.addEventListener("DOMContentLoaded", () => {
             sinLista = "{{ d.sin }}".split(',').map(s => s.trim()).filter(Boolean);
           {% endif %}
 
-          // Reconstrucción de extras asociados a este item específico
           let extrasLista = [];
           {% set outer_index = loop.index0 %}
           {% for sub in pedido_detalles %}
@@ -466,7 +463,6 @@ document.addEventListener("DOMContentLoaded", () => {
             {% endif %}
           {% endfor %}
 
-          // Filtro para extraer notas adicionales
           let notaLimpia = "{{ d.nota or '' }}";
           let saborDetectado = "";
           if (notaLimpia.includes("💧 Sabor:")) {
@@ -479,6 +475,7 @@ document.addEventListener("DOMContentLoaded", () => {
             producto_id: "{{ d.producto_id }}",
             nombre: "{{ d.nombre }}",
             precio: Number("{{ d.precio_unitario or d.precio or 0 }}"),
+            amount_base: Number("{{ d.cantidad or 1 }}"), // Fallback seguro
             cantidad: Number("{{ d.cantidad or 1 }}"),
             custom: {
               proteina: "{{ d.proteina or 'Sin proteina' }}",
@@ -912,7 +909,6 @@ function toggleUberBox(){
 }
 
 function guardarYEnviarWhatsApp(btnElement) {
-  // Si está abierto, requerimos carrito. Si está cerrado, dejamos pasar la petición para enviar WA
   const esAbierto = "{{ pedido.estado }}" === "abierto";
   if (esAbierto && Object.keys(carrito).length === 0) { 
     alert("⚠️ El carrito está vacío. Agrega productos primero."); 
@@ -927,17 +923,15 @@ function guardarYEnviarWhatsApp(btnElement) {
     return;
   }
 
-  const waWindow = window.open('about:blank', '_blank');
   document.getElementById('enviarWaHidden').value = "1";
   
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
 
-  // Manejo seguro del botón para evitar errores en consola
   let textoOriginal = "";
   if (btnElement) {
     textoOriginal = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Generando...";
+    btnElement.innerHTML = "⏳ Enviando ticket...";
     btnElement.style.pointerEvents = "none";
   }
 
@@ -953,20 +947,17 @@ function guardarYEnviarWhatsApp(btnElement) {
   })
   .then(data => {
       if(data && data.status === 'success') {
-          waWindow.location.href = data.wa_link;
+          // El backend procesó exitosamente el JSON y ejecutó el POST a Meta
           window.location.href = data.redirect_url;
       } else {
-          waWindow.close();
           if (btnElement) {
             btnElement.innerHTML = textoOriginal;
             btnElement.style.pointerEvents = "auto";
           }
-          // Muestra el mensaje exacto enviado desde el backend (error de número, etc.)
-          alert(data.message ? "⚠️ " + data.message : "⚠️ Hubo un problema al generar el enlace.");
+          alert(data.message ? "⚠️ " + data.message : "⚠️ Hubo un problema al procesar la API de WhatsApp.");
       }
   })
   .catch(err => {
-      waWindow.close();
       if (btnElement) {
         btnElement.innerHTML = textoOriginal;
         btnElement.style.pointerEvents = "auto";
