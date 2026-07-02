@@ -21,6 +21,47 @@ WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
 WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
 WA_VERSION = os.environ.get("WA_VERSION", "v20.0")
 
+@app.route('/privacy', methods=['GET'])
+def privacy_policy():
+    return """
+    <html>
+        <head><title>Política de Privacidad - Señor Chilaquil</title></head>
+        <body>
+            <h1>Política de Privacidad</h1>
+            <p>Esta aplicación respeta la privacidad de sus usuarios y solo procesa datos con fines de comunicación vía WhatsApp.</p>
+        </body>
+    </html>
+    """, 200
+
+# 2. RUTA PARA EL WEBHOOK DE WHATSAPP (Para recibir los mensajes)
+@app.route('/webhook', methods=['GET', 'POST'])
+def whatsapp_webhook():
+    if request.method == 'GET':
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+
+        # Usamos el token por defecto si no está en las variables de Railway
+        verify_token = os.environ.get("VERIFY_TOKEN", "ChilaquilToken2026")
+
+        if mode == 'subscribe' and token == verify_token:
+            print("WEBHOOK_VERIFICADO CORRECTAMENTE")
+            return challenge, 200
+        else:
+            print("ERROR: El token de verificación no coincide")
+            return "Forbidden", 403
+                
+    elif request.method == 'POST':
+        data = request.json
+        print("Mensaje recibido:", data)
+        return "EVENT_RECEIVED", 200
+
+if __name__ == '__main__':
+    # Configuración para que Railway pueda detectar el puerto automáticamente
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def whatsapp_webhook():
     if request.method == 'GET':
