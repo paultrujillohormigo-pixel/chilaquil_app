@@ -198,6 +198,13 @@ def enviar_ticket_meta_api(telefono_e164: str, pedido_id: int, cursor) -> bool:
     
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
+        
+        # === NUEVO BLOQUE DE LOGS PARA RASTREO DE ERRORES ===
+        print(f"--- [DEBUG WHATSAPP] ---")
+        print(f"Status Code de Meta: {response.status_code}")
+        print(f"Respuesta de Meta: {response.text}")
+        print(f"------------------------")
+        
         return response.status_code in [200, 201]
     except Exception as e:
         print(f"❌ Error HTTP al conectar con Meta: {e}")
