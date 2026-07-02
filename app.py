@@ -3,6 +3,7 @@ import re
 import pymysql
 import json
 import os
+
 from flask import Flask, request, redirect, url_for, flash, render_template, jsonify, send_from_directory
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
@@ -409,7 +410,7 @@ def nuevo_pedido():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            @app.route('/menu') # Asegura contexto
+            # CORREGIDO: Línea duplicada eliminada para evitar error de sintaxis
             cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
             productos = cursor.fetchall()
             cursor.execute("SELECT * FROM salsas ORDER BY nombre")
@@ -437,6 +438,7 @@ def nuevo_pedido():
 
                 tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
                 telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else None
+                totopos_ganados = request.form.get("totopos_ganados")
 
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
@@ -558,7 +560,7 @@ def nuevo_pedido():
                     placeholders_it = ",".join(["%s"] * len(cols_it))
                     cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
 
-                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo si hay un número telefónico vinculado
+                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo por cada compra si hay teléfono
                 if telefono_e164:
                     customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                     loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, 1)
@@ -754,6 +756,7 @@ def ver_pedido(pedido_id):
                 flash("Pedido no disponible", "error")
                 return redirect(url_for("pedidos_abiertos"))
 
+            cursor.execute("SELECT * FROM salsas ORDER BY nombre")
             salsas = cursor.fetchall()
             cursor.execute("SELECT * FROM proteinas ORDER BY nombre")
             proteinas = cursor.fetchall()
@@ -937,7 +940,7 @@ def ver_pedido(pedido_id):
                 update_vals.append(pedido_id)
                 cursor.execute(update_query, tuple(update_vals))
 
-                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo si hay un número telefónico vinculado al actualizar
+                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo por cada compra si hay teléfono al actualizar
                 if telefono_e164:
                     customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                     loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, 1)
@@ -1002,7 +1005,6 @@ def ver_pedido(pedido_id):
                 cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (pedido["telefono_whatsapp"],))
                 c_row = cursor.fetchone()
                 if c_row: pedido["cliente_nombre"] = c_row["nombre"]
-
     finally:
         conn.close()
 
@@ -1040,7 +1042,6 @@ def actualizar_whatsapp_pedido(pedido_id):
 
             flash("Número de WhatsApp guardado correctamente.", "success")
             return redirect(url_for("ver_pedido", pedido_id=pedido_id))
-
     except Exception as e:
         try: conn.rollback()
         except Exception: pass
@@ -1170,7 +1171,6 @@ def productos():
                 ORDER BY pr.categoria, pr.nombre
             """)
             productos_rows = cursor.fetchall()
-
     finally:
         conn.close()
 
@@ -1252,13 +1252,13 @@ def compras():
                 )
 
             if request.method == "POST":
-                cantidad_txt = (request.form.get("cantidad") or "").strip()
-                unidad_txt = (request.form.get("unidad") or "").strip()
+                amount_txt = (request.form.get("cantidad") or "").strip()
+                unit_txt = (request.form.get("unidad") or "").strip()
                 sumar_stock = (request.form.get("es_insumo") == "1")
 
                 if sumar_stock:
-                    if not cantidad_txt: cantidad_txt = (request.form.get("cantidad_base") or "").strip()
-                    if not unidad_txt: unidad_txt = (request.form.get("unidad_base") or "").strip()
+                    if not amount_txt: amount_txt = (request.form.get("cantidad_base") or "").strip()
+                    if not unit_txt: unit_txt = (request.form.get("unidad_base") or "").strip()
 
                 if not request.form.get("fecha"): flash("Fecha requerida.", "error"); return render_with_data()
                 if not (request.form.get("lugar") or "").strip(): flash("Lugar requerido.", "error"); return render_with_data()
@@ -1267,10 +1267,10 @@ def compras():
                 costo_dec = parse_decimal_mx(request.form.get("costo"))
                 if costo_dec is None or costo_dec < 0: flash("Costo total inválido.", "error"); return render_with_data()
 
-                cantidad_dec = parse_decimal_mx(cantidad_txt)
+                cantidad_dec = parse_decimal_mx(amount_txt)
                 if cantidad_dec is None or cantidad_dec <= 0: flash("Cantidad inválida.", "error"); return render_with_data()
 
-                if not unidad_txt: flash("Unidad requerida.", "error"); return render_with_data()
+                if not unit_txt: flash("Unidad requerida.", "error"); return render_with_data()
 
                 insumo_id_val = request.form.get("insumo_id") or None
                 cantidad_base_val = request.form.get("cantidad_base") or None
@@ -1288,23 +1288,23 @@ def compras():
                         return render_with_data()
                     cu_dec = parse_decimal_mx(costo_unitario_val)
                     costo_unitario_val = str(cu_dec) if cu_dec is not None else None
-                    cantidad_txt = str(cant_base_dec)
+                    amount_txt = str(cant_base_dec)
                     cantidad_base_val = str(cant_base_dec)
                 else:
-                    cantidad_txt = str(cantidad_dec)
+                    amount_txt = str(cantidad_dec)
 
                 cursor.execute("""
                     INSERT INTO insumos_compras
                     (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota, insumo_id, cantidad_base, unidad_base, costo_unitario, es_insumo)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """, (
-                    request.form["fecha"], request.form["lugar"], cantidad_txt, unidad_txt, request.form["concepto"], str(costo_dec), request.form["tipo_costo"],
+                    request.form["fecha"], request.form["lugar"], amount_txt, unit_txt, request.form["concepto"], str(costo_dec), request.form["tipo_costo"],
                     request.form.get("nota", ""), int(insumo_id_val) if (insumo_id_val and str(insumo_id_val).isdigit()) else None,
                     cantidad_base_val, unidad_base_val, costo_unitario_val, 1 if sumar_stock else 0,
                 ))
 
                 compra_id = cursor.lastrowid
-                if sumar_stock Useful and insumo_id_val and cant_base_dec is not None:
+                if sumar_stock and insumo_id_val and cant_base_dec is not None:
                     cursor.execute("""
                         INSERT IGNORE INTO inventario_movimientos (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
                         VALUES (%s, %s, 'entrada_compra', 'insumos_compras', %s, %s)
@@ -2163,7 +2163,7 @@ def agregar_stock():
 
             conn.commit()
 
-        flash(f"Stock agregado (+{cantidad} {ins['unidad_base']})", "success")
+        flash(f"Stock agregado ✅ (+{cantidad} {ins['unidad_base']})", "success")
         return redirect(url_for("ver_stock", q=q))
     except Exception:
         try: conn.rollback()
@@ -2335,7 +2335,7 @@ def campanas():
         mensaje = f"Hola {nombre}. Te extrañamos en Senor Chilaquil.\n\nHace un rato que no nos visitas y queremos consentirte. En tu proximo pedido, muestranos este mensaje y te regalamos un Totopo extra a tu cuenta.\n\n¡Te esperamos pronto!"
         msg_q = urllib.parse.quote(mensaje)
 
-        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if telefono else None
+        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if phone else None
 
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
 
