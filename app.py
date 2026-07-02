@@ -21,8 +21,58 @@ WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
 WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
 WA_VERSION = os.environ.get("WA_VERSION", "v20.0")
 
+
+¡No te preocupes, lo hacemos juntos paso a paso! Vamos a agregar el código necesario a tu aplicación de Flask y a configurar la variable de entorno en Railway.
+
+Sigue estos pasos:
+
+Paso 1: Modifica tu archivo de Flask (en tu computadora o GitHub)
+Abre el archivo principal donde tienes configuradas las rutas de tu aplicación de Flask (suele llamarse app.py, main.py o similar).
+
+Busca una parte limpia de tu archivo (por ejemplo, justo antes de la línea if __name__ == '__main__':) y pega el siguiente fragmento de código:
+
+Python
+import os
+from flask import Flask, request
+
+# NOTA: Asegúrate de usar la variable 'app' que ya tengas definida en tu archivo.
+# Si tu variable se llama de otra forma (ej. 'application'), cambia 'app.route' por 'application.route'
+
+@app.route('/webhook', methods=['GET', 'POST'])
+def whatsapp_webhook():
+    if request.method == 'GET':
+        # Este bloque maneja la verificación inicial que te pide Meta
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+
+        # Comparamos el token que envía Meta con el que guardaremos en Railway
+        # Si no existe en Railway, usará 'ChilaquilToken2026' por defecto
+        verify_token = os.environ.get("VERIFY_TOKEN", "ChilaquilToken2026")
+
+        if mode == 'subscribe' and token == verify_token:
+            print("WEBHOOK_VERIFICADO CORRECTAMENTE")
+            return challenge, 200
+        else:
+            print("ERROR: El token de verificación no coincide")
+            return "Forbidden", 403
+                
+    elif request.method == 'POST':
+        # Este bloque recibirá las notificaciones de mensajes reales en el futuro
+        data = request.json
+        print("Mensaje o evento recibido de WhatsApp:", data)
+        return "EVENT_RECEIVED", 200
+
+
+
+
+
 # ================== COSTEO ==================
+
 app.register_blueprint(costeo_bp)
+
+
+
 
 @app.route("/")
 def index():
