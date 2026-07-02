@@ -62,30 +62,6 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port)
 
 
-@app.route('/webhook', methods=['GET', 'POST'])
-def whatsapp_webhook():
-    if request.method == 'GET':
-        # Este bloque maneja la verificación inicial que te pide Meta
-        mode = request.args.get('hub.mode')
-        token = request.args.get('hub.verify_token')
-        challenge = request.args.get('hub.challenge')
-
-        # Comparamos el token que envía Meta con el que guardaremos en Railway
-        # Si no existe en Railway, usará 'ChilaquilToken2026' por defecto
-        verify_token = os.environ.get("VERIFY_TOKEN", "ChilaquilToken2026")
-
-        if mode == 'subscribe' and token == verify_token:
-            print("WEBHOOK_VERIFICADO CORRECTAMENTE")
-            return challenge, 200
-        else:
-            print("ERROR: El token de verificación no coincide")
-            return "Forbidden", 403
-                
-    elif request.method == 'POST':
-        # Este bloque recibirá las notificaciones de mensajes reales en el futuro
-        data = request.json
-        print("Mensaje o evento recibido de WhatsApp:", data)
-        return "EVENT_RECEIVED", 200
 
 
 
