@@ -2,83 +2,24 @@ import urllib.parse
 import re
 import pymysql
 import json
+import os        # <-- NUEVO: Para variables de entorno
+import requests  # <-- NUEVO: Para llamadas HTTP a Meta
 
 from flask import Flask, request, redirect, url_for, flash, render_template, jsonify, send_from_directory
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from db import get_connection
 from costeo import costeo_bp
-import os  # <-- AGREGA ESTE IMPORT AL INICIO
-import requests
 
-# =========================================================
-# CONFIGURACIÓN DE META WHATSAPP API DESDE VARIABLES DE ENTORNO
-# =========================================================
-WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
-WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
-WA_VERSION = os.environ.get("WA_VERSION", "v20.0")  # Si no está, toma v20.0 por defecto
 app = Flask(__name__)
 app.secret_key = "super_secret_key"  # cámbiala en prod
 
-def enviar_ticket_meta_api(telefono_e164: str, pedido_id: int, cursor) -> bool:
-    """
-    Envía una notificación de ticket automatizada usando la API Cloud de WhatsApp.
-    """
-    # CONTROL DE SEGURIDAD: Si no hay tokens configurados en Railway, no dispares la petición
-    if not WA_PHONE_NUMBER_ID or not WA_ACCESS_TOKEN:
-        print("⚠️ ERROR: Falta configurar WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN en las variables de Railway.")
-        return False
-
-    if not telefono_e164:
-        return False
-        
-    phone_clean = telefono_e164.replace("+", "")
-    
-    # 1. Recuperamos los datos del pedido que necesitamos
-    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
-    pedido = cursor.fetchone()
-    if not pedido:
-        return False
-
-    # 2. Buscamos el nombre del cliente
-    cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (telefono_e164,))
-    c_row = cursor.fetchone()
-    nombre_cliente = c_row["nombre"].split()[0] if c_row and c_row["nombre"] else "cliente"
-
-    # 3. Armamos la petición para los servidores de Meta
-    url = f"https://graph.facebook.com/{WA_VERSION}/{WA_PHONE_NUMBER_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WA_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": phone_clean,
-        "type": "template",
-        "template": {
-            "name": "ticket_compra",
-            "language": { "code": "es_MX" },
-            "components": [
-                {
-                    "type": "body",
-                    "parameters": [
-                        { "type": "text", "text": str(nombre_cliente) },         # Variable {{1}}
-                        { "type": "text", "text": f"#{pedido_id}" },             # Variable {{2}}
-                        { "type": "text", "text": f"${float(pedido['total']):.2f}" } # Variable {{3}}
-                    ]
-                }
-            ]
-        }
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        return response.status_code in [200, 201]
-    except Exception as e:
-        print(f"❌ Error al conectar con la API de Meta: {e}")
-        return False
-
+# =========================================================
+# CONFIGURACIÓN DE META WHATSAPP API DESDE RAILWAY
+# =========================================================
+WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
+WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
+WA_VERSION = os.environ.get("WA_VERSION", "v20.0")
 
 # ================== COSTEO ==================
 app.register_blueprint(costeo_bp)
@@ -203,6 +144,64 @@ def parse_decimal_mx(val: str | None) -> Decimal | None:
         return Decimal(s)
     except (InvalidOperation, ValueError):
         return None
+
+# =========================================================
+# NUEVO HELPER: DISPARADOR API CLOUD DE WHATSAPP (META)
+# =========================================================
+def enviar_ticket_meta_api(telefono_e164: str, pedido_id: int, cursor) -> bool:
+    """
+    Despacha el ticket usando plantillas aprobadas en la API Cloud de Meta.
+    """
+    if not WA_PHONE_NUMBER_ID or not WA_ACCESS_TOKEN:
+        print("⚠️ Variables WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN ausentes en Railway.")
+        return False
+
+    if not telefono_e164:
+        return False
+        
+    phone_clean = telefono_e164.replace("+", "")
+    
+    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
+    pedido = cursor.fetchone()
+    if not pedido:
+        return False
+
+    cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (telefono_e164,))
+    c_row = cursor.fetchone()
+    nombre_cliente = c_row["nombre"].split()[0] if c_row and c_row["nombre"] else "cliente"
+
+    url = f"https://graph.facebook.com/{WA_VERSION}/{WA_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WA_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_clean,
+        "type": "template",
+        "template": {
+            "name": "ticket_compra",
+            "language": { "code": "es_MX" },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": str(nombre_cliente) },
+                        { "type": "text", "text": f"#{pedido_id}" },
+                        { "type": "text", "text": f"${float(pedido['total']):.2f}" }
+                    ]
+                }
+            ]
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        return response.status_code in [200, 201]
+    except Exception as e:
+        print(f"❌ Error HTTP al conectar con Meta: {e}")
+        return False
 
 # =========================================================
 # ================== LOYALTY (TOTOPOS) ====================
@@ -430,7 +429,6 @@ def pedidos_abiertos():
             has_salsa_id = table_has_column(cursor, "pedido_items", "salsa_id")
             has_padre_id = table_has_column(cursor, "pedido_items", "item_padre_id")
             
-            # MAGIA 1: Mandamos el item_padre_id a la vista (si existe)
             col_padre = "pi.item_padre_id" if has_padre_id else "NULL AS item_padre_id"
             col_salsa = "s.nombre AS salsa" if has_salsa_id else "NULL AS salsa"
             join_salsa = "LEFT JOIN salsas s ON pi.salsa_id = s.id" if has_salsa_id else ""
@@ -507,7 +505,6 @@ def nuevo_pedido():
                 proteinas_id_sel = request.form.getlist("proteina_id[]")
                 salsas_id_sel = request.form.getlist("salsa_id[]")
                 
-                # Leemos el índice padre temporal del Frontend
                 padre_index_sel = request.form.getlist("padre_index[]")
 
                 def safe_get(lst, i, default=""): return lst[i] if i < len(lst) else default
@@ -542,7 +539,6 @@ def nuevo_pedido():
                     subtotal = precio_unit * cant
                     total_bruto += subtotal
 
-                    # CORRECCIÓN: Leemos el índice del padre permitiendo que sea 0
                     p_idx_raw = safe_get(padre_index_sel, i, "").strip()
                     padre_idx = int(p_idx_raw) if p_idx_raw.isdigit() else None
 
@@ -589,9 +585,7 @@ def nuevo_pedido():
                 index_to_db_id = {}
                 extras_to_insert = []
 
-                # MAGIA 2: Guardamos PRIMERO los platillos padre y recordamos sus IDs
                 for it in items:
-                    # Es extra si tiene padre_index o temporalmente si su nota dice "Para:" (Compatibilidad hacia atrás)
                     es_extra = (it["padre_index"] is not None) or ("Para:" in it["nota"])
 
                     if not es_extra:
@@ -604,12 +598,10 @@ def nuevo_pedido():
                         placeholders_it = ",".join(["%s"] * len(cols_it))
                         cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
                         
-                        # Recordamos el ID real de este platillo
                         index_to_db_id[it["original_index"]] = cursor.lastrowid
                     else:
                         extras_to_insert.append(it)
 
-                # MAGIA 3: Guardamos los EXTRAS y los amarramos al ID real de su padre
                 for it in extras_to_insert:
                     cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
                     vals_it = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
@@ -636,22 +628,13 @@ def nuevo_pedido():
                 
                 if enviar_wa and telefono_e164:
                     conn.commit()
-                    ticket_text = generar_ticket_texto(pedido_id, cursor)
-                    
-                    totopos_int = int(totopos_ganados) if totopos_ganados and str(totopos_ganados).isdigit() else 0
-                    balance = 0
-                    if totopos_int > 0:
-                        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
-                        row_totopos = cursor.fetchone()
-                        if row_totopos: balance = row_totopos["totopos_balance"]
-                            
-                    msg_loyalty = loyalty_message(balance, totopos_int, pedido_id, total_final, telefono_e164)
-                    full_message = ticket_text + "\n\n" + msg_loyalty
-                    wa_link = wa_me_link(telefono_e164, full_message)
+                    # MODIFICADO: Envío directo de fondo con la API Cloud
+                    enviado_api = enviar_ticket_meta_api(telefono_e164, pedido_id, cursor)
                     
                     return jsonify({
                         "status": "success",
-                        "wa_link": wa_link,
+                        "meta_api_sent": enviado_api,
+                        "wa_link": None,
                         "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
                     })
                 else:
@@ -854,30 +837,17 @@ def ver_pedido(pedido_id):
                         if not telefono_e164:
                             return jsonify({"status": "error", "message": "Ingresa un número válido para enviar el WhatsApp."})
                         
-                        # Actualizamos el teléfono en caso de que lo hayan corregido en la interfaz
                         if telefono_e164 != pedido.get("telefono_whatsapp"):
                             cursor.execute("UPDATE pedidos SET telefono_whatsapp = %s WHERE id = %s", (telefono_e164, pedido_id))
                             conn.commit()
 
-                        ticket_text = generar_ticket_texto(pedido_id, cursor)
-                        
-                        # Obtenemos los totopos actuales sin sumar nuevos (porque el pedido ya está cerrado)
-                        balance = 0
-                        cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164 = %s", (telefono_e164,))
-                        c_row = cursor.fetchone()
-                        if c_row:
-                            cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id = %s", (c_row["id"],))
-                            acc = cursor.fetchone()
-                            if acc: balance = acc["totopos_balance"]
-                            
-                        # earned=0 porque no sumamos puntos extra en reenvíos
-                        msg_loyalty = loyalty_message(balance, 0, pedido_id, Decimal(str(pedido["total"])), telefono_e164)
-                        full_message = ticket_text + "\n\n" + msg_loyalty
-                        wa_link = wa_me_link(telefono_e164, full_message)
+                        # MODIFICADO: Reenvío con API oficial
+                        enviado_api = enviar_ticket_meta_api(telefono_e164, pedido_id, cursor)
                         
                         return jsonify({
                             "status": "success",
-                            "wa_link": wa_link,
+                            "meta_api_sent": enviado_api,
+                            "wa_link": None,
                             "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
                         })
                     else:
@@ -902,7 +872,6 @@ def ver_pedido(pedido_id):
 
                 totopos_ganados = request.form.get("totopos_ganados")
 
-                # Recolección de las listas dinámicas del carrito
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
                 proteinas_sel = request.form.getlist("proteina[]")
@@ -920,7 +889,6 @@ def ver_pedido(pedido_id):
                 total_bruto = Decimal("0")
                 items_a_insertar = []
 
-                # Calcular subtotales y validar ítems del formulario
                 for i, prod_id in enumerate(productos_ids):
                     if not str(prod_id).isdigit(): continue
 
@@ -970,13 +938,11 @@ def ver_pedido(pedido_id):
                 total_final = total_bruto - descuento
                 neto = total_final + monto_uber
 
-                # === REEMPLAZO ATÓMICO: Limpiar items anteriores para evitar duplicación ===
                 cursor.execute("DELETE FROM pedido_items WHERE pedido_id = %s", (pedido_id,))
 
                 index_to_db_id = {}
                 extras_to_insert = []
 
-                # Insertar primero los platillos principales (Padres)
                 for it in items_a_insertar:
                     es_extra = (it["padre_index"] is not None) or ("Para:" in it["nota"])
 
@@ -993,7 +959,6 @@ def ver_pedido(pedido_id):
                     else:
                         extras_to_insert.append(it)
 
-                # Insertar los extras asociados a sus respectivos padres
                 for it in extras_to_insert:
                     cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
                     vals_it = [pedido_id, it["producto_id"], it["proteina"], it["sin"], it["nota"], it["cantidad"], it["precio_unitario"], it["subtotal"]]
@@ -1010,7 +975,6 @@ def ver_pedido(pedido_id):
                     placeholders_it = ",".join(["%s"] * len(cols_it))
                     cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
 
-                # Actualizar metadatos y totales del pedido raíz
                 has_desc = table_has_column(cursor, "pedidos", "descuento")
                 update_query = """
                     UPDATE pedidos 
@@ -1029,7 +993,6 @@ def ver_pedido(pedido_id):
                 update_vals.append(pedido_id)
                 cursor.execute(update_query, tuple(update_vals))
 
-                # Gestión del sistema de puntos (Totopos de lealtad)
                 if totopos_ganados and str(totopos_ganados).isdigit() and telefono_e164:
                     totopos_int = int(totopos_ganados)
                     if totopos_int > 0:
@@ -1038,22 +1001,13 @@ def ver_pedido(pedido_id):
 
                 if enviar_wa and telefono_e164:
                     conn.commit()
-                    ticket_text = generar_ticket_texto(pedido_id, cursor)
-                    
-                    totopos_int = int(totopos_ganados) if totopos_ganados and str(totopos_ganados).isdigit() else 0
-                    balance = 0
-                    if totopos_int > 0:
-                        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
-                        row_totopos = cursor.fetchone()
-                        if row_totopos: balance = row_totopos["totopos_balance"]
-
-                    msg_loyalty = loyalty_message(balance, totopos_int, pedido_id, total_final, telefono_e164)
-                    full_message = ticket_text + "\n\n" + msg_loyalty
-                    wa_link = wa_me_link(telefono_e164, full_message)
+                    # MODIFICADO: Envío directo mediante API de Meta al actualizar
+                    enviado_api = enviar_ticket_meta_api(telefono_e164, pedido_id, cursor)
 
                     return jsonify({
                         "status": "success",
-                        "wa_link": wa_link,
+                        "meta_api_sent": enviado_api,
+                        "wa_link": None,
                         "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
                     })
                 else:
@@ -1061,7 +1015,7 @@ def ver_pedido(pedido_id):
                     flash(f"Pedido #{pedido_id} actualizado con éxito.", "success")
                     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
-            # 4. Operación GET: Recuperar y estructurar ítems para inicializar el carrito del Front-End
+            # 4. Operación GET
             select_cols = [
                 "pi.id", "pi.producto_id", "pi.cantidad", "pi.precio_unitario", "pi.subtotal",
                 "pi.proteina", "pi.sin", "pi.nota", "p.nombre", "p.categoria"
@@ -1083,21 +1037,17 @@ def ver_pedido(pedido_id):
             """, (pedido_id,))
             items_raw = cursor.fetchall()
 
-            # Mapeamos item_padre_id al índice absoluto del arreglo (padre_index) esperado por el JS
             items = []
             id_to_index_map = {}
             
-            # Primero registramos la posición absoluta de TODOS los elementos
             for idx, row in enumerate(items_raw):
                 id_to_index_map[row["id"]] = idx
 
-            # Armamos el listado definitivo inyectando el valor correcto de padre_index
             for row in items_raw:
                 p_id = row.get("item_padre_id")
                 row["padre_index"] = id_to_index_map.get(p_id) if p_id else None
                 items.append(row)
 
-            # Obtener nombre de cliente si existe para la tarjeta informativa de la UI
             pedido["cliente_nombre"] = None
             if pedido.get("telefono_whatsapp"):
                 cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (pedido["telefono_whatsapp"],))
@@ -1110,7 +1060,7 @@ def ver_pedido(pedido_id):
     return render_template(
         "pedido.html",
         pedido=pedido,
-        pedido_detalles=items,  # Mapeado exacto para reconstrucción por JS
+        pedido_detalles=items,
         productos=productos,
         salsas=salsas,
         proteinas=proteinas
@@ -1202,11 +1152,11 @@ def cerrar_pedido_whatsapp(pedido_id):
             descontar_stock_por_pedido_cursor(cursor, pedido_id)
 
             if phone:
-                ticket_text = generar_ticket_texto(pedido_id, cursor)
-                msg_loyalty = loyalty_message(balance, earned, pedido_id, Decimal(str(pedido["total"])), phone)
-                full_message = ticket_text + "\n\n" + msg_loyalty
+                # MODIFICADO: Notificación asíncrona de fondo con Meta, sin redirects externos
+                enviar_ticket_meta_api(phone, pedido_id, cursor)
                 conn.commit()
-                return redirect(wa_me_link(phone, full_message))
+                flash(f"Pedido #{pedido_id} cerrado. Ticket enviado de fondo por la API.", "success")
+                return redirect(url_for("pedidos_abiertos"))
 
             conn.commit()
             flash("Pedido cerrado. No se envió WhatsApp porque no hay teléfono.", "success")
@@ -1329,12 +1279,10 @@ def compras():
             cursor.execute("SELECT id, nombre, unidad_base FROM insumos WHERE activo = 1 ORDER BY nombre")
             insumos = cursor.fetchall()
 
-            # --- Autoconfiguración para ocultar conceptos sin borrar data ---
             if not table_has_column(cursor, "insumos_compras", "oculto"):
                 cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
                 conn.commit()
 
-            # --- Extraemos los conceptos "Otros" que has guardado antes ---
             cursor.execute("""
                 SELECT DISTINCT concepto 
                 FROM insumos_compras 
@@ -1447,7 +1395,6 @@ def eliminar_concepto_compras():
             if not table_has_column(cursor, "insumos_compras", "oculto"):
                 cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
             
-            # Solo OCULTA la tarjeta en la interfaz, mantiene el historial financiero.
             cursor.execute("""
                 UPDATE insumos_compras 
                 SET oculto = 1
@@ -1480,7 +1427,6 @@ def eliminar_insumo_compras():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # Desactiva el insumo sin borrar dependencias de la receta
             cursor.execute("UPDATE insumos SET activo = 0 WHERE id = %s", (int(insumo_id),))
             conn.commit()
             
@@ -1500,11 +1446,6 @@ def eliminar_insumo_compras():
 # ============ DASHBOARD AVANZADO (LÓGICA NUEVA) ===========
 # =========================================================
 
-from datetime import datetime, timedelta
-from decimal import Decimal
-import json
-import pymysql
-
 def get_previous_month(ym_str):
     try:
         dt = datetime.strptime(ym_str, "%Y-%m")
@@ -1520,7 +1461,6 @@ def calc_var(current, prev):
 
 @app.route("/dashboard")
 def dashboard():
-    # 1. Capturar todos los filtros del GET (HTML)
     meses_seleccionados = request.args.getlist("mes")
     fecha_inicio_seleccionada = request.args.get("fecha_inicio", "")
     fecha_fin_seleccionada = request.args.get("fecha_fin", "")
@@ -1531,28 +1471,23 @@ def dashboard():
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Obtener meses disponibles para el selector
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disp_raw = cursor.fetchall()
             meses_disponibles = [m["mes"] for m in meses_disp_raw]
             
-            # Listas para construir el WHERE dinámico
             conds_general = []
             params_general = []
             
-            # --- FILTRO 1: Meses o Default ---
             if meses_seleccionados:
                 placeholders = ",".join(["%s"] * len(meses_seleccionados))
                 conds_general.append(f"DATE_FORMAT({{campo_fecha}}, '%%Y-%%m') IN ({placeholders})")
                 params_general.extend(meses_seleccionados)
             elif not fecha_inicio_seleccionada and not fecha_fin_seleccionada:
-                # Default: tomar el mes más reciente si no se seleccionó ni mes ni fechas específicas
                 if meses_disponibles:
                     last_m = meses_disponibles[0]
                     conds_general.append("DATE_FORMAT({campo_fecha}, '%%Y-%%m') = %s")
                     params_general.append(last_m)
 
-            # --- FILTRO 2: Rango de Fechas ---
             if fecha_inicio_seleccionada:
                 conds_general.append("DATE({campo_fecha}) >= %s")
                 params_general.append(fecha_inicio_seleccionada)
@@ -1560,7 +1495,6 @@ def dashboard():
                 conds_general.append("DATE({campo_fecha}) <= %s")
                 params_general.append(fecha_fin_seleccionada)
                 
-            # --- FILTRO 3: Días de la Semana ---
             p_dias = ""
             if dias_seleccionados:
                 mapa_dias = {'Domingo': 1, 'Lunes': 2, 'Martes': 3, 'Miércoles': 4, 'Jueves': 5, 'Viernes': 6, 'Sábado': 7}
@@ -1569,7 +1503,6 @@ def dashboard():
                     p_dias = ",".join(dias_num)
                     conds_general.append(f"DAYOFWEEK({{campo_fecha}}) IN ({p_dias})")
                     
-            # --- FILTRO 4: Origen (Solo aplica a Pedidos) ---
             conds_pedidos = list(conds_general)
             params_pedidos = list(params_general)
             
@@ -1577,24 +1510,21 @@ def dashboard():
                 conds_pedidos.append("{campo_origen} = %s")
                 params_pedidos.append(origen_seleccionado)
                 
-            # Función constructora para inyectar los campos correctos en el string
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
                 return "WHERE " + " AND ".join([c.replace("{campo_fecha}", c_fecha).replace("{campo_origen}", c_origen) for c in conds])
 
-            # Filtros Finales para las consultas
             filtro_pedidos = build_where(conds_pedidos, "fecha", "origen")
-            filtro_compras = build_where(conds_general, "fecha") # Insumos no tiene "origen"
+            filtro_compras = build_where(conds_general, "fecha") 
             filtro_ads = build_where(conds_general, "dia")
             filtro_org = build_where(conds_general, "hora_publicacion")
             
             filtro_tx_p = build_where(conds_pedidos, "p.fecha", "p.origen")
             if filtro_tx_p.startswith("WHERE"):
-                filtro_tx_p = "AND " + filtro_tx_p[5:] # Quitar el WHERE para usar dentro del JOIN
+                filtro_tx_p = "AND " + filtro_tx_p[5:]
                 
             filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
             
-            # --- LÓGICA DE MES PREVIO (Para calcular Variaciones %) ---
             filtro_prev_pedidos = ""
             filtro_prev_compras = ""
             params_prev_pedidos = []
@@ -1610,7 +1540,7 @@ def dashboard():
                 conds_prev = ["DATE_FORMAT({campo_fecha}, '%%Y-%%m') = %s"]
                 params_prev_base = [prev_m]
                 
-                if p_dias: # Mantenemos el filtro de días de semana para el mes previo
+                if p_dias:
                     conds_prev.append(f"DAYOFWEEK({{campo_fecha}}) IN ({p_dias})")
                     
                 conds_prev_pedidos = list(conds_prev)
@@ -1624,13 +1554,10 @@ def dashboard():
                 filtro_prev_compras = build_where(conds_prev, "fecha")
                 params_prev_compras = list(params_prev_base)
 
-
-            # Días reales trabajados en el periodo (Cuenta solo los días con ventas registradas)
             cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             meses_con_venta = len(meses_seleccionados) if meses_seleccionados else 1
 
-            # === CÁLCULOS PERIODO ACTUAL ===
             cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params_pedidos)
             total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
             
@@ -1640,7 +1567,6 @@ def dashboard():
             utilidad = total_ingresos - total_costos
             gross_margin_pct = ((total_ingresos - total_costos) / total_ingresos * 100) if total_ingresos > 0 else 0
 
-            # === CÁLCULOS PERIODO ANTERIOR (Para variaciones) ===
             var_ingresos = var_costos = var_utilidad = 0
             if filtro_prev_pedidos:
                 cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_prev_pedidos}", params_prev_pedidos)
@@ -1655,7 +1581,6 @@ def dashboard():
                 var_costos = calc_var(float(total_costos), float(prev_costos))
                 var_utilidad = calc_var(float(utilidad), float(prev_utilidad))
 
-            # === ANÁLISIS DE LEALTAD Y CLIENTES ===
             cursor.execute(f"""
                 SELECT 
                     COUNT(DISTINCT p.id) as pedidos_loyalty,
@@ -1685,7 +1610,6 @@ def dashboard():
                 "ticket_promedio_casual": float(tp_casual)
             }
 
-            # Top 5 Mejores Clientes
             cursor.execute(f"""
                 SELECT c.nombre, c.phone_e164 as telefono, COUNT(DISTINCT p.id) as visitas, SUM(p.total) as gastado
                 FROM loyalty_customers c
@@ -1701,7 +1625,6 @@ def dashboard():
                 c["ticket_promedio"] = float(c["gastado"]) / float(c["visitas"]) if c["visitas"] > 0 else 0
                 top_clientes.append(c)
 
-            # === COMPARATIVAS DÍA A DÍA POR MES SELECCIONADO ===
             cursor.execute(f"""
                 SELECT DAY(fecha) as dia_num, DATE_FORMAT(fecha, '%%Y-%%m') as mes, SUM(total) as total
                 FROM pedidos
@@ -1728,7 +1651,6 @@ def dashboard():
                 if mes not in gastos_comparativas: gastos_comparativas[mes] = {}
                 gastos_comparativas[mes][r["dia_num"]] = float(r["total"] or 0)
 
-            # === HISTÓRICOS GLOBALES CONTINUOS === (Se mantienen completos por definición)
             cursor.execute("""
                 SELECT DATE(fecha) as f, SUM(total) as total 
                 FROM pedidos 
@@ -1743,7 +1665,6 @@ def dashboard():
             """)
             historico_gastos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
-            # === INGENIERÍA DE MENÚ ===
             cursor.execute(f"""
                 SELECT p.nombre,
                        SUM(pi.cantidad) AS cantidad,
@@ -1764,7 +1685,6 @@ def dashboard():
 
             menu_engineering_data = [{"nombre": i["nombre"], "x": float(i["cantidad"]), "x_promedio": float(i["cantidad"] or 0)/dias_totales, "y": float(i["margen_unitario"]), "y_promedio": float(i["margen_unitario"])} for i in bcg_raw]
 
-            # === HORAS Y DÍAS DE LA SEMANA ===
             cursor.execute(f"SELECT HOUR(fecha) AS hora_num, COUNT(*) AS total_pedidos, SUM(total) AS total_dinero FROM pedidos {filtro_pedidos} GROUP BY HOUR(fecha) ORDER BY hora_num", params_pedidos)
             ventas_hora = [{"hora": f"{v['hora_num']}:00", "total": float(v["total_dinero"] or 0), "promedio": float(v["total_dinero"] or 0) / dias_totales} for v in cursor.fetchall()]
 
@@ -1780,18 +1700,12 @@ def dashboard():
             """, params_pedidos)
             ventas_semana = [{"nombre": v["nombre"], "promedio": float(v["promedio"] or 0), "total": float(v["total"] or 0)} for v in cursor.fetchall()]
 
-            # === TABLAS DE APOYO Y ÚLTIMOS PEDIDOS ===
             top_productos = bcg_raw[:10]
             cursor.execute(f"SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado FROM insumos_compras {filtro_compras} GROUP BY concepto, tipo_costo ORDER BY total_gastado DESC LIMIT 10", params_general)
             top_gastos = cursor.fetchall()
             for g in top_gastos: 
                 g["promedio_gastado"] = float(g["total_gastado"] or 0) / meses_con_venta
 
-            # =======================================================
-            # === NUEVO: DESGLOSE POR CONCEPTO (INGRESOS Y GASTOS) ==
-            # =======================================================
-            
-            # 1. Ingresos por Concepto (agrupados por 'categoria' de producto)
             cursor.execute(f"""
                 SELECT COALESCE(p.categoria, 'Otros') AS concepto, SUM(pi.subtotal) AS total
                 FROM pedido_items pi
@@ -1810,7 +1724,6 @@ def dashboard():
                 } for r in cursor.fetchall()
             ]
 
-            # 2. Gastos por Concepto (agrupados por 'concepto')
             cursor.execute(f"""
                 SELECT COALESCE(concepto, 'Otros') AS concepto, SUM(costo) AS total
                 FROM insumos_compras
@@ -1827,13 +1740,9 @@ def dashboard():
                 } for r in cursor.fetchall()
             ]
 
-            # ÚLTIMOS PEDIDOS
             cursor.execute(f"SELECT id, DATE_FORMAT(fecha, '%%Y-%%m-%%d %%H:%%i') as fecha, origen, mesero, estado, total FROM pedidos {filtro_pedidos} ORDER BY fecha DESC LIMIT 15", params_pedidos)
             ultimos_pedidos = cursor.fetchall()
 
-            # =======================================================
-            # === DATOS DE MARKETING (INSTAGRAM ADS) ================
-            # =======================================================
             cursor.execute(f"""
                 SELECT 
                     SUM(importe_gastado) AS total_ads,
@@ -1847,11 +1756,9 @@ def dashboard():
             total_alcance = int(ads_totals["total_alcance"] or 0)
             total_impresiones = int(ads_totals["total_impresiones"] or 0)
             
-            # CAC y ROAS
             cac_global = float(total_gasto_ads) / total_pedidos_gral if total_pedidos_gral > 0 else 0
             roas_global = float(total_ingresos) / float(total_gasto_ads) if total_gasto_ads > 0 else 0
             
-            # Gráficas combinadas diarias (Ventas, Ads, Alcance, Impresiones)
             cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha)", params_pedidos)
             ventas_dict = {str(r["f"]): float(r["total"] or 0) for r in cursor.fetchall()}
             
@@ -1874,9 +1781,6 @@ def dashboard():
                 for f in todas_las_fechas
             ]
             
-            # =======================================================
-            # === DATOS ORGÁNICOS (INSTAGRAM) =======================
-            # =======================================================
             cursor.execute(f"""
                 SELECT 
                     DATE(hora_publicacion) as f, 
@@ -1889,7 +1793,6 @@ def dashboard():
             """, params_general)
             org_rows = cursor.fetchall()
             
-            # Filtramos para que solo tome fechas válidas y no choque con nulos
             org_dict = {str(r["f"]): r for r in org_rows if r["f"] is not None}
             todas_las_fechas_extendidas = sorted(list(set(todas_las_fechas).union(set(org_dict.keys()))))
             
@@ -1905,7 +1808,6 @@ def dashboard():
     finally:
         conn.close()
 
-    # Retornamos todo inyectando los filtros nuevos al final para que el HTML guarde su estado seleccionado
     return render_template(
         "dashboard.html",
         meses_seleccionados=meses_seleccionados, 
@@ -1930,8 +1832,8 @@ def dashboard():
         gastos_comparativas=gastos_comparativas,
         historico_ingresos=historico_ingresos,
         historico_gastos=historico_gastos,
-        ingresos_por_concepto=ingresos_por_concepto, # NUEVA VARIABLE
-        gastos_por_concepto=gastos_por_concepto,     # NUEVA VARIABLE
+        ingresos_por_concepto=ingresos_por_concepto, 
+        gastos_por_concepto=gastos_por_concepto,     
         total_gasto_ads=float(total_gasto_ads),
         total_alcance=total_alcance,
         total_impresiones=total_impresiones,
@@ -1939,15 +1841,11 @@ def dashboard():
         roas_global=round(roas_global, 2),
         ads_vs_ventas=ads_vs_ventas,
         org_vs_ventas=org_vs_ventas,
-        # Nuevos filtros conservados para el front-end
         fecha_inicio_seleccionada=fecha_inicio_seleccionada,
         fecha_fin_seleccionada=fecha_fin_seleccionada,
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
-
-
-
 
 # =========================================================
 # ================== CONTROL DE COCINA ====================
@@ -1958,7 +1856,6 @@ def toggle_item_cocina(item_id):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            # Invierte el estado: si era 0 lo hace 1, si era 1 lo hace 0
             cur.execute("UPDATE pedido_items SET entregado = NOT entregado WHERE id = %s", (item_id,))
             conn.commit()
         return jsonify({"status": "success"})
@@ -1966,9 +1863,6 @@ def toggle_item_cocina(item_id):
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         conn.close()
-
-
-
 
 # =========================================================
 # ============ ELIMINAR ITEM / ELIMINAR PEDIDO =============
@@ -2048,7 +1942,7 @@ def eliminar_pedido(pedido_id):
             conn.rollback()
         except Exception:
             pass
-        flash(f"Error eliminando pedido #{pedido_id}: {e}", "error")
+        flash(f"Error Comicando pedido #{pedido_id}: {e}", "error")
     finally:
         conn.close()
 
@@ -2086,7 +1980,6 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
     pedido = cursor.fetchone()
 
     lines = []
-    # \U0001F44B = Manita saludando 👋
     lines.append("¡Hola! \U0001F44B Aquí tienes el resumen de tu pedido:\n")
 
     subtotal_items = Decimal("0")
@@ -2095,25 +1988,19 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
         subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
         subtotal_items += subtotal
         
-        # \u25AA\uFE0F = Cuadrito negro ▪️
         lines.append(f'\u25AA\uFE0F {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
 
         if it.get("proteina") and it.get("proteina") != "Sin proteina":
-            # \U0001F373 = Sartén con huevo 🍳
             lines.append(f'   \U0001F373 {it["proteina"]}')
         if it.get("salsa"):
-            # \U0001F336\uFE0F = Chile 🌶️
             lines.append(f'   \U0001F336\uFE0F {it["salsa"]}')
         if it.get("sin"):
-            # \U0001F6AB = Señal prohibido 🚫
             lines.append(f'   \U0001F6AB Sin {it["sin"]}')
         
         nota = it.get("nota")
         if nota:
-            # Reemplazamos la mano (👉) por el más (➕)
             if "👉 Para:" in nota or "\U0001F449 Para:" in nota:
                 nota = nota.replace("👉 Para:", "\u2795 Extra para:").replace("\U0001F449 Para:", "\u2795 Extra para:")
-            # \U0001F4DD = Papel con lápiz 📝
             lines.append(f'   \U0001F4DD {nota}')
 
     total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
@@ -2326,7 +2213,7 @@ def agregar_stock():
         flash("Cantidad inválida.", "error")
         return redirect(url_for("ver_stock", q=q))
 
-    if cantidad <= 0:
+    if Math := cantidad <= 0:
         flash("La cantidad debe ser mayor a 0.", "error")
         return redirect(url_for("ver_stock", q=q))
 
@@ -2497,14 +2384,12 @@ def platillo_set_proteina_qty(platillo_id):
 
 @app.route("/campanas")
 def campanas():
-    # Por defecto busca clientes que no han venido en 30 días
     dias_str = request.args.get("dias", "30")
     dias = int(dias_str) if dias_str.isdigit() else 30
     
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Buscamos clientes cuya última compra supere X días
             cursor.execute("""
                 SELECT 
                     c.id, c.nombre, c.phone_e164, 
@@ -2524,11 +2409,10 @@ def campanas():
     finally:
         conn.close()
 
-    # Construimos el mensaje de WhatsApp personalizado para cada uno
     for c in clientes_inactivos:
         telefono = (c["phone_e164"] or "").replace("+", "")
         nombre_completo = c["nombre"] or "amigo"
-        nombre = nombre_completo.split()[0] # Tomamos solo el primer nombre
+        nombre = nombre_completo.split()[0]
         
         mensaje = f"¡Hola {nombre}! 👋 Te extrañamos en Señor Chilaquil.\n\nHace un rato que no nos visitas y queremos consentirte. 🌶️ En tu próximo pedido, muéstranos este mensaje y te regalamos un *Totopo extra* 🌮✨ a tu cuenta.\n\n¡Te esperamos pronto!"
         msg_q = urllib.parse.quote(mensaje)
@@ -2553,14 +2437,12 @@ def corte_caja():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             
-            # 1. Verificar si hay pedidos ABIERTOS
             cursor.execute("""
                 SELECT COUNT(*) as abiertos FROM pedidos 
                 WHERE DATE(fecha) = %s AND estado = 'abierto'
             """, (fecha_str,))
             pedidos_abiertos = cursor.fetchone()["abiertos"]
 
-            # 2. Resumen de ventas por método de pago (solo cerrados)
             cursor.execute("""
                 SELECT COALESCE(metodo_pago, 'Otro') as metodo_pago, SUM(total) as total_ventas 
                 FROM pedidos 
@@ -2569,7 +2451,6 @@ def corte_caja():
             """, (fecha_str,))
             ventas_dia = cursor.fetchall()
 
-            # 3. CORREGIDO: Obtener el TOTAL de gastos de la fecha (sin filtrar por texto 'efectivo')
             cursor.execute("""
                 SELECT SUM(costo) as total_gastos 
                 FROM insumos_compras 
@@ -2578,7 +2459,6 @@ def corte_caja():
             gastos_row = cursor.fetchone()
             total_gastos = Decimal(str(gastos_row["total_gastos"] or 0))
 
-            # Organizar variables del sistema
             ventas_totales = Decimal("0")
             efectivo_sistema = Decimal("0")
             tarjeta_sistema = Decimal("0")
@@ -2599,14 +2479,11 @@ def corte_caja():
                 else:
                     otros_sistema += monto
 
-            # Banco Esperado Sistema = Tarjeta + Transferencia
             banco_esperado_sistema = tarjeta_sistema + transferencia_sistema
 
-            # Ver si ya existe un corte guardado para hoy
             cursor.execute("SELECT * FROM cortes_caja WHERE fecha_corte = %s", (fecha_str,))
             corte_guardado = cursor.fetchone()
 
-            # --- PROCESAR EL GUARDADO DEL CORTE (POST) ---
             if request.method == "POST":
                 if pedidos_abiertos > 0:
                     flash(f"¡Cuidado! Hay {pedidos_abiertos} pedido(s) abierto(s). Ciérralos primero.", "error")
@@ -2615,9 +2492,8 @@ def corte_caja():
                 fondo_caja = parse_decimal_mx(request.form.get("fondo_caja", "0")) or Decimal("0")
                 efectivo_fisico = parse_decimal_mx(request.form.get("efectivo_fisico", "0")) or Decimal("0")
                 tarjeta_fisico = parse_decimal_mx(request.form.get("tarjeta_fisico", "0")) or Decimal("0")
-                notas = request.form.get("notas", "")
+                notes = request.form.get("notas", "")
                 
-                # Cálculos de diferencias
                 efectivo_esperado = fondo_caja + efectivo_sistema - total_gastos
                 diferencia_efectivo = efectivo_fisico - efectivo_esperado
                 diferencia_tarjeta = tarjeta_fisico - banco_esperado_sistema
@@ -2631,7 +2507,7 @@ def corte_caja():
                         WHERE fecha_corte=%s
                     """, (str(fondo_caja), str(ventas_totales), str(efectivo_sistema), str(tarjeta_sistema), 
                           str(transferencia_sistema), str(otros_sistema), str(total_gastos), str(efectivo_fisico), 
-                          str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas, fecha_str))
+                          str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notes, fecha_str))
                     flash("Corte de caja actualizado correctamente.", "success")
                 else:
                     cursor.execute("""
@@ -2641,13 +2517,12 @@ def corte_caja():
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (fecha_str, str(fondo_caja), str(ventas_totales), str(efectivo_sistema), 
                           str(tarjeta_sistema), str(transferencia_sistema), str(otros_sistema), 
-                          str(total_gastos), str(efectivo_fisico), str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas))
+                          str(total_gastos), str(efectivo_fisico), str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notes))
                     flash("Corte de caja guardado exitosamente.", "success")
                 
                 conn.commit()
                 return redirect(url_for("corte_caja", fecha=fecha_str))
 
-            # 4. NUEVO: Traer el historial de los últimos 15 cortes realizados para mostrar abajo
             cursor.execute("""
                 SELECT fecha_corte AS fecha, fondo_caja, efectivo_fisico, tarjeta_fisico, 
                        diferencia, diferencia_tarjeta, notas 
@@ -2675,7 +2550,7 @@ def corte_caja():
         total_gastos=total_gastos,
         efectivo_esperado=efectivo_esperado,
         corte_guardado=corte_guardado,
-        cortes=historial_cortes # Enviamos la lista a la vista
+        cortes=historial_cortes 
     )
 
 # ================== RUN ==================
