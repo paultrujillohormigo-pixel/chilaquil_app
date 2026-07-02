@@ -21,23 +21,6 @@ WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
 WA_ACCESS_TOKEN = os.environ.get("WA_ACCESS_TOKEN")
 WA_VERSION = os.environ.get("WA_VERSION", "v20.0")
 
-
-¡No te preocupes, lo hacemos juntos paso a paso! Vamos a agregar el código necesario a tu aplicación de Flask y a configurar la variable de entorno en Railway.
-
-Sigue estos pasos:
-
-Paso 1: Modifica tu archivo de Flask (en tu computadora o GitHub)
-Abre el archivo principal donde tienes configuradas las rutas de tu aplicación de Flask (suele llamarse app.py, main.py o similar).
-
-Busca una parte limpia de tu archivo (por ejemplo, justo antes de la línea if __name__ == '__main__':) y pega el siguiente fragmento de código:
-
-Python
-import os
-from flask import Flask, request
-
-# NOTA: Asegúrate de usar la variable 'app' que ya tengas definida en tu archivo.
-# Si tu variable se llama de otra forma (ej. 'application'), cambia 'app.route' por 'application.route'
-
 @app.route('/webhook', methods=['GET', 'POST'])
 def whatsapp_webhook():
     if request.method == 'GET':
