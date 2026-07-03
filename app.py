@@ -28,6 +28,29 @@ def privacy_policy():
 # COSTEO BLUEPRINT
 app.register_blueprint(costeo_bp)
 
+
+def get_previous_month(yyyy_mm: str) -> str | None:
+    """
+    Takes a string in format 'YYYY-MM' and returns the previous month 
+    in the same 'YYYY-MM' format.
+    """
+    if not yyyy_mm or "-" not in yyyy_mm:
+        return None
+        
+    try:
+        year_str, month_str = yyyy_mm.split("-")
+        year = int(year_str)
+        month = int(month_str)
+        
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+            
+        return f"{year}-{month:02d}"
+    except ValueError:
+        return None
+
 @app.route("/")
 def index():
     return render_template("index.html")
