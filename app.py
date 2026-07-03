@@ -28,29 +28,6 @@ def privacy_policy():
 # COSTEO BLUEPRINT
 app.register_blueprint(costeo_bp)
 
-
-def get_previous_month(yyyy_mm: str) -> str | None:
-    """
-    Takes a string in format 'YYYY-MM' and returns the previous month 
-    in the same 'YYYY-MM' format.
-    """
-    if not yyyy_mm or "-" not in yyyy_mm:
-        return None
-        
-    try:
-        year_str, month_str = yyyy_mm.split("-")
-        year = int(year_str)
-        month = int(month_str)
-        
-        month -= 1
-        if month == 0:
-            month = 12
-            year -= 1
-            
-        return f"{year}-{month:02d}"
-    except ValueError:
-        return None
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -123,6 +100,28 @@ def raw_data():
 # =========================================================
 # ================== HELPERS ==============================
 # =========================================================
+
+def get_previous_month(yyyy_mm: str) -> str | None:
+    if not yyyy_mm or "-" not in yyyy_mm:
+        return None
+    try:
+        year_str, month_str = yyyy_mm.split("-")
+        year = int(year_str)
+        month = int(month_str)
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+        return f"{year}-{month:02d}"
+    except ValueError:
+        return None
+
+def calc_var(current: float, previous: float) -> float:
+    if previous == 0:
+        if current == 0:
+            return 0.0
+        return 100.0
+    return ((current - previous) / previous) * 100.0
 
 def normalize_phone_mx(raw: str) -> str | None:
     if not raw:
@@ -2358,7 +2357,7 @@ def campanas():
         mensaje = f"Hola {nombre}. Te extrañamos en Senor Chilaquil.\n\nHace un rato que no nos visitas y queremos consentirte. En tu proximo pedido, muestranos este mensaje y te regalamos un Totopo extra a tu cuenta.\n\n¡Te esperamos pronto!"
         msg_q = urllib.parse.quote(mensaje)
 
-        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if phone else None
+        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if telefono else None
 
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
 
