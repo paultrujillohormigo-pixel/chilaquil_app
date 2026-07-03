@@ -126,108 +126,133 @@
 
   <aside class="pos-right">
 
-    <div class="card card-sticky">
+    <div class="card card-sticky" style="padding: 0; overflow: hidden;">
 
-      <div class="card-head carrito-head">
-        <div>
-          <h3 class="carrito-title">Carrito</h3>
-          <div class="hint">+ / – para ajustar</div>
+      <!-- SECCIÓN: YA GUARDADO -->
+      <div id="contenedorGuardados" style="display:none; background: #f8fafc; border-bottom: 2px dashed #cbd5e1; padding: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h3 style="margin:0; color: #334155; font-size: 1.1rem;">📦 Ya en el pedido</h3>
+          <div style="text-align: right;">
+            <div class="hint">Subtotal Guardado</div>
+            <strong id="subtotalGuardadoText" style="color: #475569; font-size: 1.1rem;">$0.00</strong>
+          </div>
         </div>
-
-        <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
-      </div>
-
-      <div class="carrito-wrap" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
-        <table id="carritoTable">
-          <thead>
+        <table id="tablaGuardados" style="width: 100%; table-layout: fixed; font-size: 0.9rem;">
+          <thead style="background: transparent;">
             <tr>
-              <th>Producto</th>
-              <th>Cant.</th>
-              <th>Precio</th>
-              <th>Subtotal</th>
-              <th></th>
+              <th style="padding-left:0;">Producto</th>
+              <th style="width: 85px;">Cant.</th>
+              <th style="width: 70px;">Precio</th>
+              <th style="width: 80px;">Subtotal</th>
+              <th style="width: 65px;"></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
-
-        <div class="total-box" style="display:flex; flex-direction:column; gap:10px;">
-
-          <div style="display:flex; justify-content:space-between; gap:10px;">
-            <div>Subtotal</div>
-            <div class="total-amount" id="subtotalPedido">$0.00</div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-end;">
-            <div>
-              <label style="font-weight:800;">Descuento ($)</label>
-              <input
-                type="number"
-                id="descuentoInput"
-                step="0.01"
-                min="0"
-                value="{{ pedido.descuento or '0.00' }}"
-                inputmode="decimal"
-                style="width:140px; margin-top:6px; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:16px;"
-                placeholder="0.00"
-              >
-              <div class="hint" style="margin-top:4px;">Se aplica al total</div>
-            </div>
-
-            <div style="text-align:right;">
-              <div class="hint">Descuento</div>
-              <div style="font-weight:900;" id="descuentoMostrado">-$0.00</div>
-            </div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px dashed #ddd; padding-top:10px;">
-            <div style="font-size:1.05rem; font-weight:900;">Total</div>
-            <div class="total-amount" id="totalPedido">$0.00</div>
-          </div>
-
-        </div>
-
-        <div id="inputsHidden"></div>
-        <input type="hidden" name="descuento" id="descuentoHidden" value="{{ pedido.descuento or '0' }}">
-        <input type="hidden" name="totopos_ganados" value="1">
       </div>
 
-      <div style="pointer-events: auto; opacity: 1;">
-      {% if pedido.estado == 'abierto' %}
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-            💬 Actualizar y Enviar WhatsApp Web
-          </button>
-          
-          <button type="submit" class="btn-guardar" style="padding: 12px; width: 100%;">
-            💾 Solo Actualizar Pedido
-          </button>
+      <!-- SECCIÓN: NUEVO CARRITO -->
+      <div style="padding: 15px;">
+        <div class="carrito-head" style="margin-bottom: 15px;">
+          <div>
+            <h3 class="carrito-title" style="color: #10b981;">🛒 Nuevos Agregados</h3>
+            <div class="hint">+ / – para ajustar</div>
+          </div>
+          <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
         </div>
 
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee;">
-          <h4 style="margin-top: 0; margin-bottom: 10px; color: #555; text-align: center;">Finalizar Pedido</h4>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR este pedido y enviar ticket por WA? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrarWA').submit();" style="background-color: #128C7E; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
-              🔒 Cerrar y Enviar WA Web
+        <div class="carrito-wrap" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
+          <table id="carritoTable" style="width: 100%; table-layout: fixed;">
+            <thead>
+              <tr>
+                <th style="padding-left:0;">Producto</th>
+                <th style="width: 85px;">Cant.</th>
+                <th style="width: 70px;">Precio</th>
+                <th style="width: 80px;">Subtotal</th>
+                <th style="width: 65px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="total-box" style="display:flex; flex-direction:column; gap:10px; margin-top: 15px;">
+
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+              <div>Subtotal (Guardado + Nuevo)</div>
+              <div class="total-amount" id="subtotalPedido" style="font-size: 1.1rem;">$0.00</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-end;">
+              <div>
+                <label style="font-weight:800;">Descuento ($)</label>
+                <input
+                  type="number"
+                  id="descuentoInput"
+                  step="0.01"
+                  min="0"
+                  value="{{ pedido.descuento or '0.00' }}"
+                  inputmode="decimal"
+                  style="width:140px; margin-top:6px; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:16px;"
+                  placeholder="0.00"
+                >
+                <div class="hint" style="margin-top:4px;">Se aplica al total general</div>
+              </div>
+
+              <div style="text-align:right;">
+                <div class="hint">Descuento</div>
+                <div style="font-weight:900; color: #ef4444;" id="descuentoMostrado">-$0.00</div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px dashed #ddd; padding-top:10px;">
+              <div style="font-size:1.15rem; font-weight:900;">Gran Total</div>
+              <div class="total-amount" id="totalPedido" style="font-size: 1.4rem; color: #111827;">$0.00</div>
+            </div>
+
+          </div>
+
+          <div id="inputsHidden"></div>
+          <input type="hidden" name="descuento" id="descuentoHidden" value="{{ pedido.descuento or '0' }}">
+          <input type="hidden" name="totopos_ganados" value="1">
+        </div>
+
+        <div style="pointer-events: auto; opacity: 1;">
+        {% if pedido.estado == 'abierto' %}
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+            <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+              💬 Actualizar y Enviar WhatsApp Web
             </button>
             
-            <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR el pedido sin enviar mensaje? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrar').submit();" style="background-color: #d9534f; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
-              🔒 Solo Cerrar
+            <button type="submit" class="btn-guardar" style="padding: 12px; width: 100%;">
+              💾 Solo Actualizar Pedido
             </button>
           </div>
-        </div>
-      {% else %}
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
-            🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
+
+          <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee;">
+            <h4 style="margin-top: 0; margin-bottom: 10px; color: #555; text-align: center;">Finalizar Pedido</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR este pedido y enviar ticket por WA? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrarWA').submit();" style="background-color: #128C7E; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
+                🔒 Cerrar y Enviar WA Web
+              </button>
+              
+              <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR el pedido sin enviar mensaje? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrar').submit();" style="background-color: #d9534f; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
+                🔒 Solo Cerrar
+              </button>
+            </div>
           </div>
-          <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-            💬 Reenviar Ticket por WhatsApp Web
-          </button>
+        {% else %}
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+            <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
+              🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
+            </div>
+            <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+              💬 Reenviar Ticket por WhatsApp Web
+            </button>
+          </div>
+        {% endif %}
         </div>
-      {% endif %}
       </div>
-      </div>
+    </div>
 
   </aside>
 
@@ -290,7 +315,7 @@ html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .pos-layout{ display:flex; flex-direction:column; gap:12px; }
   .pos-left,.pos-right{ width:100%; }
   .card-sticky{ position:static !important; top:auto !important; }
-  #carritoTable th, #carritoTable td{ font-size:.95rem; }
+  #carritoTable th, #carritoTable td, #tablaGuardados th, #tablaGuardados td { font-size:.95rem; }
 }
 .carrito-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .carrito-title{ margin:0; }
@@ -331,11 +356,10 @@ html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .tag-warn{ background:#fff3cd; border-color:#f0c36d; }
 .nota{ padding:6px 8px; border-radius:8px; border:1px dashed #bbb; background:#fff; font-size:.85rem; }
 .modal-actions{ position:sticky; bottom:0; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); padding-top:10px; display:flex; gap:10px; justify-content:flex-end; }
-.pos-layout,.card,.carrito-wrap,#carritoTable,.modal-box{ max-width:100%; }
+.pos-layout,.card,.carrito-wrap,#carritoTable,#tablaGuardados,.modal-box{ max-width:100%; }
 body{ overflow-x:hidden; }
-#carritoTable{ width:100%; table-layout:fixed; }
-#carritoTable th,#carritoTable td{ overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
-#carritoTable td.td-left,#carritoTable td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+#carritoTable th,#carritoTable td, #tablaGuardados th, #tablaGuardados td{ overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+#carritoTable td.td-left,#carritoTable td:first-child, #tablaGuardados td.td-left, #tablaGuardados td:first-child{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
 .qty-controls{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
 #lista_clientes div { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.95rem; }
 #lista_clientes div:hover { background-color: #f8f8f8; color: #b32417; }
@@ -477,6 +501,7 @@ document.addEventListener("DOMContentLoaded", () => {
             precio: Number("{{ d.precio_unitario or d.precio or 0 }}"),
             amount_base: Number("{{ d.cantidad or 1 }}"), 
             cantidad: Number("{{ d.cantidad or 1 }}"),
+            isSaved: true, // <--- MARCADOR DE QUE VIENE DE LA BASE DE DATOS
             custom: {
               proteina: "{{ d.proteina or 'Sin proteina' }}",
               salsa_id: "{{ d.salsa_id or '' }}",
@@ -581,7 +606,7 @@ function agregarProducto(id, nombre, precio, category) {
     nombre: nombre,
     precio: Number(precio),
     cantidad: 1,
-    isNew: true, 
+    isNew: true, // No es de la BD, se está creando ahorita
     custom: {
       proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: ""
     }
@@ -611,12 +636,18 @@ function eliminarProducto(uid){
 }
 
 function renderCarrito(){
-  const tbody = document.querySelector("#carritoTable tbody");
+  const tbodyGuardados = document.querySelector("#tablaGuardados tbody");
+  const tbodyNuevos = document.querySelector("#carritoTable tbody");
+  const contenedorGuardados = document.getElementById("contenedorGuardados");
   const hidden = document.getElementById("inputsHidden");
 
-  tbody.innerHTML = "";
+  let htmlGuardados = "";
+  let htmlNuevos = "";
   hidden.innerHTML = "";
+
   let subtotalGeneral = 0;
+  let totalGuardado = 0;
+  let totalNuevo = 0;
   let currentIndex = 0; 
 
   Object.keys(carrito).forEach(uid => {
@@ -630,7 +661,6 @@ function renderCarrito(){
 
     const precioVentaTotal = item.precio + precioExtrasAcumulado;
     const subtotal = precioVentaTotal * item.cantidad;
-    subtotalGeneral += subtotal;
 
     let modsHtml = "";
     if (item.custom.proteina && item.custom.proteina !== "Sin proteina") {
@@ -652,26 +682,36 @@ function renderCarrito(){
       modsHtml += `<div class="nota">📝 ${escapeHtml(item.custom.nota)}</div>`;
     }
 
-    tbody.innerHTML += `
+    const rowHtml = `
       <tr>
-        <td class="td-left">
+        <td class="td-left" style="padding-left:0;">
           <b>${escapeHtml(item.nombre)}</b>
           ${modsHtml ? `<div class="cocina-meta">${modsHtml}</div>` : ''}
         </td>
-        <td class="qty-controls">
+        <td class="qty-controls" style="width: 85px;">
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', -1)">-</button>
           <span><b>${item.cantidad}</b></span>
           <button type="button" class="btn-gray" style="padding:2px 8px;" onclick="cambiarCantidad('${uid}', 1)">+</button>
         </td>
-        <td>$${precioVentaTotal.toFixed(2)}</td>
-        <td><strong>$${subtotal.toFixed(2)}</strong></td>
-        <td style="text-align:right;">
-          <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:5px;" onclick="abrirCustomModal('${uid}')">✏️</button>
+        <td style="width: 70px;">$${precioVentaTotal.toFixed(2)}</td>
+        <td style="width: 80px;"><strong>$${subtotal.toFixed(2)}</strong></td>
+        <td style="width: 65px; text-align:right;">
+          <button type="button" style="color:#007bff; background:none; border:none; cursor:pointer; font-size:1.2rem; margin-right:4px;" onclick="abrirCustomModal('${uid}')">✏️</button>
           <button type="button" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem;" onclick="eliminarProducto('${uid}')">🗑️</button>
         </td>
       </tr>
     `;
 
+    // CLASIFICAR SEGÚN SI YA ESTABA GUARDADO O ES NUEVO
+    if (item.isSaved) {
+        htmlGuardados += rowHtml;
+        totalGuardado += subtotal;
+    } else {
+        htmlNuevos += rowHtml;
+        totalNuevo += subtotal;
+    }
+
+    // EL BACKEND RECIBE TODO JUNTO PARA PODER ACTUALIZAR LA BD
     let notaParaBackend = item.custom.nota;
     if (item.custom.sabor) {
         notaParaBackend = `💧 Sabor: ${item.custom.sabor} | ` + notaParaBackend;
@@ -710,6 +750,23 @@ function renderCarrito(){
     });
   });
 
+  // RENDERIZAR TABLAS SEPARADAS
+  tbodyGuardados.innerHTML = htmlGuardados;
+  tbodyNuevos.innerHTML = htmlNuevos;
+
+  if (htmlGuardados !== "") {
+      contenedorGuardados.style.display = "block";
+      document.getElementById("subtotalGuardadoText").innerText = "$" + totalGuardado.toFixed(2);
+  } else {
+      contenedorGuardados.style.display = "none";
+  }
+
+  if (htmlNuevos === "") {
+      tbodyNuevos.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#9ca3af; padding: 25px;'>Aún no hay productos nuevos en este carrito</td></tr>";
+  }
+
+  // CÁLCULO DE TOTALES GLOBALES
+  subtotalGeneral = totalGuardado + totalNuevo;
   const descuentoAplicado = Math.min(descuentoTotal, subtotalGeneral);
   const totalFinal = subtotalGeneral - descuentoAplicado;
 
@@ -825,6 +882,8 @@ function cerrarCustomModal() {
   renderCarrito();
 }
 
+function table_has_column(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+
 function confirmarCustom() {
   if (!editandoUid || !carrito[editandoUid]) { cerrarCustomModal(); return; }
   
@@ -925,7 +984,6 @@ function guardarYEnviarWhatsApp(btnElement) {
 
   const ultimos10 = numeros.slice(-10);
 
-  // Asegurar código de país de México si solo ponen 10 dígitos para el envío de WhatsApp Web
   if (numeros.length === 10) {
     numeros = "52" + numeros;
   }
@@ -942,7 +1000,6 @@ function guardarYEnviarWhatsApp(btnElement) {
     btnElement.style.pointerEvents = "none";
   }
 
-  // 1. Guardar el pedido en tu base de datos mediante AJAX
   fetch(window.location.href, {
       method: 'POST',
       headers: { 'Accept': 'application/json' },
@@ -959,7 +1016,6 @@ function guardarYEnviarWhatsApp(btnElement) {
         btnElement.style.pointerEvents = "auto";
       }
 
-      // 2. Generar el texto elegante del ticket - MODIFICADO: 100% CERO EMOJIS O SÍMBOLOS EXTRAÑOS
       let ticket = `Senor Chilaquil\n`;
       ticket += `Pedido: #${ "{{ pedido.id }}" }\n`;
       ticket += `Mesa/Destino: ${form.elements['mesa'].value}\n`;
@@ -979,7 +1035,6 @@ function guardarYEnviarWhatsApp(btnElement) {
       ticket += `--------------------------------\n`;
       ticket += `Total a pagar: ${document.getElementById("totalPedido").innerText}\n\n`;
       
-      // 3. Agregar los datos de lealtad y el Link de puntos dinámico con los últimos 10 dígitos del teléfono
       ticket += `Con esta compra sumas 1 totopo a tu cuenta! Promocion activa.\n\n`;
       ticket += `Consulta tus puntos y recompensas aqui:\n`;
       
@@ -987,11 +1042,9 @@ function guardarYEnviarWhatsApp(btnElement) {
       ticket += `Link de Perfil: ${baseUrl}/mi-perfil/${ultimos10}\n\n`;
       ticket += `¡Gracias por tu preferencia!`;
 
-      // 4. Abrir la URL de WhatsApp Web directamente
       const urlWa = `https://wa.me/${numeros}?text=${encodeURIComponent(ticket)}`;
       window.open(urlWa, '_blank');
 
-      // 5. Redirigir o recargar la pantalla
       if(data && data.redirect_url) {
           window.location.href = data.redirect_url;
       } else {
