@@ -63,7 +63,7 @@
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
-          <small>Al hacer clic en Enviar WhatsApp, se guardará el pedido y se abrirá el chat listo para enviar el ticket.</small>
+          <small>Requerido si deseas enviar el ticket por WhatsApp.</small>
 
           <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -218,27 +218,23 @@
 
         <div style="pointer-events: auto; opacity: 1;">
         {% if pedido.estado == 'abierto' %}
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-            <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-              💬 Actualizar y Enviar WhatsApp Web
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 25px;">
+            
+            <!-- 1. WhatsApp y Cerrar -->
+            <button type="button" onclick="if(confirm('¿Deseas CERRAR el pedido y abrir WhatsApp para enviar ticket? (Asegúrate de darle en Actualizar primero si agregaste cosas)')) document.getElementById('formCerrarWA').submit();" style="background-color: #25D366; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 6px rgba(37,211,102,0.3);">
+              💬 Enviar por WhatsApp y Cerrar
             </button>
             
-            <button type="submit" class="btn-guardar" style="padding: 12px; width: 100%;">
-              💾 Solo Actualizar Pedido
+            <!-- 2. Solo Cerrar -->
+            <button type="button" onclick="if(confirm('¿Deseas CERRAR el pedido SIN enviar WhatsApp?')) document.getElementById('formCerrar').submit();" style="background-color: #ef4444; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+              🔒 Solo Cerrar
             </button>
-          </div>
 
-          <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee;">
-            <h4 style="margin-top: 0; margin-bottom: 10px; color: #555; text-align: center;">Finalizar Pedido</h4>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR este pedido y enviar ticket por WA? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrarWA').submit();" style="background-color: #128C7E; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
-                🔒 Cerrar y Enviar WA Web
-              </button>
-              
-              <button type="button" onclick="if(confirm('¿Seguro que deseas CERRAR el pedido sin enviar mensaje? Asegúrate de haber actualizado si hiciste cambios.')) document.getElementById('formCerrar').submit();" style="background-color: #d9534f; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 0.95rem; cursor: pointer;">
-                🔒 Solo Cerrar
-              </button>
-            </div>
+            <!-- 3. Actualizar -->
+            <button type="submit" class="btn-guardar" style="background-color: #3b82f6; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 8px;">
+              💾 Actualizar
+            </button>
+            
           </div>
         {% else %}
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
@@ -996,10 +992,49 @@ function guardarYEnviarWhatsApp(btnElement) {
   let textoOriginal = "";
   if (btnElement) {
     textoOriginal = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Guardando pedido...";
+    btnElement.innerHTML = "⏳ Abriendo WhatsApp...";
     btnElement.style.pointerEvents = "none";
   }
 
+  // REENVÍO DIRECTO PARA PEDIDOS CERRADOS (No usa Fetch a la BD)
+  if (!esAbierto) {
+      if (btnElement) {
+        btnElement.innerHTML = textoOriginal;
+        btnElement.style.pointerEvents = "auto";
+      }
+
+      let ticket = `Senor Chilaquil\n`;
+      ticket += `Pedido: #${ "{{ pedido.id }}" }\n`;
+      ticket += `Mesa/Destino: ${form.elements['mesa'].value}\n`;
+      ticket += `--------------------------------\n`;
+
+      Object.keys(carrito).forEach(uid => {
+        const item = carrito[uid];
+        ticket += `*${item.cantidad}x* ${item.nombre}\n`;
+        if (item.custom.proteina && item.custom.proteina !== "Sin proteina") ticket += `   Huevo: ${item.custom.proteina}\n`;
+        if (item.custom.salsa) ticket += `   Salsa: ${item.custom.salsa}\n`;
+        if (item.custom.sabor) ticket += `   Sabor: ${item.custom.sabor}\n`;
+        if (item.custom.extras.length > 0) ticket += `   Extras: ${item.custom.extras.join(', ')}\n`;
+        if (item.custom.sin.length > 0) ticket += `   Sin: ${item.custom.sin.join(', ')}\n`;
+        if (item.custom.nota) ticket += `   Nota: ${item.custom.nota}\n`;
+      });
+
+      ticket += `--------------------------------\n`;
+      ticket += `Total a pagar: ${document.getElementById("totalPedido").innerText}\n\n`;
+      
+      ticket += `Con esta compra sumas 1 totopo a tu cuenta! Promocion activa.\n\n`;
+      ticket += `Consulta tus puntos y recompensas aqui:\n`;
+      
+      const baseUrl = window.location.origin;
+      ticket += `Link de Perfil: ${baseUrl}/mi-perfil/${ultimos10}\n\n`;
+      ticket += `¡Gracias por tu preferencia!`;
+
+      const urlWa = `https://wa.me/${numeros}?text=${encodeURIComponent(ticket)}`;
+      window.open(urlWa, '_blank');
+      return;
+  }
+
+  // FLUJO NORMAL SI EL PEDIDO ESTÁ ABIERTO: Guarda por Ajax y luego abre WhatsApp
   fetch(window.location.href, {
       method: 'POST',
       headers: { 'Accept': 'application/json' },
