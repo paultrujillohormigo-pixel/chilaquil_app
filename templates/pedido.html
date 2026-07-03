@@ -71,7 +71,6 @@
               <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;" {% if pedido.estado != 'abierto' %} disabled {% endif %}>✕ Limpiar</button>
             </div>
             <div id="detalle_tel" style="font-size:0.9rem; color:#555; margin-top:4px;">📞 {{ pedido.telefono_whatsapp or 'Sin teléfono' }}</div>
-            <div id="detalle_extra" style="font-size:0.9rem; color:#555; margin-top:4px;"></div>
           </div>
 
         </div>
@@ -220,13 +219,13 @@
         {% if pedido.estado == 'abierto' %}
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 25px;">
             
-            <!-- 1. WhatsApp y Cerrar -->
-            <button type="button" onclick="if(confirm('¿Deseas CERRAR el pedido y abrir WhatsApp para enviar ticket? (Asegúrate de darle en Actualizar primero si agregaste cosas)')) document.getElementById('formCerrarWA').submit();" style="background-color: #25D366; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 6px rgba(37,211,102,0.3);">
+            <!-- 1. Enviar WhatsApp y Cerrar -->
+            <button type="button" onclick="procesarCierre('wa', this)" style="background-color: #25D366; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 6px rgba(37,211,102,0.3);">
               💬 Enviar por WhatsApp y Cerrar
             </button>
             
             <!-- 2. Solo Cerrar -->
-            <button type="button" onclick="if(confirm('¿Deseas CERRAR el pedido SIN enviar WhatsApp?')) document.getElementById('formCerrar').submit();" style="background-color: #ef4444; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+            <button type="button" onclick="procesarCierre('solo', this)" style="background-color: #ef4444; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
               🔒 Solo Cerrar
             </button>
 
@@ -237,12 +236,13 @@
             
           </div>
         {% else %}
+          <!-- Estado Cerrado -->
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
             <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
               🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
             </div>
-            <button type="button" class="btn-primary" onclick="guardarYEnviarWhatsApp(this)" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
-              💬 Reenviar Ticket por WhatsApp Web
+            <button type="button" onclick="reenviarWA('{{pedido.id}}')" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+              💬 Reenviar Ticket por WA
             </button>
           </div>
         {% endif %}
@@ -497,7 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
             precio: Number("{{ d.precio_unitario or d.precio or 0 }}"),
             amount_base: Number("{{ d.cantidad or 1 }}"), 
             cantidad: Number("{{ d.cantidad or 1 }}"),
-            isSaved: true, // <--- MARCADOR DE QUE VIENE DE LA BASE DE DATOS
+            isSaved: true, 
             custom: {
               proteina: "{{ d.proteina or 'Sin proteina' }}",
               salsa_id: "{{ d.salsa_id or '' }}",
@@ -602,7 +602,7 @@ function agregarProducto(id, nombre, precio, category) {
     nombre: nombre,
     precio: Number(precio),
     cantidad: 1,
-    isNew: true, // No es de la BD, se está creando ahorita
+    isNew: true, 
     custom: {
       proteina: "Sin proteina", salsa_id: "", salsas_ids: [], salsa: "", sin: [], extras: [], nota: "", sabor: ""
     }
@@ -698,7 +698,6 @@ function renderCarrito(){
       </tr>
     `;
 
-    // CLASIFICAR SEGÚN SI YA ESTABA GUARDADO O ES NUEVO
     if (item.isSaved) {
         htmlGuardados += rowHtml;
         totalGuardado += subtotal;
@@ -707,7 +706,6 @@ function renderCarrito(){
         totalNuevo += subtotal;
     }
 
-    // EL BACKEND RECIBE TODO JUNTO PARA PODER ACTUALIZAR LA BD
     let notaParaBackend = item.custom.nota;
     if (item.custom.sabor) {
         notaParaBackend = `💧 Sabor: ${item.custom.sabor} | ` + notaParaBackend;
@@ -746,7 +744,6 @@ function renderCarrito(){
     });
   });
 
-  // RENDERIZAR TABLAS SEPARADAS
   tbodyGuardados.innerHTML = htmlGuardados;
   tbodyNuevos.innerHTML = htmlNuevos;
 
@@ -761,7 +758,6 @@ function renderCarrito(){
       tbodyNuevos.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#9ca3af; padding: 25px;'>Aún no hay productos nuevos en este carrito</td></tr>";
   }
 
-  // CÁLCULO DE TOTALES GLOBALES
   subtotalGeneral = totalGuardado + totalNuevo;
   const descuentoAplicado = Math.min(descuentoTotal, subtotalGeneral);
   const totalFinal = subtotalGeneral - descuentoAplicado;
@@ -957,142 +953,66 @@ function abrirVistaCocina() {
 
 function cerrarVistaCocina() { document.getElementById('cocinaModal').classList.remove('is-open'); }
 
-/* ================== UI & WHATSAPP WEB COMPLETAMENTE LIMPIO ================== */
+/* ================== LÓGICA DE BOTONES ================== */
 function toggleUberBox(){
   const origen = document.getElementById("origenSelect").value;
   document.getElementById("uberBox").style.display = (origen === "uber") ? "block" : "none";
 }
 
-function guardarYEnviarWhatsApp(btnElement) {
-  const esAbierto = "{{ pedido.estado }}" === "abierto";
-  if (esAbierto && Object.keys(carrito).length === 0) { 
-    alert("⚠️ El carrito está vacío. Agrega productos primero."); 
-    return; 
-  }
+function procesarCierre(tipo, btnElement) {
+  const telefono = document.getElementById('buscador_cliente').value.trim();
+  const numeros = telefono.replace(/\D/g, '');
 
-  let telefono = document.getElementById('buscador_cliente').value.trim();
-  let numeros = telefono.replace(/\D/g, '');
-
-  if (numeros.length < 10) {
-    alert("⚠️ Ingresa un teléfono de al menos 10 dígitos para enviar el ticket.");
+  if (tipo === 'wa' && numeros.length < 10) {
+    alert("⚠️ Ingresa un teléfono de al menos 10 dígitos para poder enviar el ticket por WhatsApp.");
     return;
   }
 
-  const ultimos10 = numeros.slice(-10);
+  const confirmMsg = tipo === 'wa' 
+    ? '¿Deseas CERRAR el pedido y abrir WhatsApp para enviar el ticket?' 
+    : '¿Deseas CERRAR el pedido SIN enviar mensaje?';
 
-  if (numeros.length === 10) {
-    numeros = "52" + numeros;
-  }
+  if (!confirm(confirmMsg)) return;
 
-  document.getElementById('enviarWaHidden').value = "0"; 
-  
+  const textoOriginal = btnElement.innerHTML;
+  btnElement.innerHTML = "⏳ Guardando y cerrando...";
+  btnElement.style.pointerEvents = "none";
+
   const form = document.getElementById('pedidoForm');
   const formData = new FormData(form);
+  document.getElementById('enviarWaHidden').value = "0"; 
 
-  let textoOriginal = "";
-  if (btnElement) {
-    textoOriginal = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳ Abriendo WhatsApp...";
-    btnElement.style.pointerEvents = "none";
-  }
-
-  // REENVÍO DIRECTO PARA PEDIDOS CERRADOS (No usa Fetch a la BD)
-  if (!esAbierto) {
-      if (btnElement) {
-        btnElement.innerHTML = textoOriginal;
-        btnElement.style.pointerEvents = "auto";
-      }
-
-      let ticket = `Senor Chilaquil\n`;
-      ticket += `Pedido: #${ "{{ pedido.id }}" }\n`;
-      ticket += `Mesa/Destino: ${form.elements['mesa'].value}\n`;
-      ticket += `--------------------------------\n`;
-
-      Object.keys(carrito).forEach(uid => {
-        const item = carrito[uid];
-        ticket += `*${item.cantidad}x* ${item.nombre}\n`;
-        if (item.custom.proteina && item.custom.proteina !== "Sin proteina") ticket += `   Huevo: ${item.custom.proteina}\n`;
-        if (item.custom.salsa) ticket += `   Salsa: ${item.custom.salsa}\n`;
-        if (item.custom.sabor) ticket += `   Sabor: ${item.custom.sabor}\n`;
-        if (item.custom.extras.length > 0) ticket += `   Extras: ${item.custom.extras.join(', ')}\n`;
-        if (item.custom.sin.length > 0) ticket += `   Sin: ${item.custom.sin.join(', ')}\n`;
-        if (item.custom.nota) ticket += `   Nota: ${item.custom.nota}\n`;
-      });
-
-      ticket += `--------------------------------\n`;
-      ticket += `Total a pagar: ${document.getElementById("totalPedido").innerText}\n\n`;
-      
-      ticket += `Con esta compra sumas 1 totopo a tu cuenta! Promocion activa.\n\n`;
-      ticket += `Consulta tus puntos y recompensas aqui:\n`;
-      
-      const baseUrl = window.location.origin;
-      ticket += `Link de Perfil: ${baseUrl}/mi-perfil/${ultimos10}\n\n`;
-      ticket += `¡Gracias por tu preferencia!`;
-
-      const urlWa = `https://wa.me/${numeros}?text=${encodeURIComponent(ticket)}`;
-      window.open(urlWa, '_blank');
-      return;
-  }
-
-  // FLUJO NORMAL SI EL PEDIDO ESTÁ ABIERTO: Guarda por Ajax y luego abre WhatsApp
+  // 1. Guardamos silenciosamente por AJAX para asegurar que la BD tenga el teléfono y el carrito guardado
   fetch(window.location.href, {
       method: 'POST',
-      headers: { 'Accept': 'application/json' },
       body: formData
   })
-  .then(async res => {
-      const text = await res.text();
-      try { return JSON.parse(text); } 
-      catch(e) { throw new Error("Error interno al guardar."); }
-  })
-  .then(data => {
-      if (btnElement) {
-        btnElement.innerHTML = textoOriginal;
-        btnElement.style.pointerEvents = "auto";
-      }
-
-      let ticket = `Senor Chilaquil\n`;
-      ticket += `Pedido: #${ "{{ pedido.id }}" }\n`;
-      ticket += `Mesa/Destino: ${form.elements['mesa'].value}\n`;
-      ticket += `--------------------------------\n`;
-
-      Object.keys(carrito).forEach(uid => {
-        const item = carrito[uid];
-        ticket += `*${item.cantidad}x* ${item.nombre}\n`;
-        if (item.custom.proteina && item.custom.proteina !== "Sin proteina") ticket += `   Huevo: ${item.custom.proteina}\n`;
-        if (item.custom.salsa) ticket += `   Salsa: ${item.custom.salsa}\n`;
-        if (item.custom.sabor) ticket += `   Sabor: ${item.custom.sabor}\n`;
-        if (item.custom.extras.length > 0) ticket += `   Extras: ${item.custom.extras.join(', ')}\n`;
-        if (item.custom.sin.length > 0) ticket += `   Sin: ${item.custom.sin.join(', ')}\n`;
-        if (item.custom.nota) ticket += `   Nota: ${item.custom.nota}\n`;
-      });
-
-      ticket += `--------------------------------\n`;
-      ticket += `Total a pagar: ${document.getElementById("totalPedido").innerText}\n\n`;
-      
-      ticket += `Con esta compra sumas 1 totopo a tu cuenta! Promocion activa.\n\n`;
-      ticket += `Consulta tus puntos y recompensas aqui:\n`;
-      
-      const baseUrl = window.location.origin;
-      ticket += `Link de Perfil: ${baseUrl}/mi-perfil/${ultimos10}\n\n`;
-      ticket += `¡Gracias por tu preferencia!`;
-
-      const urlWa = `https://wa.me/${numeros}?text=${encodeURIComponent(ticket)}`;
-      window.open(urlWa, '_blank');
-
-      if(data && data.redirect_url) {
-          window.location.href = data.redirect_url;
+  .then(() => {
+      // 2. Ejecutamos la ruta correspondiente del backend para cerrar y enviar (o solo cerrar)
+      if (tipo === 'wa') {
+          document.getElementById('formCerrarWA').submit();
       } else {
-          window.location.reload();
+          document.getElementById('formCerrar').submit();
       }
   })
   .catch(err => {
-      if (btnElement) {
-        btnElement.innerHTML = textoOriginal;
-        btnElement.style.pointerEvents = "auto";
-      }
-      alert("❌ Error al guardar pedido: " + err.message);
+      btnElement.innerHTML = textoOriginal;
+      btnElement.style.pointerEvents = "auto";
+      alert("❌ Hubo un error de conexión al intentar guardar. Intenta de nuevo.");
   });
+}
+
+function reenviarWA(pedidoId) {
+  const telefono = document.getElementById('buscador_cliente').value.trim();
+  const numeros = telefono.replace(/\D/g, '');
+
+  if (numeros.length < 10) {
+    alert("⚠️ Este pedido no tiene un teléfono válido. Escribe uno en la casilla de búsqueda primero.");
+    return;
+  }
+  
+  // Llama a la ruta limpia de tu backend que te genera la URL y te redirige a WA
+  window.open(`/pedido/${pedidoId}/whatsapp?tel=${numeros}`, '_blank');
 }
 </script>
 
