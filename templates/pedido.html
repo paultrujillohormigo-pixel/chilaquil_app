@@ -127,7 +127,6 @@
 
     <div class="card card-sticky" style="padding: 0; overflow: hidden;">
 
-      <!-- SECCIÓN: YA GUARDADO -->
       <div id="contenedorGuardados" style="display:none; background: #f8fafc; border-bottom: 2px dashed #cbd5e1; padding: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
           <h3 style="margin:0; color: #334155; font-size: 1.1rem;">📦 Ya en el pedido</h3>
@@ -150,7 +149,6 @@
         </table>
       </div>
 
-      <!-- SECCIÓN: NUEVO CARRITO -->
       <div style="padding: 15px;">
         <div class="carrito-head" style="margin-bottom: 15px;">
           <div>
@@ -219,24 +217,20 @@
         {% if pedido.estado == 'abierto' %}
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 25px;">
             
-            <!-- 1. Enviar WhatsApp y Cerrar -->
             <button type="button" onclick="procesarCierre('wa', this)" style="background-color: #25D366; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 6px rgba(37,211,102,0.3);">
               💬 Enviar por WhatsApp y Cerrar
             </button>
             
-            <!-- 2. Solo Cerrar -->
             <button type="button" onclick="procesarCierre('solo', this)" style="background-color: #ef4444; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
               🔒 Solo Cerrar
             </button>
 
-            <!-- 3. Actualizar -->
             <button type="submit" class="btn-guardar" style="background-color: #3b82f6; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 8px;">
               💾 Actualizar
             </button>
             
           </div>
         {% else %}
-          <!-- Estado Cerrado -->
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
             <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
               🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
@@ -478,7 +472,8 @@ document.addEventListener("DOMContentLoaded", () => {
           {% set outer_index = loop.index0 %}
           {% for sub in pedido_detalles %}
             {% if sub.padre_index == outer_index %}
-              let extName = "{{ sub.nombre or '' }}";
+              // --- CORRECCIÓN: Cambiado a var para evitar SyntaxError al ciclar múltiples extras ---
+              var extName = "{{ sub.nombre or '' }}";
               extrasLista.push(extName);
             {% endif %}
           {% endfor %}
