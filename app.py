@@ -432,7 +432,6 @@ def nuevo_pedido():
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            # CORREGIDO: Línea duplicada eliminada para evitar error de sintaxis
             cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
             productos = cursor.fetchall()
             cursor.execute("SELECT * FROM salsas ORDER BY nombre")
@@ -550,7 +549,9 @@ def nuevo_pedido():
                 extras_to_insert = []
 
                 for it in items:
-                    es_extra = (it["padre_index"] is not None) or ("Para:" in it["nota"])
+                    # --- CORRECCIÓN --- 
+                    # Solo es extra si tiene un padre asignado. Ignoramos si dice "Para:" en la nota.
+                    es_extra = (it["padre_index"] is not None)
 
                     if not es_extra:
                         cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
@@ -582,7 +583,6 @@ def nuevo_pedido():
                     placeholders_it = ",".join(["%s"] * len(cols_it))
                     cursor.execute(f"INSERT INTO pedido_items ({','.join(cols_it)}) VALUES ({placeholders_it})", tuple(vals_it))
 
-                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo por cada compra si hay teléfono
                 if telefono_e164:
                     customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                     loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, 1)
@@ -913,7 +913,8 @@ def ver_pedido(pedido_id):
                 extras_to_insert = []
 
                 for it in items_a_insertar:
-                    es_extra = (it["padre_index"] is not None) or ("Para:" in it["nota"])
+                    # --- CORRECCIÓN ---
+                    es_extra = (it["padre_index"] is not None)
 
                     if not es_extra:
                         cols_it = ["pedido_id", "producto_id", "proteina", "sin", "nota", "cantidad", "precio_unitario", "subtotal"]
@@ -962,7 +963,6 @@ def ver_pedido(pedido_id):
                 update_vals.append(pedido_id)
                 cursor.execute(update_query, tuple(update_vals))
 
-                # AUTOMATIZACIÓN: Suma forzosamente 1 totopo por cada compra si hay teléfono al actualizar
                 if telefono_e164:
                     customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
                     loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, 1)
@@ -1020,6 +1020,17 @@ def ver_pedido(pedido_id):
             for row in items_raw:
                 p_id = row.get("item_padre_id")
                 row["padre_index"] = id_to_index_map.get(p_id) if p_id else None
+                
+                # --- CORRECCIÓN: PREVENCIÓN DE CRASHEOS JS ---
+                if row.get("precio_unitario") is not None:
+                    row["precio_unitario"] = float(row["precio_unitario"])
+                if row.get("subtotal") is not None:
+                    row["subtotal"] = float(row["subtotal"])
+                
+                if row.get("nota"):
+                    row["nota"] = str(row["nota"]).replace("\n", " ").replace("\r", "").replace('"', '\\"').replace("'", "\\'")
+                # ---------------------------------------------
+
                 items.append(row)
 
             pedido["cliente_nombre"] = None
@@ -1027,6 +1038,17 @@ def ver_pedido(pedido_id):
                 cursor.execute("SELECT nombre FROM loyalty_customers WHERE phone_e164 = %s LIMIT 1", (pedido["telefono_whatsapp"],))
                 c_row = cursor.fetchone()
                 if c_row: pedido["cliente_nombre"] = c_row["nombre"]
+
+            # --- CORRECCIÓN: Convertir los totales del pedido ---
+            pedido["total"] = float(pedido["total"] or 0)
+            if "descuento" in pedido and pedido["descuento"] is not None:
+                pedido["descuento"] = float(pedido["descuento"])
+            if "monto_uber" in pedido and pedido["monto_uber"] is not None:
+                pedido["monto_uber"] = float(pedido["monto_uber"])
+            if "neto" in pedido and pedido["neto"] is not None:
+                pedido["neto"] = float(pedido["neto"])
+            # ----------------------------------------------------
+
     finally:
         conn.close()
 
@@ -1114,7 +1136,6 @@ def cerrar_pedido_whatsapp(pedido_id):
             phone = pedido.get("telefono_whatsapp")
             cursor.execute("UPDATE pedidos SET estado='cerrado' WHERE id=%s", (pedido_id,))
 
-            # AUTOMATIZACIÓN: Suma forzosamente 1 totopo al cerrar el pedido con WhatsApp
             balance = 0
             if phone:
                 customer_id = loyalty_get_or_create_customer(cursor, phone)
