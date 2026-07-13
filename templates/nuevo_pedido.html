@@ -482,29 +482,40 @@ function productoTieneModificadores(nombre, categoria){
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
 }
 
+/* --- CORRECCIÓN EN LA BÚSQUEDA DE ID DEL EXTRA OBLIGATORIA --- */
 function encontrarProductoExtraId(nombreBuscar) {
   const botones = document.querySelectorAll('.js-add');
   const nomNorm = normaliza(nombreBuscar);
   
-  // 1. Búsqueda EXACTA primero (prioridad máxima)
+  // 1. Intentar match EXACTO del nombre (Ej: "huevo" con "huevo")
   for (let b of botones) {
-    const btnNorm = normaliza(b.dataset.nombre);
-    if (btnNorm === nomNorm || btnNorm === "extra " + nomNorm || btnNorm === nomNorm + " extra") {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    if (btnNombreNorm === nomNorm) {
       return b.dataset.id;
     }
   }
 
-  // 2. Búsqueda flexible filtrada por categoría extra
+  // 2. Buscar si el botón contiene explícitamente la palabra "extra " + el ingrediente
   for (let b of botones) {
-    const btnNorm = normaliza(b.dataset.nombre);
-    if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || normaliza(b.dataset.categoria).includes('extra'))) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    if (btnNombreNorm === "extra " + nomNorm || btnNombreNorm === "extra: " + nomNorm) {
       return b.dataset.id;
     }
   }
 
-  // 3. Búsqueda parcial como último recurso
+  // 3. Buscar por la categoría "extras" que tenga el nombre del ingrediente
   for (let b of botones) {
-    if (normaliza(b.dataset.nombre).includes(nomNorm)) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    const btnCatNorm = normaliza(b.dataset.categoria || b.dataset.category || "");
+    if (btnNombreNorm.includes(nomNorm) && btnCatNorm.includes('extra')) {
+      return b.dataset.id;
+    }
+  }
+
+  // 4. Último recurso: match parcial pero filtrando que NO contenga "chilaquiles" o palabras clave de platos fuertes
+  for (let b of botones) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    if (btnNombreNorm.includes(nomNorm) && !btnNombreNorm.includes('chilaquil')) {
       return b.dataset.id;
     }
   }
@@ -529,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
     grid.addEventListener("click", (e) => {
       const btn = e.target.closest(".js-add");
       if (!btn) return;
-      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || "");
+      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || b.dataset.category || "");
     });
   }
 
