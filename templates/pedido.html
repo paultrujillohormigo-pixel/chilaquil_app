@@ -7,7 +7,7 @@
 
   <input type="hidden" name="enviar_wa" id="enviarWaHidden" value="0">
 
-  <section class="pos-left" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
+  <section class="pos-left" style="opacity: 1;">
 
     <div class="card">
       <div class="card-head">
@@ -50,16 +50,16 @@
           <input type="text" name="mesero" placeholder="Nombre" value="{{ pedido.mesero or '' }}">
         </div>
 
-        <div style="position: relative; grid-column: 1 / -1; {% if pedido.estado != 'abierto' %} pointer-events: auto; opacity: 1; {% endif %}">
+        <div style="position: relative; grid-column: 1 / -1;">
           <label>Buscar Cliente / WhatsApp</label>
-          
+           
           <div style="display: flex; gap: 8px;">
             <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o número (ej. 449...)" inputmode="numeric" autocomplete="off" style="flex: 1;" value="{{ pedido.telefono_whatsapp or '' }}">
             <button type="button" class="btn-primary" onclick="buscarClienteManual()" style="padding: 0 16px; border-radius: 8px;">
               🔍 Buscar
             </button>
           </div>
-          
+           
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
@@ -68,7 +68,7 @@
           <div id="cliente_seleccionado_card" class="nota" style="{% if pedido.cliente_nombre or pedido.telefono_whatsapp %}display:block;{% else %}display:none;{% endif %} margin-top:10px; background:#f0f8ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <strong id="detalle_nombre" style="color:#0056b3; font-size:1.1rem;">{{ pedido.cliente_nombre or 'Cliente Registrado' }}</strong>
-              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;" {% if pedido.estado != 'abierto' %} disabled {% endif %}>✕ Limpiar</button>
+              <button type="button" class="btn-gray" onclick="limpiarCliente()" style="font-size:0.8rem; padding:4px 8px;">✕ Limpiar</button>
             </div>
             <div id="detalle_tel" style="font-size:0.9rem; color:#555; margin-top:4px;">📞 {{ pedido.telefono_whatsapp or 'Sin teléfono' }}</div>
           </div>
@@ -158,7 +158,7 @@
           <button type="button" class="btn-gray" onclick="abrirVistaCocina()">👨‍🍳 Vista cocina</button>
         </div>
 
-        <div class="carrito-wrap" {% if pedido.estado != 'abierto' %} style="pointer-events: none; opacity: 0.85;" {% endif %}>
+        <div class="carrito-wrap" style="opacity: 1;">
           <table id="carritoTable" style="width: 100%; table-layout: fixed;">
             <thead>
               <tr>
@@ -231,10 +231,15 @@
             
           </div>
         {% else %}
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-            <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba;">
-              🔒 <strong>Pedido Cerrado</strong><br>Ya no se pueden hacer modificaciones.
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+            <div class="nota" style="background-color:#fff3cd; color:#856404; text-align:center; border-color:#ffeeba; padding: 10px;">
+              🔒 <strong>Pedido Cerrado:</strong> Las modificaciones hechas aquí reajustarán los totales y el inventario de insumos de forma automática.
             </div>
+            
+            <button type="submit" class="btn-guardar" style="background-color: #eab308; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 6px rgba(234,179,8,0.2);">
+              💾 Guardar Cambios en Pedido Cerrado
+            </button>
+
             <button type="button" onclick="reenviarWA('{{pedido.id}}')" style="background-color: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer;">
               💬 Reenviar Ticket por WA
             </button>
@@ -472,7 +477,6 @@ document.addEventListener("DOMContentLoaded", () => {
           {% set outer_index = loop.index0 %}
           {% for sub in pedido_detalles %}
             {% if sub.padre_index == outer_index %}
-              // --- CORRECCIÓN: Cambiado a var para evitar SyntaxError al ciclar múltiples extras ---
               var extName = "{{ sub.nombre or '' }}";
               extrasLista.push(extName);
             {% endif %}
@@ -981,20 +985,20 @@ function procesarCierre(tipo, btnElement) {
   fetch(window.location.href, {
       method: 'POST',
       body: formData
-  })
-  .then(() => {
-      // 2. Ejecutamos la ruta correspondiente del backend para cerrar y enviar (o solo cerrar)
-      if (tipo === 'wa') {
-          document.getElementById('formCerrarWA').submit();
-      } else {
-          document.getElementById('formCerrar').submit();
-      }
-  })
-  .catch(err => {
-      btnElement.innerHTML = textoOriginal;
-      btnElement.style.pointerEvents = "auto";
-      alert("❌ Hubo un error de conexión al intentar guardar. Intenta de nuevo.");
-  });
+    })
+    .then(() => {
+        // 2. Ejecutamos la ruta correspondiente del backend para cerrar y enviar (o solo cerrar)
+        if (tipo === 'wa') {
+            document.getElementById('formCerrarWA').submit();
+        } else {
+            document.getElementById('formCerrar').submit();
+        }
+    })
+    .catch(err => {
+        btnElement.innerHTML = textoOriginal;
+        btnElement.style.pointerEvents = "auto";
+        alert("❌ Hubo un error de conexión al intentar guardar. Intenta de nuevo.");
+    });
 }
 
 function reenviarWA(pedidoId) {
