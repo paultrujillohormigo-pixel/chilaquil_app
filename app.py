@@ -794,37 +794,48 @@ def ver_pedido(pedido_id):
                 tel_raw = (request.form.get("telefono_whatsapp") or "").strip()
                 telefono_e164 = normalize_phone_mx(tel_raw) if tel_raw else pedido.get("telefono_whatsapp")
 
-                if pedido.get("estado") != "abierto":
-                    if enviar_wa:
-                        if not telefono_e164:
-                            return jsonify({"status": "error", "message": "Ingresa un número válido para enviar el WhatsApp."})
+                # --- CAMBIO: Se elimina el bloqueo estricto de edición para pedidos cerrados ---
+                # Si solo se solicitó enviar WhatsApp desde la UI en un pedido ya procesado:
+                if enviar_wa and request.form.get("solo_enviar_wa") == "1":
+                    if not telefono_e164:
+                        return jsonify({"status": "error", "message": "Ingresa un número válido para enviar el WhatsApp."})
 
-                        if telefono_e164 != pedido.get("telefono_whatsapp"):
-                            cursor.execute("UPDATE pedidos SET telefono_whatsapp = %s WHERE id = %s", (telefono_e164, pedido_id))
-                            conn.commit()
+                    if telefono_e164 != pedido.get("telefono_whatsapp"):
+                        cursor.execute("UPDATE pedidos SET telefono_whatsapp = %s WHERE id = %s", (telefono_e164, pedido_id))
+                        conn.commit()
 
-                        ticket_text = generar_ticket_texto(pedido_id, cursor)
+                    ticket_text = generar_ticket_texto(pedido_id, cursor)
 
-                        balance = 0
-                        cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164 = %s", (telefono_e164,))
-                        c_row = cursor.fetchone()
-                        if c_row:
-                            cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id = %s", (c_row["id"],))
-                            acc = cursor.fetchone()
-                            if acc: balance = acc["totopos_balance"]
+                    balance = 0
+                    cursor.execute("SELECT id FROM loyalty_customers WHERE phone_e164 = %s", (telefono_e164,))
+                    c_row = cursor.fetchone()
+                    if c_row:
+                        cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id = %s", (c_row["id"],))
+                        acc = cursor.fetchone()
+                        if acc: balance = acc["totopos_balance"]
 
-                        msg_loyalty = loyalty_message(balance, 0, pedido_id, Decimal(str(pedido["total"])), telefono_e164)
-                        full_message = ticket_text + "\n\n" + msg_loyalty
-                        wa_link = wa_me_link(telefono_e164, full_message)
+                    msg_loyalty = loyalty_message(balance, 0, pedido_id, Decimal(str(pedido["total"])), telefono_e164)
+                    full_message = ticket_text + "\n\n" + msg_loyalty
+                    wa_link = wa_me_link(telefono_e164, full_message)
 
-                        return jsonify({
-                            "status": "success",
-                            "wa_link": wa_link,
-                            "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
-                        })
-                    else:
-                        flash("No se puede modificar un pedido que ya está cerrado.", "error")
-                        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+                    return jsonify({
+                        "status": "success",
+                        "wa_link": wa_link,
+                        "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
+                    })
+
+                # Iniciar la transacción para la edición del pedido
+                conn.begin()
+
+                # --- CONTROL DE INVENTARIO PARA PEDIDOS CERRADOS ---
+                # Si el pedido ya estaba cerrado, eliminamos sus movimientos previos de stock antes de actualizar
+                if pedido.get("estado") == "cerrado":
+                    cursor.execute("""
+                        DELETE FROM inventario_movimientos
+                        WHERE tipo = 'salida_venta'
+                          AND ref_tabla = 'pedidos'
+                          AND ref_id = %s
+                    """, (pedido_id,))
 
                 fecha = request.form.get("fecha") or pedido.get("fecha")
                 origen = (request.form.get("origen") or "").strip().lower()
@@ -838,8 +849,6 @@ def ver_pedido(pedido_id):
                 except Exception:
                     descuento = Decimal("0")
                 if descuento < 0: descuento = Decimal("0")
-
-                totopos_ganados = request.form.get("totopos_ganados")
 
                 productos_ids = request.form.getlist("producto_id[]")
                 cantidades = request.form.getlist("cantidad[]")
@@ -900,6 +909,7 @@ def ver_pedido(pedido_id):
                     })
 
                 if not items_a_insertar:
+                    conn.rollback()
                     flash("El carrito no puede quedarse vacío al actualizar.", "error")
                     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
@@ -907,13 +917,13 @@ def ver_pedido(pedido_id):
                 total_final = total_bruto - descuento
                 neto = total_final + monto_uber
 
+                # Limpiar items viejos e insertar los nuevos modificados
                 cursor.execute("DELETE FROM pedido_items WHERE pedido_id = %s", (pedido_id,))
 
                 index_to_db_id = {}
                 extras_to_insert = []
 
                 for it in items_a_insertar:
-                    # --- CORRECCIÓN ---
                     es_extra = (it["padre_index"] is not None)
 
                     if not es_extra:
@@ -963,12 +973,18 @@ def ver_pedido(pedido_id):
                 update_vals.append(pedido_id)
                 cursor.execute(update_query, tuple(update_vals))
 
+                # --- RE-APLICAR INVENTARIO SI EL PEDIDO YA ESTABA CERRADO ---
+                if pedido.get("estado") == "cerrado":
+                    descontar_stock_por_pedido_cursor(cursor, pedido_id)
+
                 if telefono_e164:
                     customer_id = loyalty_get_or_create_customer(cursor, telefono_e164)
+                    # El programa de lealtad ignora duplicados por purchase usando la restricción unique/tx_check en loyalty_tx
                     loyalty_add_totopos_for_purchase(cursor, customer_id, pedido_id, 1)
 
+                conn.commit()
+
                 if enviar_wa and telefono_e164:
-                    conn.commit()
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
                     
                     cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
@@ -985,11 +1001,10 @@ def ver_pedido(pedido_id):
                         "redirect_url": url_for("ver_pedido", pedido_id=pedido_id)
                     })
                 else:
-                    conn.commit()
                     flash(f"Pedido #{pedido_id} actualizado con éxito.", "success")
                     return redirect(url_for("ver_pedido", pedido_id=pedido_id))
 
-            # 4. Operación GET
+            # 4. Operación GET (Permanece igual)
             select_cols = [
                 "pi.id", "pi.producto_id", "pi.cantidad", "pi.precio_unitario", "pi.subtotal",
                 "pi.proteina", "pi.sin", "pi.nota", "p.nombre", "p.categoria"
@@ -1021,7 +1036,6 @@ def ver_pedido(pedido_id):
                 p_id = row.get("item_padre_id")
                 row["padre_index"] = id_to_index_map.get(p_id) if p_id else None
                 
-                # --- CORRECCIÓN: PREVENCIÓN DE CRASHEOS JS ---
                 if row.get("precio_unitario") is not None:
                     row["precio_unitario"] = float(row["precio_unitario"])
                 if row.get("subtotal") is not None:
@@ -1029,7 +1043,6 @@ def ver_pedido(pedido_id):
                 
                 if row.get("nota"):
                     row["nota"] = str(row["nota"]).replace("\n", " ").replace("\r", "").replace('"', '\\"').replace("'", "\\'")
-                # ---------------------------------------------
 
                 items.append(row)
 
@@ -1039,7 +1052,6 @@ def ver_pedido(pedido_id):
                 c_row = cursor.fetchone()
                 if c_row: pedido["cliente_nombre"] = c_row["nombre"]
 
-            # --- CORRECCIÓN: Convertir los totales del pedido ---
             pedido["total"] = float(pedido["total"] or 0)
             if "descuento" in pedido and pedido["descuento"] is not None:
                 pedido["descuento"] = float(pedido["descuento"])
@@ -1047,8 +1059,11 @@ def ver_pedido(pedido_id):
                 pedido["monto_uber"] = float(pedido["monto_uber"])
             if "neto" in pedido and pedido["neto"] is not None:
                 pedido["neto"] = float(pedido["neto"])
-            # ----------------------------------------------------
 
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+        raise
     finally:
         conn.close()
 
@@ -1060,7 +1075,6 @@ def ver_pedido(pedido_id):
         salsas=salsas,
         proteinas=proteinas
     )
-
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
 def actualizar_whatsapp_pedido(pedido_id):
     telefono_recibido = request.form.get("telefono_whatsapp", "").strip()
