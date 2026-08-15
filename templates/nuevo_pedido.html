@@ -512,11 +512,16 @@ function encontrarProductoExtraId(nombreBuscar) {
     }
   }
 
-  // 4. Último recurso: match parcial pero filtrando que NO contenga "chilaquiles" o palabras clave de platos fuertes
+  // 4. Último recurso: match parcial filtrando "chilaquiles", "envuelto" y protegiendo por precio.
   for (let b of botones) {
     const btnNombreNorm = normaliza(b.dataset.nombre);
-    if (btnNombreNorm.includes(nomNorm) && !btnNombreNorm.includes('chilaquil')) {
-      return b.dataset.id;
+    const precio = Number(b.dataset.precio || 0);
+
+    if (btnNombreNorm.includes(nomNorm) && !btnNombreNorm.includes('chilaquil') && !btnNombreNorm.includes('envuelto')) {
+      // Filtro de seguridad: ignorar platillos principales caros si estamos buscando un extra
+      if (precio < 90) {
+        return b.dataset.id;
+      }
     }
   }
   
@@ -540,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
     grid.addEventListener("click", (e) => {
       const btn = e.target.closest(".js-add");
       if (!btn) return;
-      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || b.dataset.category || "");
+      agregarProducto(btn.dataset.id, btn.dataset.nombre, btn.dataset.precio, btn.dataset.categoria || btn.dataset.category || "");
     });
   }
 
