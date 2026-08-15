@@ -52,14 +52,14 @@
 
         <div style="position: relative; grid-column: 1 / -1;">
           <label>Buscar Cliente / WhatsApp</label>
-           
+            
           <div style="display: flex; gap: 8px;">
             <input type="text" id="buscador_cliente" name="telefono_whatsapp" placeholder="Nombre o número (ej. 449...)" inputmode="numeric" autocomplete="off" style="flex: 1;" value="{{ pedido.telefono_whatsapp or '' }}">
             <button type="button" class="btn-primary" onclick="buscarClienteManual()" style="padding: 0 16px; border-radius: 8px;">
               🔍 Buscar
             </button>
           </div>
-           
+            
           <div id="resultados_busqueda" class="card" style="position: absolute; width: 100%; z-index: 999; display: none; margin-top: 5px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div id="lista_clientes" style="max-height: 200px; overflow-y: auto;"></div>
           </div>
@@ -422,21 +422,49 @@ function productoTieneModificadores(nombre, category){
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
 }
 
+/* --- CORRECCIÓN EN LA BÚSQUEDA DE ID DEL EXTRA OBLIGATORIA --- */
 function encontrarProductoExtraId(nombreBuscar) {
   const botones = document.querySelectorAll('.js-add');
   const nomNorm = normaliza(nombreBuscar);
   
+  // 1. Intentar match EXACTO del nombre (Ej: "huevo" con "huevo")
   for (let b of botones) {
-    const btnNorm = normaliza(b.dataset.nombre);
-    if (btnNorm.includes(nomNorm) && (btnNorm.includes('extra') || normaliza(b.dataset.category).includes('extra'))) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    if (btnNombreNorm === nomNorm) {
       return b.dataset.id;
     }
   }
+
+  // 2. Buscar si el botón contiene explícitamente la palabra "extra " + el ingrediente
   for (let b of botones) {
-    if (normaliza(b.dataset.nombre).includes(nomNorm)) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    if (btnNombreNorm === "extra " + nomNorm || btnNombreNorm === "extra: " + nomNorm) {
       return b.dataset.id;
     }
   }
+
+  // 3. Buscar por la categoría "extras" que tenga el nombre del ingrediente
+  for (let b of botones) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    const btnCatNorm = normaliza(b.dataset.categoria || b.dataset.category || "");
+    if (btnNombreNorm.includes(nomNorm) && btnCatNorm.includes('extra')) {
+      return b.dataset.id;
+    }
+  }
+
+  // 4. Último recurso: match parcial filtrando "chilaquiles", "envuelto" y protegiendo por precio.
+  for (let b of botones) {
+    const btnNombreNorm = normaliza(b.dataset.nombre);
+    const precio = Number(b.dataset.precio || 0);
+
+    if (btnNombreNorm.includes(nomNorm) && !btnNombreNorm.includes('chilaquil') && !btnNombreNorm.includes('envuelto')) {
+      // Filtro de seguridad: ignorar platillos principales caros si estamos buscando un extra
+      if (precio < 90) {
+        return b.dataset.id;
+      }
+    }
+  }
+  
   return null;
 }
 
