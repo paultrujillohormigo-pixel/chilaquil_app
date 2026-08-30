@@ -1,41 +1,67 @@
 {% extends "base.html" %}
 {% block content %}
-<a class="btn btn-secondary" href="{{ url_for('costeo.platillos_index') }}">🍽️ Platillos</a>
-<a class="btn btn-secondary" href="{{ url_for('costeo.insumos_index') }}">🧾 Insumos</a>
 
-<div class="page-head">
-  <h2>📌 Recetas</h2>
-  <div class="page-actions">
-    <a class="btn btn-secondary" href="{{ url_for('costeo.costeo_index') }}">📊 Ver costeo</a>
+<!-- NAVEGACIÓN SUPERIOR -->
+<div class="top-nav" style="display: flex; gap: 12px; margin-bottom: 24px;">
+  <a class="nav-pill" href="{{ url_for('costeo.platillos_index') }}">🍽️ Catálogo de Platillos</a>
+  <a class="nav-pill" href="{{ url_for('costeo.insumos_index') }}">🧾 Catálogo de Insumos</a>
+</div>
+
+<div class="bi-header">
+  <div>
+    <h1 class="page-title">Fichas Técnicas (Recetas)</h1>
+    <p class="page-subtitle">Administración de explosión de materiales (BOM) por platillo.</p>
+  </div>
+  <div>
+    <a class="btn-primary" href="{{ url_for('costeo.costeo_index') }}" style="text-decoration: none;">📊 Ver Reporte de Costeos</a>
   </div>
 </div>
 
 <div class="card">
-  <div class="card-head">
-    <h3>Platillos</h3>
-    <p class="muted">Selecciona un platillo para capturar o editar su receta.</p>
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h2 style="font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Directorio de Platillos</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">Selecciona un platillo para capturar su receta o vaciar sus insumos.</p>
+    </div>
+    
+    <!-- BUSCADOR EN TIEMPO REAL -->
+    <div style="min-width: 250px;">
+      <input type="text" id="searchInput" class="form-input" placeholder="🔍 Buscar platillo..." onkeyup="filtrarTabla()" style="background: white; border: 1px solid var(--border); color: var(--text-main);">
+    </div>
   </div>
 
-  <div class="table-wrap">
-    <table class="table">
+  <div class="table-responsive" style="margin-top: 16px;">
+    <table class="bi-table" id="recetasTable">
       <thead>
         <tr>
           <th style="width: 80px;">ID</th>
-          <th>Platillo</th>
-          <th style="width: 220px;">Acciones</th>
+          <th>Nombre del Platillo</th>
+          <th class="text-right" style="width: 280px;">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for p in platillos %}
-        <tr>
-          <td>{{ p.id }}</td>
-          <td>{{ p.nombre }}</td>
-          <td>
-            <a class="btn btn-primary"
-               href="{{ url_for('costeo.recetas_edit', platillo_id=p.id) }}">
-              ✏️ Editar receta
+        <tr class="item-row">
+          <td style="color: var(--text-muted); font-weight: 600;">#{{ p.id }}</td>
+          <td class="item-name font-bold" style="color: var(--slate);">{{ p.nombre }}</td>
+          
+          <td class="text-right" style="display: flex; gap: 8px; justify-content: flex-end;">
+            <!-- BOTÓN EDITAR -->
+            <a class="btn-action edit" href="{{ url_for('costeo.recetas_edit', platillo_id=p.id) }}">
+              ✏️ Editar Ficha
             </a>
+
+            <!-- BOTÓN VACIAR (BORRAR RECETA) -->
+            <form method="POST" action="{{ url_for('costeo.receta_eliminar_completa', platillo_id=p.id) }}" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas vaciar/borrar toda la receta de {{ p.nombre }}? Esto no borra el platillo, pero eliminará todos sus insumos vinculados.');" style="margin: 0;">
+              <button type="submit" class="btn-action delete">
+                🗑️ Vaciar
+              </button>
+            </form>
           </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3" class="text-center" style="padding: 32px; color: var(--text-muted);">No hay platillos registrados en el sistema.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -44,17 +70,68 @@
 </div>
 
 <style>
-  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
-  .page-actions{display:flex;gap:10px;flex-wrap:wrap}
-  .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
-  .card-head h3{margin:0 0 6px 0}
-  .muted{opacity:.7;margin:0}
-  .table-wrap{overflow:auto;margin-top:10px}
-  .table{width:100%;border-collapse:collapse}
-  .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd}
-  .btn-primary{background:#111;color:#fff;border-color:#111}
-  .btn-secondary{background:#f6f6f6;color:#111}
+  /* Variables Enterprise */
+  :root {
+    --card-bg: #ffffff;
+    --text-main: #334155;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --emerald: #10b981;
+    --emerald-dark: #047857;
+    --blue: #3b82f6;
+    --slate: #475569;
+    --rose: #f43f5e;
+  }
+
+  .top-nav { border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .nav-pill { background: white; border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--slate); text-decoration: none; transition: 0.2s; }
+  .nav-pill:hover { background: #f8fafc; color: var(--blue); border-color: #bfdbfe; }
+
+  .bi-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .page-title { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: var(--text-muted); }
+
+  .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  
+  .form-input { width: 100%; padding: 10px 14px; border-radius: 6px; font-size: 13px; outline: none; transition: 0.2s; }
+  .form-input:focus { border-color: var(--blue) !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+  .table-responsive { overflow-x: auto; }
+  .bi-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .bi-table th { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 600; background: #f8fafc; }
+  .bi-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-main); }
+  .bi-table tbody tr:hover { background-color: #f8fafc; }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .font-bold { font-weight: 600; }
+
+  .btn-primary { padding: 10px 20px; background: var(--slate); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; }
+  .btn-primary:hover { background: #0f172a; }
+
+  /* Botones de Acción de Tabla */
+  .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; text-decoration: none; transition: 0.2s; }
+  .btn-action.edit { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+  .btn-action.edit:hover { background: #dbeafe; }
+  .btn-action.delete { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+  .btn-action.delete:hover { background: #ffe4e6; }
 </style>
+
+<script>
+  // Script para buscar platillos en la tabla
+  function filtrarTabla() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll(".item-row");
+
+    rows.forEach(row => {
+      let nombre = row.querySelector(".item-name").textContent.toLowerCase();
+      if (nombre.includes(input)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  }
+</script>
 
 {% endblock %}
