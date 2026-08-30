@@ -124,29 +124,29 @@ def platillo_delete(platillo_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # 1. Borrar dependencias en recetas (para evitar errores de Foreign Key)
+            # 1. Borrar dependencias en recetas
             cursor.execute("DELETE FROM recetas WHERE platillo_id = %s", (platillo_id,))
             
-            # 2. Borrar dependencias en recetas_proteina (si existe)
+            # 2. Borrar dependencias en recetas_proteina
             cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
             
-            # (Opcional) Si en tu BD la tabla 'productos' tiene llave foránea a 'platillos'
-            # y no te deja borrar, tendrías que desvincularlo:
-            # cursor.execute("UPDATE productos SET platillo_id = NULL WHERE platillo_id = %s", (platillo_id,))
+            # 3. ¡LA SOLUCIÓN AL ERROR 1451!
+            # Desvinculamos el platillo de la tabla de productos (POS). 
+            # Así mantenemos el historial de ventas del producto intacto, pero rompemos la llave foránea.
+            cursor.execute("UPDATE productos SET platillo_id = NULL WHERE platillo_id = %s", (platillo_id,))
 
-            # 3. Finalmente, borrar el platillo
+            # 4. Ahora sí, con el camino libre, borramos el platillo
             cursor.execute("DELETE FROM platillos WHERE id = %s", (platillo_id,))
             
         conn.commit()
-        flash("Platillo y su receta eliminados con éxito.", "success")
+        flash("Platillo eliminado con éxito.", "success")
         
     except Exception as e:
-        # Si falla (por ejemplo, está atado a una orden de venta y la BD lo protege), hacemos rollback
         try: 
             conn.rollback()
         except: 
             pass
-        flash(f"No se pudo eliminar el platillo. Es posible que esté en uso en el POS o historial: {e}", "error")
+        flash(f"Error al eliminar: {e}", "error")
         
     finally:
         conn.close()
