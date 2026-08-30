@@ -1658,20 +1658,14 @@ def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
         SELECT
             COALESCE(SUM(
                 (r.cantidad_base * (1 + (i.merma_pct / 100))) *
-                (
-                    CASE
-                        WHEN r.usa_precio_manual = 1 AND r.precio_manual IS NOT NULL
-                            THEN r.precio_manual
-                        ELSE COALESCE((
-                            SELECT ic.costo_unitario
-                            FROM insumos_compras ic
-                            WHERE ic.insumo_id = r.insumo_id
-                              AND ic.costo_unitario IS NOT NULL
-                            ORDER BY ic.fecha DESC, ic.id DESC
-                            LIMIT 1
-                        ), 0)
-                    END
-                )
+                COALESCE((
+                    SELECT ic.costo_unitario
+                    FROM insumos_compras ic
+                    WHERE ic.insumo_id = r.insumo_id
+                      AND ic.costo_unitario IS NOT NULL
+                    ORDER BY ic.fecha DESC, ic.id DESC
+                    LIMIT 1
+                ), 0)
             ), 0) AS costo_platillo
         FROM recetas r
         JOIN insumos i ON i.id = r.insumo_id
