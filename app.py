@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
 from db import get_connection
 from costeo import costeo_bp
-
+from dashboard import dashboard_bp
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
 
@@ -42,6 +42,8 @@ def privacy_policy():
 
 # COSTEO BLUEPRINT
 app.register_blueprint(costeo_bp)
+# COSTEO dashboard
+app.register_blueprint(dashboard_bp) # <--- Y esta línea
 
 @app.route("/")
 def index():
