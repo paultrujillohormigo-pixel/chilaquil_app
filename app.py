@@ -13,6 +13,17 @@ from costeo import costeo_bp
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
 
+
+
+
+
+# Arriba, en tus importaciones
+from gastos import gastos_bp
+
+# Más abajo, donde registras tus blueprints
+app.register_blueprint(gastos_bp)
+
+
 # =========================================================
 # ================== CONFIGURACIÓN Y RUTAS BASE ===========
 # =========================================================
