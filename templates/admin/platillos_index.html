@@ -51,7 +51,7 @@
           <th style="width:80px;">ID</th>
           <th>Platillo</th>
           <th style="width:260px;">Precio (actualizar)</th>
-          <th style="width:220px;">Acción</th>
+          <th style="width:260px;">Acción</th> <!-- Se amplió un poco el ancho para los dos botones -->
         </tr>
       </thead>
       <tbody>
@@ -87,10 +87,20 @@
             </small>
           </td>
 
+          <!-- Columna de Acción Actualizada -->
           <td>
-            <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_edit', platillo_id=p.id) }}">
-              ✏️ Crear/Editar receta
-            </a>
+            <div style="display:flex; gap:8px;">
+              <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_edit', platillo_id=p.id) }}">
+                ✏️ Crear/Editar receta
+              </a>
+              
+              <!-- Botón de Borrar -->
+              <form method="post" action="{{ url_for('costeo.platillo_delete', platillo_id=p.id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este platillo? Esta acción no se puede deshacer.');" style="margin:0;">
+                <button class="btn btn-danger" type="submit">
+                  🗑️ Borrar
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -118,9 +128,12 @@
   label{display:block;font-weight:600;margin-bottom:6px}
   input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
   .form-actions{display:flex;justify-content:flex-end}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;border:1px solid #ddd;cursor:pointer;font-family:inherit;font-size:inherit;}
   .btn-primary{background:#111;color:#fff;border-color:#111}
   .btn-secondary{background:#f6f6f6;color:#111}
+  /* Nueva clase para el botón de borrar */
+  .btn-danger{background:#dc3545;color:#fff;border-color:#dc3545}
+  .btn-danger:hover{background:#c82333;border-color:#bd2130}
 </style>
 
 {% endblock %}
