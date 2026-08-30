@@ -115,6 +115,20 @@ def platillo_precio_update(platillo_id):
 
     return redirect(url_for("costeo.platillos_index"))
 
+# =========================================================
+# ================== eliminar platillo ==================
+# =========================================================
+
+
+@costeo_bp.route('/platillos/<int:platillo_id>/delete', methods=['POST'])
+def platillo_delete(platillo_id):
+    # Lógica para buscar y borrar el platillo en la BD
+    # platillo = Platillo.query.get_or_404(platillo_id)
+    # db.session.delete(platillo)
+    # db.session.commit()
+    # flash("Platillo eliminado con éxito", "success")
+    return redirect(url_for('costeo.platillos_index'))
+
 
 # =========================================================
 # ================== CATÁLOGO DE INSUMOS ==================
