@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="page-head">
+<div class="bi-header">
   <div>
-    <h2 style="margin:0; color: #b32417;">🧾 Receta: {{ platillo.nombre }}</h2>
-    <p class="muted" style="margin:6px 0 0;">
-      Análisis de costos e ingeniería de menú basados en tu historial de compras.
-    </p>
+    <h1 class="page-title">Ficha Técnica: {{ platillo.nombre }}</h1>
+    <p class="page-subtitle">Análisis de costo dinámico basado en historial de compras (FIFO)</p>
   </div>
-  <div class="page-actions">
-    <a class="btn btn-secondary" href="{{ url_for('costeo.recetas_index') }}">← Volver</a>
+  <div>
+    <a class="btn-secondary" style="display:inline-block; padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:white; text-decoration:none;" href="{{ url_for('costeo.recetas_index') }}">← Volver al Menú</a>
   </div>
 </div>
 
@@ -19,66 +17,42 @@
 {% if costeo_compras %}
   {% set c1 = costeo_compras %}
 
-  <div class="card" style="margin:16px 0;">
-    <div class="card-head">
-      <h3 style="margin:0; color: #333;">Resumen de Costos Dinámicos</h3>
-      <p class="muted" style="margin:4px 0 0; font-size:13px;">
-        Métricas calculadas en tiempo real usando el costo de la <b>última compra</b> de cada insumo.
-      </p>
+  <section class="kpi-section" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 32px;">
+    {% set precio_actual_1 = c1.precio_actual if c1 and c1.precio_actual is not none else none %}
+    {% set costo_total_1 = c1.costo_total if c1 and c1.costo_total is not none else none %}
+    {% set ganancia_actual_1 = (precio_actual_1 - costo_total_1) if (precio_actual_1 and precio_actual_1 > 0 and costo_total_1 is not none) else none %}
+    {% set margen_actual_1 = ((ganancia_actual_1 / precio_actual_1) * 100) if (ganancia_actual_1 and precio_actual_1) else none %}
+
+    <div class="kpi-card">
+        <div class="kpi-title">Costo Materia Prima (COGS)</div>
+        <div class="kpi-value text-slate">{% if c1 and c1.costo_insumos is not none %}${{ "%.2f"|format(c1.costo_insumos) }}{% else %}—{% endif %}</div>
+        <div class="kpi-footer">Basado en última compra</div>
     </div>
 
-    <div class="summary-container" style="margin-top: 14px;">
-      <div class="cmp" style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
-        
-        {% set precio_actual_1 = c1.precio_actual if c1 and c1.precio_actual is not none else none %}
-        {% set costo_total_1 = c1.costo_total if c1 and c1.costo_total is not none else none %}
-        {% set ganancia_actual_1 = (precio_actual_1 - costo_total_1) if (precio_actual_1 and precio_actual_1 > 0 and costo_total_1 is not none) else none %}
-        {% set margen_actual_1 = ((ganancia_actual_1 / precio_actual_1) * 100) if (ganancia_actual_1 and precio_actual_1) else none %}
-
-        <div class="cmp-grid">
-          <div class="box">
-            <div class="k">Costo insumos (Compras)</div>
-            <div class="v">{% if c1 and c1.costo_insumos is not none %}${{ "%.2f"|format(c1.costo_insumos) }}{% else %}—{% endif %}</div>
-          </div>
-          <div class="box">
-            <div class="k">Operativos (75%)</div>
-            <div class="v">{% if c1 and c1.costo_operativo is not none %}${{ "%.2f"|format(c1.costo_operativo) }}{% else %}—{% endif %}</div>
-          </div>
-          <div class="box">
-            <div class="k">Costo total real</div>
-            <div class="v">{% if c1 and c1.costo_total is not none %}${{ "%.2f"|format(c1.costo_total) }}{% else %}—{% endif %}</div>
-          </div>
-          <div class="box">
-            <div class="k">Precio sugerido</div>
-            <div class="v" style="font-weight: bold; color: #25D366;">{% if c1 and c1.precio_sugerido is not none %}${{ "%.2f"|format(c1.precio_sugerido) }}{% else %}—{% endif %}</div>
-          </div>
-
-          <div class="box" style="grid-column: span 2;">
-            <div class="k">Rendimiento Real</div>
-            <div class="sub">
-              <div class="k2">Ganancia neta / Margen</div>
-              {% if ganancia_actual_1 is not none %}
-                <div class="v2"><b>${{ "%.2f"|format(ganancia_actual_1) }}</b> <span class="muted">({{ "%.2f"|format(margen_actual_1) }}%)</span></div>
-              {% else %}
-                <div class="v2 muted">—</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="box">
-            <div class="k">Precio público</div>
-            <div class="v">{% if precio_actual_1 %}${{ "%.2f"|format(precio_actual_1) }}{% else %}<span class="muted">—</span>{% endif %}</div>
-            {% if c1 and c1.insumos_sin_precio and c1.insumos_sin_precio > 0 %}
-              <div class="pill pill-warn" style="margin-top:8px;">⚠️ Faltan compras ({{ c1.insumos_sin_precio }})</div>
-            {% else %}
-              <div class="pill pill-ok" style="margin-top:8px;">✅ Costeado al 100%</div>
-            {% endif %}
-          </div>
-        </div>
-
-      </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Costo Total Real</div>
+        <div class="kpi-value text-rose">{% if c1 and c1.costo_total is not none %}${{ "%.2f"|format(c1.costo_total) }}{% else %}—{% endif %}</div>
+        <div class="kpi-footer">Materia prima + Operativos</div>
     </div>
-  </div>
+
+    <div class="kpi-card">
+        <div class="kpi-title">Precio Público Actual</div>
+        <div class="kpi-value text-blue">{% if precio_actual_1 %}${{ "%.2f"|format(precio_actual_1) }}{% else %}—{% endif %}</div>
+        <div class="kpi-footer" style="color: #10b981; font-weight:600;">Sugerido: {% if c1 and c1.precio_sugerido is not none %}${{ "%.2f"|format(c1.precio_sugerido) }}{% else %}—{% endif %}</div>
+    </div>
+
+    <div class="kpi-card highlight-card">
+        <div class="kpi-title text-white">Margen de Rentabilidad</div>
+        <div class="kpi-value text-white">{% if ganancia_actual_1 is not none %}${{ "%.2f"|format(ganancia_actual_1) }}{% else %}—{% endif %}</div>
+        <div class="kpi-footer text-emerald-100">Margen Bruto: {% if margen_actual_1 is not none %}{{ "%.2f"|format(margen_actual_1) }}%{% else %}—{% endif %}</div>
+    </div>
+  </section>
+
+  {% if c1 and c1.insumos_sin_precio and c1.insumos_sin_precio > 0 %}
+    <div style="background: #fef2f2; border-left: 4px solid #f43f5e; padding: 12px 16px; margin-bottom: 24px; color: #be123c; border-radius: 4px; font-weight: 500;">
+      ⚠️ Tienes {{ c1.insumos_sin_precio }} insumo(s) en esta receta sin registro de compras. El costo mostrado está incompleto.
+    </div>
+  {% endif %}
 {% endif %}
 
 {# =========================================================
@@ -86,103 +60,88 @@
    ========================================================= #}
 <form method="post" id="recetaForm">
 
-  <div class="card" style="padding:16px; margin:16px 0;">
-    <h3 style="margin:0 0 10px; color: #333;">Proteína Estándar por Platillo</h3>
+  <div class="chart-section half" style="margin-bottom: 24px;">
     
-    <div style="max-width: 300px;">
-      <label class="lbl">Cantidad base por porción (gramos)</label>
-      <input
-        type="number"
-        step="0.01"
-        class="inp"
-        name="proteina_cantidad_base"
-        value="{{ platillo.proteina_cantidad_base if platillo.proteina_cantidad_base is not none else '' }}"
-        placeholder="Ej. 120"
-      >
+    <!-- TARJETA: PROTEÍNA BASE -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Proteína Estándar (Integración POS)</h2>
+      </div>
+      <div>
+        <label class="filter-label">GRAMAJE BASE POR PORCIÓN (Gr)</label>
+        <input type="number" step="0.01" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" name="proteina_cantidad_base" value="{{ platillo.proteina_cantidad_base if platillo.proteina_cantidad_base is not none else '' }}" placeholder="Ej. 120">
+        <p class="page-subtitle" style="margin-top: 12px; font-size: 12px;">El gramaje se descontará automáticamente del stock cuando el cajero seleccione la proteína (Pollo, Arrachera, etc.) en el punto de venta.</p>
+      </div>
     </div>
 
-    <div class="muted" style="margin-top:10px; font-size:13px; line-height:1.4;">
-      💡 El gramaje configurado se descontará de forma automatizada del stock del insumo asociado a la proteína que el cajero seleccione en la comanda del POS (Pollo, Arrachera, Pastor, etc.). Deja este campo vacío si el platillo no requiere proteínas.
+    <!-- TARJETA: AGREGAR INSUMO -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Agregar Ingrediente</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start;">
+        <div>
+          <label class="filter-label">INSUMO / MATERIA PRIMA</label>
+          <select id="addInsumo" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);">
+            <option value="">— Buscar en catálogo —</option>
+            {% for i in insumos %}
+              <option value="{{ i.id }}" data-nombre="{{ i.nombre }}" data-unidad="{{ i.unidad_base }}" data-merma="{{ i.merma_pct or 0 }}" data-costo="{{ i.ultimo_costo if i.ultimo_costo is not none else 0 }}">
+                {{ i.nombre }} ({{ i.unidad_base }})
+              </option>
+            {% endfor %}
+          </select>
+          <div id="costoReferencia" style="font-size: 11px; margin-top: 6px; color: var(--text-muted); font-weight:600;"></div>
+        </div>
+
+        <div>
+          <label class="filter-label">CANTIDAD NETA</label>
+          <input id="addCantidad" type="number" step="0.01" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" placeholder="Ej. 0.250">
+        </div>
+      </div>
+      <button type="button" class="btn-primary" onclick="agregarInsumo()" style="margin-top: 16px;">➕ Insertar a la Receta</button>
     </div>
   </div>
 
-  <div class="card" style="padding:16px; margin:16px 0;">
-    <h3 style="margin:0 0 12px; color: #333;">Agregar Ingrediente a la Receta</h3>
-
-    <div class="add-row">
-      <div>
-        <label class="lbl">Insumo / Materia Prima</label>
-        <select id="addInsumo" class="inp">
-          <option value="">— Selecciona Insumo —</option>
-          {% for i in insumos %}
-            <option
-              value="{{ i.id }}"
-              data-nombre="{{ i.nombre }}"
-              data-unidad="{{ i.unidad_base }}"
-              data-merma="{{ i.merma_pct or 0 }}"
-              data-costo="{{ i.ultimo_costo if i.ultimo_costo is not none else 0 }}"
-            >
-              {{ i.nombre }} ({{ i.unidad_base }})
-            </option>
-          {% endfor %}
-        </select>
-        <div id="costoReferencia" style="font-size: 12px; margin-top: 6px; color: #4a5568;"></div>
-      </div>
-
-      <div>
-        <label class="lbl">Cantidad Neta</label>
-        <input id="addCantidad" type="number" step="0.01" class="inp" placeholder="Ej. 0.250">
-      </div>
-
-      <div class="add-actions">
-        <button type="button" class="btn btn-primary" onclick="agregarInsumo()" style="padding: 10px 20px; width: 100%;">
-          ➕ Insertar a la receta
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="padding:16px; margin:16px 0;">
-    <h3 style="margin:0 0 10px; color: #333;">Ingredientes y Desglose Estructurado</h3>
-
-    <div class="table-wrap">
-      <table class="table" id="recetaTable">
+  <!-- TABLA DE RECETA -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header"><h2>Explosión de Materiales (BOM)</h2></div>
+    <div class="table-responsive">
+      <table class="bi-table" id="recetaTable">
         <thead>
-          <tr style="background: #f9f9f9; border-bottom: 2px solid #ddd;">
+          <tr>
             <th>Insumo</th>
-            <th style="width:130px;">Cantidad</th>
-            <th style="width:80px;">Unidad</th>
-            <th style="width:130px;">$ Costo Unitario</th>
-            <th style="width:130px;">Subtotal</th>
-            <th style="width:80px; text-align:center;">Acciones</th>
+            <th style="width:120px;">Cantidad</th>
+            <th>Unidad</th>
+            <th class="text-right">Costo Unitario (Últ. Compra)</th>
+            <th class="text-right">Subtotal</th>
+            <th class="text-center">Acción</th>
           </tr>
         </thead>
-
         <tbody id="recetaBody">
           {% for r in receta %}
-          <tr class="{% if r.costo_unitario_usado is none %}row-warn{% endif %}" style="border-bottom: 1px solid #eee;">
+          <tr style="{% if r.costo_unitario_usado is none %}background-color: #fff1f2;{% endif %}">
             <td>
               <input type="hidden" name="insumo_id[]" value="{{ r.insumo_id }}">
-              <b>{{ r.insumo_nombre }}</b>
+              <span class="font-bold">{{ r.insumo_nombre }}</span>
               {% if r.merma_pct and r.merma_pct != 0 %}
-                <div class="muted" style="font-size:11px; color:#777;">Merma vinculada: {{ r.merma_pct }}%</div>
+                <span class="badge neutral" style="margin-left: 8px;">Merma: {{ r.merma_pct }}%</span>
               {% endif %}
               {% if r.costo_unitario_usado is none %}
-                <div class="warn-text">⚠️ Sin historial de compras.</div>
+                <div style="font-size: 11px; color: #e11d48; margin-top: 4px; font-weight: 600;">Falta registrar compra</div>
               {% endif %}
             </td>
 
             <td>
-              <input type="number" step="0.01" name="cantidad_base[]" value="{{ r.cantidad_base }}" class="inp-sm">
+              <input type="number" step="0.0001" name="cantidad_base[]" value="{{ r.cantidad_base }}" class="form-input" style="background:white; color:#334155; border:1px solid var(--border); padding: 6px;">
             </td>
 
-            <td style="color:#666;">{{ r.unidad_base }}</td>
+            <td style="color: var(--text-muted);">{{ r.unidad_base }}</td>
 
-            <td style="font-weight:600; color:#333;">{% if r.costo_unitario_usado is not none %}${{ "%.2f"|format(r.costo_unitario_usado) }}{% else %}—{% endif %}</td>
-            <td style="font-weight:700; color:#b32417;">{% if r.subtotal is not none %}${{ "%.2f"|format(r.subtotal) }}{% else %}—{% endif %}</td>
+            <td class="text-right font-bold" style="color: var(--slate);">{% if r.costo_unitario_usado is not none %}${{ "%.2f"|format(r.costo_unitario_usado) }}{% else %}—{% endif %}</td>
+            <td class="text-right font-bold text-rose">{% if r.subtotal is not none %}${{ "%.4f"|format(r.subtotal) }}{% else %}—{% endif %}</td>
 
-            <td style="text-align:center;">
-              <button type="button" class="btn btn-danger" onclick="quitarFila(this)" title="Quitar ingrediente">🗑️</button>
+            <td class="text-center">
+              <button type="button" onclick="quitarFila(this)" style="background: #fee2e2; color: #be123c; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">✕</button>
             </td>
           </tr>
           {% endfor %}
@@ -191,61 +150,52 @@
     </div>
   </div>
 
-  <div class="footer-actions" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-    <button type="submit" class="btn btn-primary" style="background: #b32417; border-color: #b32417; padding: 12px 24px; font-weight: bold;">💾 Guardar Cambios Receta</button>
-    <a href="{{ url_for('costeo.recetas_index') }}" class="btn btn-secondary" style="padding: 12px 24px;">Cancelar</a>
+  <div style="display: flex; gap: 12px; justify-content: flex-end;">
+    <a href="{{ url_for('costeo.recetas_index') }}" style="padding: 12px 24px; background: white; border: 1px solid var(--border); border-radius: 6px; color: var(--slate); font-weight: 600; text-decoration: none;">Cancelar</a>
+    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 32px;">💾 Guardar Ficha Técnica</button>
   </div>
 
 </form>
 
 <style>
-  .page-head {display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px;}
-  .page-actions {display:flex; gap:10px;}
-  
-  .card {background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;}
-  .muted {opacity:.7; font-size: 14px;}
-  .warn-text {font-size:12px; color:#b32417; font-weight:bold; margin-top:4px;}
-
-  .cmp-grid {display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;}
-  .box {border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#fff;}
-  .box .k {font-size:11px; text-transform:uppercase; color:#718096; font-weight:600;}
-  .box .v {font-size:20px; font-weight:700; margin-top:4px; color:#2d3748;}
-  .box .sub {margin-top:8px; padding-top:8px; border-top:1px dashed #e2e8f0;}
-  .box .k2 {font-size:11px; color:#718096;}
-  .box .v2 {margin-top:4px; font-size:14px;}
-
-  .table-wrap {overflow-x:auto;}
-  .table {width:100%; border-collapse:collapse;}
-  .table th {background:#f7fafc; color:#4a5568; font-weight:700; padding:12px; border-bottom:2px solid #e2e8f0; text-align:left;}
-  .table td {padding:12px; border-bottom:1px solid #edf2f7; vertical-align:middle;}
-  .row-warn td {background:#fff5f5;}
-
-  .btn {display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px; font-weight:600; font-size:14px; text-decoration:none; border:1px solid #cbd5e0; background:#fff; cursor:pointer; transition:all 0.2s;}
-  .btn-primary {background:#2d3748; color:#fff; border-color:#2d3748;}
-  .btn-primary:hover {background:#1a202c;}
-  .btn-secondary {background:#edf2f7; color:#2d3748;}
-  .btn-secondary:hover {background:#e2e8f0;}
-  .btn-danger {background:#fff5f5; color:#c53030; border-color:#feb2b2; padding:6px 10px;}
-  .btn-danger:hover {background:#fed7d7;}
-
-  .lbl {display:block; font-size:13px; font-weight:600; color:#4a5568; margin-bottom:6px;}
-  .inp {width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:8px; font-size:14px;}
-  .inp-sm {width:100%; max-width:120px; padding:6px 10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;}
-
-  /* Ajuste para 3 columnas simples */
-  .add-row {display:grid; grid-template-columns: 2fr 1fr 1fr; gap:16px; align-items:end;}
-  .add-actions {display:flex; gap:15px; align-items:center; justify-content:flex-end;}
-
-  .pill {display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:bold; padding:4px 10px; border-radius:12px;}
-  .pill-ok {background:#c6f6d5; color:#22543d;}
-  .pill-warn {background:#fed7d7; color:#742a2a;}
-
-  .footer-actions {display:flex; gap:12px;}
-
-  @media (max-width: 1100px) {
-    .add-row {grid-template-columns:1fr;}
-    .cmp-grid {grid-template-columns:1fr;}
-  }
+    :root {
+        --bg-app: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #334155;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --emerald: #10b981;
+        --emerald-dark: #047857;
+        --rose: #f43f5e;
+        --blue: #3b82f6;
+        --slate: #475569;
+    }
+    .bi-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .page-title { font-size: 24px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px; }
+    .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-section { display: grid; gap: 20px; }
+    .kpi-card { background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .highlight-card { background: var(--emerald-dark); border: none; }
+    .kpi-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .kpi-footer { font-size: 12px; margin-top: auto; }
+    .text-emerald { color: var(--emerald); } .text-rose { color: var(--rose); } .text-blue { color: var(--blue); } .text-slate { color: var(--slate); } .text-white { color: #ffffff; }
+    .chart-section { display: flex; gap: 24px; }
+    .chart-section.half > .card { flex: 1; min-width: 0; }
+    .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 24px; }
+    .card-header h2 { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 20px; }
+    .filter-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block;}
+    .form-input { width: 100%; padding: 10px; border-radius: 6px; font-size: 13px; }
+    .form-input:focus { outline: none; border-color: var(--blue); }
+    .btn-primary { padding: 12px; background: var(--emerald); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;}
+    .btn-primary:hover { background: var(--emerald-dark); }
+    .table-responsive { overflow-x: auto; }
+    .bi-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .bi-table th { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 600; background: #f8fafc; }
+    .bi-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-main); }
+    .text-right { text-align: right !important; } .text-center { text-align: center !important; } .font-bold { font-weight: 600; }
+    .badge { padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 20px; }
+    .badge.neutral { background: #f1f5f9; color: #475569; }
 </style>
 
 <script>
@@ -254,23 +204,19 @@
     if (tr) tr.remove();
   }
 
-  // --- Muestra el costo base al seleccionar un insumo ---
   document.getElementById('addInsumo').addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
     const ref = document.getElementById('costoReferencia');
     
-    if (!this.value) {
-      ref.innerHTML = '';
-      return;
-    }
+    if (!this.value) { ref.innerHTML = ''; return; }
 
     const costo = parseFloat(opt.getAttribute('data-costo')) || 0;
     const unidad = opt.getAttribute('data-unidad') || '';
 
     if (costo > 0) {
-      ref.innerHTML = `🛒 Última compra: <b>$${costo.toFixed(4)}</b> / ${unidad}`;
+      ref.innerHTML = `Precio Proveedor (Última compra): <span style="color:var(--emerald); font-size:13px;">$${costo.toFixed(4)} / ${unidad}</span>`;
     } else {
-      ref.innerHTML = `<span style="color:#b32417; font-weight:bold;">⚠️ Sin historial de compras.</span> Registra una compra primero.`;
+      ref.innerHTML = `<span style="color:var(--rose);">⚠️ Sin historial en compras. Se requiere registrar factura.</span>`;
     }
   });
 
@@ -281,62 +227,52 @@
     const insumoId = sel.value;
     const opt = sel.options[sel.selectedIndex];
 
-    if (!insumoId) { alert('Por favor, selecciona un insumo de la lista.'); return; }
+    if (!insumoId) { alert('Selecciona un insumo de la lista.'); return; }
 
     const cantidadStr = (cant.value || '').trim();
     const cantidadVal = parseFloat(cantidadStr);
     if (!cantidadStr || isNaN(cantidadVal) || cantidadVal <= 0) { 
-        alert('Ingresa una cantidad válida mayor a cero.'); 
+        alert('Ingresa el gramaje/cantidad mayor a cero.'); 
         return; 
     }
 
-    const exists = Array.from(document.querySelectorAll('input[name="insumo_id[]"]'))
-      .some(i => i.value === insumoId);
-    if (exists) { alert('Este insumo ya se encuentra agregado en la receta actual.'); return; }
+    const exists = Array.from(document.querySelectorAll('input[name="insumo_id[]"]')).some(i => i.value === insumoId);
+    if (exists) { alert('Este insumo ya está en la receta.'); return; }
 
     const nombre = opt.getAttribute('data-nombre') || 'Insumo';
     const unidad = opt.getAttribute('data-unidad') || '';
     const mermaVal = parseFloat(opt.getAttribute('data-merma')) || 0;
     const ultimoCosto = parseFloat(opt.getAttribute('data-costo')) || 0;
 
-    // Fórmula pura con el último costo
     const cantidadConMerma = cantidadVal * (1 + (mermaVal / 100));
-    const subtotal = ultimoCosto > 0 ? (cantidadConMerma * ultimoCosto).toFixed(2) : null;
+    const subtotal = ultimoCosto > 0 ? (cantidadConMerma * ultimoCosto).toFixed(4) : null;
     
-    const textCosto = ultimoCosto > 0 ? `$${ultimoCosto.toFixed(4)}` : `<span class="warn-text">⚠️ 0.00</span>`;
+    const textCosto = ultimoCosto > 0 ? `$${ultimoCosto.toFixed(4)}` : `<span style="color:var(--rose); font-size:11px;">⚠️ Faltan Compras</span>`;
     const textSubtotal = subtotal !== null ? `$${subtotal}` : `—`;
 
     const body = document.getElementById('recetaBody');
     const tr = document.createElement('tr');
-    tr.style.borderBottom = '1px solid #eee';
+    if (ultimoCosto === 0) tr.style.backgroundColor = '#fff1f2';
 
     tr.innerHTML = `
       <td>
         <input type="hidden" name="insumo_id[]" value="${escapeAttr(insumoId)}">
-        <b>${escapeHtml(nombre)}</b>
-        ${mermaVal > 0 ? `<div class="muted" style="font-size:11px; color:#777;">Merma vinculada: ${mermaVal}%</div>` : ``}
-        ${ultimoCosto === 0 ? `<div class="warn-text">⚠️ Sin historial de compras registradas.</div>` : ``}
+        <span class="font-bold">${escapeHtml(nombre)}</span>
+        ${mermaVal > 0 ? `<span class="badge neutral" style="margin-left: 8px;">Merma: ${mermaVal}%</span>` : ``}
       </td>
-
       <td>
-        <input type="number" step="0.01" name="cantidad_base[]" value="${escapeAttr(cantidadStr)}" class="inp-sm">
+        <input type="number" step="0.0001" name="cantidad_base[]" value="${escapeAttr(cantidadStr)}" class="form-input" style="background:white; color:#334155; border:1px solid var(--border); padding: 6px;">
       </td>
-
-      <td style="color:#666;">${escapeHtml(unidad)}</td>
-
-      <td style="font-weight:600; color:#333;">${textCosto}</td>
-      <td style="font-weight:700; color:#b32417;">${textSubtotal}</td>
-
-      <td style="text-align:center;">
-        <button type="button" class="btn btn-danger" onclick="quitarFila(this)" title="Quitar ingrediente">🗑️</button>
+      <td style="color: var(--text-muted);">${escapeHtml(unidad)}</td>
+      <td class="text-right font-bold" style="color: var(--slate);">${textCosto}</td>
+      <td class="text-right font-bold text-rose">${textSubtotal}</td>
+      <td class="text-center">
+        <button type="button" onclick="quitarFila(this)" style="background: #fee2e2; color: #be123c; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">✕</button>
       </td>
     `;
-
     body.appendChild(tr);
 
-    cant.value = '';
-    sel.value = '';
-    document.getElementById('costoReferencia').innerHTML = ''; 
+    cant.value = ''; sel.value = ''; document.getElementById('costoReferencia').innerHTML = ''; 
   }
 
   function escapeHtml(s) {
@@ -346,5 +282,4 @@
   }
   function escapeAttr(s) { return escapeHtml(s); }
 </script>
-
 {% endblock %}
