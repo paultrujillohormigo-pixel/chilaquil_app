@@ -76,42 +76,37 @@
             </div>
         </header>
 
-        <!-- SECCIÓN 1: EXECUTIVE SUMMARY (KPIs) -->
-        <section class="kpi-section">
+        <!-- SECCIÓN 1: ESTADO DE RESULTADOS (P&L) -->
+        <section class="kpi-section" style="grid-template-columns: repeat(4, 1fr);">
             
             <div class="kpi-card">
-                <div class="kpi-title">Venta Neta Real</div>
-                <div class="kpi-value text-slate view-total">{{ inv_venta_neta | money }}</div>
-                <div class="kpi-value text-slate view-promedio">{{ (inv_venta_neta / dias_totales) | round(2) | money }}</div>
-                <div class="kpi-footer">Libre de impuestos (Tu dinero)</div>
+                <div class="kpi-title">1. Liquidez en Caja</div>
+                <div class="kpi-value text-slate view-total">{{ total_ingresos | money }}</div>
+                <div class="kpi-value text-slate view-promedio">{{ (total_ingresos / dias_totales) | round(2) | money }}</div>
+                <div class="kpi-footer">Efectivo total que entró (Con IVA)</div>
+            </div>
+
+            <div class="kpi-card" style="background-color: #eff6ff; border-color: #bfdbfe;">
+                <div class="kpi-title text-blue">2. Venta Neta Real</div>
+                <div class="kpi-value text-blue view-total">{{ inv_venta_neta | money }}</div>
+                <div class="kpi-value text-blue view-promedio">{{ (inv_venta_neta / dias_totales) | round(2) | money }}</div>
+                <div class="kpi-footer text-orange" style="font-weight: 600;">Provisión IVA: {{ inv_iva | money }}</div>
             </div>
 
             <div class="kpi-card">
-                <div class="kpi-title">Gastos y Costos (OPEX)</div>
+                <div class="kpi-title">3. Gastos Operativos</div>
                 <div class="kpi-value text-rose view-total">{{ total_costos | money }}</div>
                 <div class="kpi-value text-rose view-promedio">{{ (total_costos / dias_totales) | round(2) | money }}</div>
-                <div class="kpi-footer">Capital invertido / fugas</div>
+                <div class="kpi-footer">Nómina, insumos y fijos</div>
             </div>
 
             <div class="kpi-card highlight-card">
-                <div class="kpi-title text-white">Utilidad (EBITDA aprox)</div>
+                <div class="kpi-title text-white">4. Rendimiento (Libre de IVA)</div>
                 <div class="kpi-value text-white view-total">{{ utilidad | money }}</div>
                 <div class="kpi-value text-white view-promedio">{{ (utilidad / dias_totales) | round(2) | money }}</div>
-                <div class="kpi-footer text-emerald-100">Margen Bruto: {{ gross_margin_pct }}%</div>
+                <div class="kpi-footer text-emerald-100" style="font-size: 13px;">Margen Real del Negocio: {{ gross_margin_pct }}%</div>
             </div>
 
-            <div class="kpi-card">
-                <div class="kpi-title">Ticket Promedio</div>
-                <div class="kpi-value text-blue">{{ loyalty_stats.ticket_promedio_casual | money }}</div>
-                <div class="kpi-footer">Clientes casuales (Promedio)</div>
-            </div>
-
-            <div class="kpi-card">
-                <div class="kpi-title">Provisión de IVA</div>
-                <div class="kpi-value text-orange view-total">{{ inv_iva | money }}</div>
-                <div class="kpi-value text-orange view-promedio">{{ (inv_iva / dias_totales) | round(2) | money }}</div>
-                <div class="kpi-footer">Impuestos a separar (16%)</div>
-            </div>
         </section>
 
         <!-- SECCIÓN 2: SALUD FINANCIERA (GRÁFICA PRINCIPAL) -->
