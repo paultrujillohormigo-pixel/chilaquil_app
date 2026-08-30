@@ -116,19 +116,42 @@ def platillo_precio_update(platillo_id):
     return redirect(url_for("costeo.platillos_index"))
 
 # =========================================================
-# ================== eliminar platillo ==================
+# ================== ELIMINAR PLATILLO ====================
 # =========================================================
-
 
 @costeo_bp.route('/platillos/<int:platillo_id>/delete', methods=['POST'])
 def platillo_delete(platillo_id):
-    # Lógica para buscar y borrar el platillo en la BD
-    # platillo = Platillo.query.get_or_404(platillo_id)
-    # db.session.delete(platillo)
-    # db.session.commit()
-    # flash("Platillo eliminado con éxito", "success")
-    return redirect(url_for('costeo.platillos_index'))
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Borrar dependencias en recetas (para evitar errores de Foreign Key)
+            cursor.execute("DELETE FROM recetas WHERE platillo_id = %s", (platillo_id,))
+            
+            # 2. Borrar dependencias en recetas_proteina (si existe)
+            cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
+            
+            # (Opcional) Si en tu BD la tabla 'productos' tiene llave foránea a 'platillos'
+            # y no te deja borrar, tendrías que desvincularlo:
+            # cursor.execute("UPDATE productos SET platillo_id = NULL WHERE platillo_id = %s", (platillo_id,))
 
+            # 3. Finalmente, borrar el platillo
+            cursor.execute("DELETE FROM platillos WHERE id = %s", (platillo_id,))
+            
+        conn.commit()
+        flash("Platillo y su receta eliminados con éxito.", "success")
+        
+    except Exception as e:
+        # Si falla (por ejemplo, está atado a una orden de venta y la BD lo protege), hacemos rollback
+        try: 
+            conn.rollback()
+        except: 
+            pass
+        flash(f"No se pudo eliminar el platillo. Es posible que esté en uso en el POS o historial: {e}", "error")
+        
+    finally:
+        conn.close()
+
+    return redirect(url_for('costeo.platillos_index'))
 
 # =========================================================
 # ================== CATÁLOGO DE INSUMOS ==================
