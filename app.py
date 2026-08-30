@@ -2245,30 +2245,34 @@ def dashboard():
             inv_iva = float((inv_data and inv_data["iva"]) or 0)
 
 
-            # 3. Métricas Generales (Flujo de Caja)
+           # 3. Métricas Generales (Flujo de Caja y Rentabilidad Real)
             cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             meses_con_venta = len(meses_seleccionados) if meses_seleccionados else 1
 
             cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params_pedidos)
-            total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
+            total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0)) # Este es el dinero en caja (con IVA)
 
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_costos = Decimal(str(cursor.fetchone()["total"] or 0))
 
-            utilidad = total_ingresos - total_costos
-            gross_margin_pct = ((total_ingresos - total_costos) / total_ingresos * 100) if total_ingresos > 0 else 0
+            # --- NUEVO CÁLCULO DE RENDIMIENTO REAL (DESPUÉS DE IVA) ---
+            # Rendimiento = Tu dinero real (Venta Neta) - Tus Gastos Reales
+            utilidad = Decimal(str(inv_venta_neta)) - total_costos
+            gross_margin_pct = (utilidad / Decimal(str(inv_venta_neta)) * 100) if inv_venta_neta > 0 else 0
 
             # 4. Variaciones vs Periodo Anterior
             var_ingresos = var_costos = var_utilidad = 0
             if filtro_prev_pedidos:
-                cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_prev_pedidos}", params_prev_pedidos)
-                prev_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
+                cursor.execute(f"SELECT SUM(total) AS total, SUM(total / 1.16) AS venta_neta FROM pedidos {filtro_prev_pedidos}", params_prev_pedidos)
+                prev_data = cursor.fetchone()
+                prev_ingresos = Decimal(str(prev_data["total"] or 0))
+                prev_venta_neta = Decimal(str(prev_data["venta_neta"] or 0))
 
                 cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_prev_compras}", params_prev_compras)
                 prev_costos = Decimal(str(cursor.fetchone()["total"] or 0))
 
-                prev_utilidad = prev_ingresos - prev_costos
+                prev_utilidad = prev_venta_neta - prev_costos
 
                 var_ingresos = calc_var(float(total_ingresos), float(prev_ingresos))
                 var_costos = calc_var(float(total_costos), float(prev_costos))
