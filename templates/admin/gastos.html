@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <h2>💸 Gastos Operativos (OPEX)</h2>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Registrar Gasto</h3>
+    <p class="muted">Registra aquí la nómina, renta, servicios y otros pagos fijos (no insumos).</p>
+  </div>
+
+  <form method="post" action="{{ url_for('gastos.gastos_create') }}">
+    <div class="form-grid-gastos">
+      <div>
+        <label>Fecha</label>
+        <!-- Con value="{{ request.args.get('fecha', '') }}" podrías pre-llenar, pero por ahora lo dejamos simple -->
+        <input type="date" name="fecha" required>
+      </div>
+
+      <div>
+        <label>Categoría</label>
+        <select name="categoria_id" required>
+          <option value="" disabled selected>-- Selecciona --</option>
+          {% for c in categorias %}
+            <!-- Asumiendo que tu BD devuelve un diccionario o tupla, dependiendo de tu conector. Si usas dict_cursor: c.id y c.nombre. Si usas tuplas estándar: c[0] y c[1] -->
+            <option value="{{ c.id if c.id is defined else c[0] }}">
+              {{ c.nombre if c.nombre is defined else c[1] }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Concepto</label>
+        <input type="text" name="concepto" placeholder="Ej. Quincena 1 Chef" required>
+      </div>
+
+      <div>
+        <label>Monto ($)</label>
+        <input type="number" step="0.01" min="0" name="monto" placeholder="Ej. 4500.00" required>
+      </div>
+      
+      <div>
+        <label>Nota (Opcional)</label>
+        <input type="text" name="nota" placeholder="Ej. Transferencia #908">
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top: 16px;">
+      <button class="btn btn-primary" type="submit">💾 Guardar Gasto</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3>Historial (Últimos gastos)</h3>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:80px;">ID</th>
+          <th style="width:120px;">Fecha</th>
+          <th>Categoría</th>
+          <th>Concepto</th>
+          <th style="width:150px;">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gastos %}
+        <tr>
+          <!-- Adaptado para tuplas o diccionarios según tu configuración de PyMySQL -->
+          <td>{{ g.id if g.id is defined else g[0] }}</td>
+          <td>{{ g.fecha if g.fecha is defined else g[1] }}</td>
+          <td><span class="badge">{{ g.categoria if g.categoria is defined else g[2] }}</span></td>
+          <td><strong>{{ g.concepto if g.concepto is defined else g[3] }}</strong></td>
+          <td><strong>${{ "%.2f"|format(g.monto if g.monto is defined else g[4]) }}</strong></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="muted">No hay gastos registrados todavía. ¡Anota el primero arriba!</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .card{background:#fff;border:1px solid #e7e7e7;border-radius:14px;padding:16px}
+  .card-head h3{margin:0 0 6px 0}
+  .muted{opacity:.7;margin:0}
+  
+  /* Nuevo grid para acomodar varios campos */
+  .form-grid-gastos{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;align-items:end}
+  
+  label{display:block;font-weight:600;margin-bottom:6px;font-size:0.9em}
+  input, select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-family:inherit;box-sizing:border-box;}
+  
+  .form-actions{display:flex;justify-content:flex-end}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;text-decoration:none;border:1px solid #ddd;cursor:pointer;font-family:inherit;font-size:inherit;}
+  .btn-primary{background:#111;color:#fff;border-color:#111}
+  
+  .table-wrap{overflow:auto;margin-top:10px}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle;white-space:nowrap}
+  
+  /* Un toque visual para la categoría */
+  .badge {background:#f0f0f0; padding:4px 8px; border-radius:6px; font-size: 0.85em; color: #444; font-weight: 600;}
+</style>
+
+{% endblock %}
