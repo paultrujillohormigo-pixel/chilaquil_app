@@ -4,10 +4,10 @@ from db import get_connection
 
 costeo_bp = Blueprint("costeo", __name__, url_prefix="/admin")
 
+# =========================================================
+# ================== HELPERS DE BASE DE DATOS =============
+# =========================================================
 
-# =========================
-# Helpers DB
-# =========================
 def query_all(sql, params=None):
     conn = get_connection()
     try:
@@ -16,7 +16,6 @@ def query_all(sql, params=None):
             return cursor.fetchall()
     finally:
         conn.close()
-
 
 def query_one(sql, params=None):
     conn = get_connection()
@@ -27,7 +26,6 @@ def query_one(sql, params=None):
     finally:
         conn.close()
 
-
 def execute(sql, params=None):
     conn = get_connection()
     try:
@@ -36,7 +34,6 @@ def execute(sql, params=None):
         conn.commit()
     finally:
         conn.close()
-
 
 def execute_many(sql, rows):
     conn = get_connection()
@@ -48,9 +45,10 @@ def execute_many(sql, rows):
         conn.close()
 
 
-# =========================
-# Platillos
-# =========================
+# =========================================================
+# ================== CATÁLOGO DE PLATILLOS ================
+# =========================================================
+
 @costeo_bp.get("/platillos")
 def platillos_index():
     try:
@@ -58,7 +56,6 @@ def platillos_index():
     except Exception:
         platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
     return render_template("admin/platillos_index.html", platillos=platillos)
-
 
 @costeo_bp.post("/platillos")
 def platillos_create():
@@ -85,19 +82,48 @@ def platillos_create():
 
     return redirect(url_for("costeo.platillos_index"))
 
+@costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
+def platillo_precio_update(platillo_id):
+    precio_txt = (request.form.get("precio_pos") or "").strip()
 
-# =========================
-# Insumos
-# =========================
+    try:
+        precio_pos = Decimal(precio_txt)
+    except (InvalidOperation, TypeError):
+        flash("Precio inválido.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    if precio_pos < 0:
+        flash("El precio no puede ser negativo.", "error")
+        return redirect(url_for("costeo.platillos_index"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            conn.begin()
+            cursor.execute("UPDATE platillos SET precio_actual = %s WHERE id = %s", (precio_pos, platillo_id))
+
+            cursor.execute("UPDATE productos SET precio = %s WHERE platillo_id = %s", (precio_pos, platillo_id))
+
+            conn.commit()
+            flash("Precio actualizado ✅", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error actualizando precio: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("costeo.platillos_index"))
+
+
+# =========================================================
+# ================== CATÁLOGO DE INSUMOS ==================
+# =========================================================
+
 @costeo_bp.get("/insumos")
 def insumos_index():
-    insumos = query_all("""
-        SELECT id, nombre, unidad_base, merma_pct, activo
-        FROM insumos
-        ORDER BY nombre
-    """)
+    insumos = query_all("SELECT id, nombre, unidad_base, merma_pct, activo FROM insumos ORDER BY nombre")
     return render_template("admin/insumos_index.html", insumos=insumos)
-
 
 @costeo_bp.post("/insumos")
 def insumos_create():
@@ -133,14 +159,14 @@ def insumos_create():
     return redirect(url_for("costeo.insumos_index"))
 
 
-# =========================
-# Recetas
-# =========================
+# =========================================================
+# ================== GESTIÓN DE RECETAS (BOM) =============
+# =========================================================
+
 @costeo_bp.get("/recetas")
 def recetas_index():
     platillos = query_all("SELECT id, nombre FROM platillos ORDER BY nombre")
     return render_template("admin/recetas_index.html", platillos=platillos)
-
 
 @costeo_bp.get("/recetas/<int:platillo_id>")
 def recetas_edit(platillo_id):
@@ -149,38 +175,10 @@ def recetas_edit(platillo_id):
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
 
-    insumos = query_all("""
-        SELECT
-          i.id,
-          i.nombre,
-          i.unidad_base,
-          i.merma_pct,
-          cv.costo_unitario AS ultimo_costo
-        FROM insumos i
-        LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = i.id
-        WHERE i.activo=1
-        ORDER BY i.nombre
-    """)
+    insumos = query_all("SELECT i.id, i.nombre, i.unidad_base, i.merma_pct, cv.costo_unitario AS ultimo_costo FROM insumos i LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = i.id WHERE i.activo=1 ORDER BY i.nombre")
 
     # Receta: simplificada para usar solo compras reales
-    receta = query_all("""
-        SELECT
-          r.id AS receta_id,
-          r.insumo_id,
-          i.nombre AS insumo_nombre,
-          i.unidad_base,
-          i.merma_pct,
-          r.cantidad_base,
-          cv.costo_unitario AS costo_unitario_usado,
-          ROUND(
-            r.cantidad_base * cv.costo_unitario * (1 + (i.merma_pct/100)), 2
-          ) AS subtotal
-        FROM recetas r
-        JOIN insumos i ON i.id = r.insumo_id
-        LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = r.insumo_id
-        WHERE r.platillo_id=%s
-        ORDER BY i.nombre
-    """, (platillo_id,))
+    receta = query_all("SELECT r.id AS receta_id, r.insumo_id, i.nombre AS insumo_nombre, i.unidad_base, i.merma_pct, r.cantidad_base, cv.costo_unitario AS costo_unitario_usado, ROUND(r.cantidad_base * cv.costo_unitario * (1 + (i.merma_pct/100)), 2) AS subtotal FROM recetas r JOIN insumos i ON i.id = r.insumo_id LEFT JOIN v_insumo_costo_vigente cv ON cv.insumo_id = r.insumo_id WHERE r.platillo_id=%s ORDER BY i.nombre", (platillo_id,))
 
     costeo = None
     costeo_compras = None
@@ -202,7 +200,6 @@ def recetas_edit(platillo_id):
         costeo=costeo,
         costeo_compras=costeo_compras
     )
-
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
 def recetas_save(platillo_id):
@@ -243,14 +240,7 @@ def recetas_save(platillo_id):
         flash("No hay ingredientes válidos.", "warning")
         return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
-    execute_many("""
-        INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual)
-        VALUES (%s,%s,%s,%s,%s)
-        ON DUPLICATE KEY UPDATE
-          cantidad_base = VALUES(cantidad_base),
-          usa_precio_manual = VALUES(usa_precio_manual),
-          precio_manual = VALUES(precio_manual)
-    """, rows)
+    execute_many("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
 
     conn = get_connection()
     try:
@@ -274,9 +264,40 @@ def recetas_save(platillo_id):
     return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
 
-# =========================
-# Costeo (listado)
-# =========================
+# =========================================================
+# ================== BORRADO DE RECETA ====================
+# =========================================================
+
+@costeo_bp.route("/receta/<int:platillo_id>/eliminar_completa", methods=["POST"])
+def receta_eliminar_completa(platillo_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Borramos todos los insumos de esta receta
+            cursor.execute("DELETE FROM recetas WHERE platillo_id = %s", (platillo_id,))
+            
+            # 2. Borramos la vinculación de proteína estándar si es que tiene una
+            cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
+            
+            # 3. Limpiamos el gramaje base del platillo
+            cursor.execute("UPDATE platillos SET proteina_cantidad_base = NULL WHERE id = %s", (platillo_id,))
+            
+            conn.commit()
+            flash("Receta vaciada correctamente. Todos los insumos fueron removidos.", "success")
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
+        flash(f"Error al borrar la receta: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for('costeo.recetas_index'))
+
+
+# =========================================================
+# ================== REPORTE DE COSTEO ====================
+# =========================================================
+
 @costeo_bp.get("/costeo")
 def costeo_index():
     try:
@@ -287,46 +308,3 @@ def costeo_index():
         flash("No se pudo cargar el costeo dinámico: verifica tus compras.", "error")
 
     return render_template("admin/costeo_index.html", data=data)
-
-
-@costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
-def platillo_precio_update(platillo_id):
-    precio_txt = (request.form.get("precio_pos") or "").strip()
-
-    try:
-        precio_pos = Decimal(precio_txt)
-    except (InvalidOperation, TypeError):
-        flash("Precio inválido.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    if precio_pos < 0:
-        flash("El precio no puede ser negativo.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            conn.begin()
-
-            cursor.execute("""
-                UPDATE platillos
-                SET precio_actual = %s
-                WHERE id = %s
-            """, (precio_pos, platillo_id))
-
-            cursor.execute("""
-                UPDATE productos
-                SET precio = %s
-                WHERE platillo_id = %s
-            """, (precio_pos, platillo_id))
-
-            conn.commit()
-            flash("Precio actualizado ✅", "success")
-
-    except Exception as e:
-        conn.rollback()
-        flash(f"Error actualizando precio: {e}", "error")
-    finally:
-        conn.close()
-
-    return redirect(url_for("costeo.platillos_index"))
