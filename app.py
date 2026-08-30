@@ -2162,12 +2162,20 @@ def dashboard():
                 conds_pedidos.append("{campo_origen} = %s")
                 params_pedidos.append(origen_seleccionado)
 
+            # --- NUEVO: FILTRO EXCLUSIVO PARA COMPRAS (EXCLUIR GASTOS PERSONALES) ---
+            conds_compras = list(conds_general)
+            params_compras = list(params_general)
+            conds_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
+            params_compras.append('%personal%')
+            # -------------------------------------------------------------------------
+
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
                 return "WHERE " + " AND ".join([c.replace("{campo_fecha}", c_fecha).replace("{campo_origen}", c_origen) for c in conds])
 
             filtro_pedidos = build_where(conds_pedidos, "fecha", "origen")
-            filtro_compras = build_where(conds_general, "fecha")
+            filtro_compras = build_where(conds_compras, "fecha")
+            
             filtro_ads = build_where(conds_general, "dia")
             filtro_org = build_where(conds_general, "hora_publicacion")
 
@@ -2202,13 +2210,19 @@ def dashboard():
                     conds_prev_pedidos.append("{campo_origen} = %s")
                     params_prev_pedidos.append(origen_seleccionado)
 
-                filtro_prev_pedidos = build_where(conds_prev_pedidos, "fecha", "origen")
-                filtro_prev_compras = build_where(conds_prev, "fecha")
+                # --- EXCLUIR 'PERSONAL' TAMBIÉN DEL MES ANTERIOR ---
+                conds_prev_compras = list(conds_prev)
                 params_prev_compras = list(params_prev_base)
+                conds_prev_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
+                params_prev_compras.append('%personal%')
+                # ----------------------------------------------------
+
+                filtro_prev_pedidos = build_where(conds_prev_pedidos, "fecha", "origen")
+                filtro_prev_compras = build_where(conds_prev_compras, "fecha")
 
 
             # =========================================================
-            # ---> NUEVO BLOQUE: VISIÓN INVERSIONISTA
+            # ---> VISIÓN INVERSIONISTA
             # =========================================================
             conds_inv = list(conds_pedidos)
             conds_inv.append("estado NOT IN ('abierto', 'cancelado')")
@@ -2239,7 +2253,7 @@ def dashboard():
             cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params_pedidos)
             total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0))
 
-            cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_general)
+            cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_costos = Decimal(str(cursor.fetchone()["total"] or 0))
 
             utilidad = total_ingresos - total_costos
@@ -2325,7 +2339,7 @@ def dashboard():
                 FROM insumos_compras
                 {filtro_compras}
                 GROUP BY mes, dia_num
-            """, params_general)
+            """, params_compras)
             gastos_comp_raw = cursor.fetchall()
             gastos_comparativas = {}
             for r in gastos_comp_raw:
@@ -2333,18 +2347,20 @@ def dashboard():
                 if mes not in gastos_comparativas: gastos_comparativas[mes] = {}
                 gastos_comparativas[mes][r["dia_num"]] = float(r["total"] or 0)
 
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT DATE(fecha) as f, SUM(total) as total 
                 FROM pedidos 
+                {filtro_pedidos}
                 GROUP BY f ORDER BY f
-            """)
+            """, params_pedidos)
             historico_ingresos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT DATE(fecha) as f, SUM(costo) as total 
                 FROM insumos_compras 
+                {filtro_compras}
                 GROUP BY f ORDER BY f
-            """)
+            """, params_compras)
             historico_gastos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
 
@@ -2385,7 +2401,7 @@ def dashboard():
             ventas_semana = [{"nombre": v["nombre"], "promedio": float(v["promedio"] or 0), "total": float(v["total"] or 0)} for v in cursor.fetchall()]
 
             top_productos = bcg_raw[:10]
-            cursor.execute(f"SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado FROM insumos_compras {filtro_compras} GROUP BY concepto, tipo_costo ORDER BY total_gastado DESC LIMIT 10", params_general)
+            cursor.execute(f"SELECT concepto, tipo_costo, COUNT(*) AS veces, SUM(costo) AS total_gastado FROM insumos_compras {filtro_compras} GROUP BY concepto, tipo_costo ORDER BY total_gastado DESC LIMIT 10", params_compras)
             top_gastos = cursor.fetchall()
             for g in top_gastos: 
                 g["promedio_gastado"] = float(g["total_gastado"] or 0) / meses_con_venta
@@ -2416,7 +2432,7 @@ def dashboard():
                 {filtro_compras}
                 GROUP BY concepto
                 ORDER BY total DESC
-            """, params_general)
+            """, params_compras)
 
             gastos_por_concepto = [
                 {
@@ -2430,7 +2446,7 @@ def dashboard():
             ultimos_pedidos = cursor.fetchall()
 
 
-            # 9. Publicidad / Marketing
+            # 9. Publicidad / Marketing (Oculto en HTML pero la data se sigue enviando para no romper nada interno)
             cursor.execute(f"""
                 SELECT 
                     SUM(importe_gastado) AS total_ads,
@@ -2499,12 +2515,10 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        # --- Variables Inversionista ---
         inv_venta_bruta=inv_venta_bruta,
         inv_descuentos=inv_descuentos,
         inv_venta_neta=inv_venta_neta,
         inv_iva=inv_iva,
-        # -------------------------------
         meses_seleccionados=meses_seleccionados, 
         meses_disponibles=meses_disponibles,
         total_ingresos=float(total_ingresos), 
