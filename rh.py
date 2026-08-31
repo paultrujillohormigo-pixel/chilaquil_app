@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from db import get_connection
-
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 # Creamos el módulo (Blueprint) con el prefijo /rh
 rh_bp = Blueprint("rh_bp", __name__, url_prefix="/rh")
 
