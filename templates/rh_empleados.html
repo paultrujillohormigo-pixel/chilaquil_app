@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="max-width: 1000px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2>🧑‍🤝‍🧑 Directorio de Staff</h2>
+        <p class="text-muted" style="margin-top: 5px; font-size: 14px;">Gestiona a tu equipo de trabajo, sueldos y perfiles.</p>
+    </div>
+    <button onclick="document.getElementById('modalNuevoEmpleado').style.display='block'" class="btn-primary" style="width: auto; padding: 10px 20px;">
+        + Nuevo Empleado
+    </button>
+</div>
+
+<div class="card" style="max-width: 1000px; margin: 0 auto; overflow-x: auto;">
+    <table class="bi-table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Puesto</th>
+                <th>Teléfono</th>
+                <th>Sueldo Base</th>
+                <th>Esquema</th>
+                <th>Ingreso</th>
+                <th class="text-right">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for emp in empleados %}
+            <tr>
+                <td class="font-bold">{{ emp.nombre }}</td>
+                <td><span class="badge neutral">{{ emp.puesto }}</span></td>
+                <td>{{ emp.telefono or 'N/A' }}</td>
+                <td class="text-emerald font-bold">${{ emp.salario_base }}</td>
+                <td>Por {{ emp.tipo_pago }}</td>
+                <td class="text-muted">{{ emp.fecha_ingreso }}</td>
+                <td class="text-right">
+                    <form action="{{ url_for('rh_bp.dar_de_baja', empleado_id=emp.id) }}" method="POST" onsubmit="return confirm('¿Seguro que quieres dar de baja a {{ emp.nombre }}?');">
+                        <button type="submit" class="btn-secondary" style="color: #e11d48; border: 1px solid #fecaca; background: #fff1f2; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Dar de baja</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 30px;">
+                    No tienes empleados registrados aún. Haz clic en "+ Nuevo Empleado" para comenzar.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para Nuevo Empleado -->
+<div id="modalNuevoEmpleado" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content card" style="max-width: 500px; margin: 10% auto; padding: 30px; position: relative;">
+        <span onclick="document.getElementById('modalNuevoEmpleado').style.display='none'" style="position: absolute; right: 20px; top: 15px; cursor: pointer; font-size: 20px; color: #64748b;">✕</span>
+        <h2 style="margin-bottom: 20px;">Registrar Nuevo Empleado</h2>
+        
+        <form action="{{ url_for('rh_bp.directorio') }}" method="POST">
+            <div style="margin-bottom: 15px;">
+                <label class="filter-label">Nombre Completo *</label>
+                <input type="text" name="nombre" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label class="filter-label">Puesto</label>
+                    <input type="text" name="puesto" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" placeholder="Ej. Cocinero, Mesero">
+                </div>
+                <div>
+                    <label class="filter-label">Teléfono</label>
+                    <input type="text" name="telefono" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label class="filter-label">Sueldo Base ($)</label>
+                    <input type="number" step="0.01" name="salario_base" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+                </div>
+                <div>
+                    <label class="filter-label">Esquema de Pago</label>
+                    <select name="tipo_pago" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;">
+                        <option value="dia">Por Día</option>
+                        <option value="semana">Por Semana</option>
+                        <option value="quincena">Por Quincena</option>
+                        <option value="hora">Por Hora</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label class="filter-label">Fecha de Ingreso</label>
+                <input type="date" name="fecha_ingreso" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+            </div>
+
+            <button type="submit" class="btn-primary">Guardar Empleado</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
