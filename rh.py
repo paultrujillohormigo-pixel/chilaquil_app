@@ -179,3 +179,50 @@ def nomina():
         conn.close()
 
     return render_template("rh_nomina.html", empleados=empleados, ultimos_pagos=ultimos_pagos)
+@rh_bp.route("/api/calcular-pago", methods=["GET"])
+def api_calcular_pago():
+    empleado_id = request.args.get("empleado_id")
+    inicio = request.args.get("inicio")
+    fin = request.args.get("fin")
+    
+    if not all([empleado_id, inicio, fin]):
+        return jsonify({"monto": 0, "dias": 0})
+        
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Obtener salario y esquema del empleado
+            cursor.execute("SELECT salario_base, tipo_pago FROM rh_empleados WHERE id = %s", (empleado_id,))
+            emp = cursor.fetchone()
+            if not emp: return jsonify({"monto": 0, "dias": 0})
+            
+            salario_base = float(emp["salario_base"])
+            tipo_pago = emp["tipo_pago"]
+            
+            # 2. Contar días distintos que vino a trabajar en el periodo
+            cursor.execute("""
+                SELECT COUNT(DISTINCT fecha) as dias_trabajados, SUM(minutos_trabajados) as total_minutos
+                FROM rh_asistencias
+                WHERE empleado_id = %s AND fecha >= %s AND fecha <= %s AND hora_entrada IS NOT NULL
+            """, (empleado_id, inicio, fin))
+            asistencias = cursor.fetchone()
+            
+            dias = int(asistencias["dias_trabajados"] or 0)
+            minutos = int(asistencias["total_minutos"] or 0)
+            
+            # 3. Calcular monto según su esquema de pago
+            monto = 0
+            if tipo_pago == "dia":
+                monto = dias * salario_base
+            elif tipo_pago == "hora":
+                monto = (minutos / 60.0) * salario_base
+            elif tipo_pago == "semana":
+                monto = (salario_base / 7) * dias
+            elif tipo_pago == "quincena":
+                monto = (salario_base / 15) * dias
+            else:
+                monto = dias * salario_base
+                
+            return jsonify({"monto": round(monto, 2), "dias": dias, "tipo": tipo_pago})
+    finally:
+        conn.close()
