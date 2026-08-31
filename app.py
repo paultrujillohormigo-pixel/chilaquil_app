@@ -24,7 +24,7 @@ from gastos import gastos_bp
 
 
 app.register_blueprint(costeo_bp)
-app.register_blueprint(gastos_bp)
+
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(rh_bp) # <--- Agrega esta línea
 
