@@ -166,6 +166,68 @@
             </div>
         </section>
 
+
+
+        <!-- SECCIÓN 4: TABLAS DE CONTROL EJECUTIVO -->
+        <section class="table-section">
+            <div class="card">
+                <div class="card-header"><h2>Top 10 Fugas de Capital (Gastos)</h2></div>
+                <div class="table-responsive">
+                    <table class="bi-table">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Tipo</th>
+                                <th class="text-right">Monto Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in top_gastos %}
+                            <tr>
+                                <td>{{ g.concepto }}</td>
+                                <td>
+                                    <!-- Aquí pintamos si es Insumo o Gasto Operativo -->
+                                    <span class="badge {% if g.tipo_costo == 'Operativo' %}rose{% else %}neutral{% endif %}">
+                                        {{ g.tipo_costo | capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-right text-rose font-bold">{{ g.total_gastado | money }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center muted">No hay gastos en este periodo.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h2>Top 10 Generadores de Ingreso (Platillos)</h2></div>
+                <div class="table-responsive">
+                    <table class="bi-table">
+                        <thead>
+                            <tr>
+                                <th>Platillo</th>
+                                <th class="text-center">Unidades</th>
+                                <th class="text-right">Ingreso Bruto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in top_productos %}
+                            <tr>
+                                <td>{{ p.nombre }}</td>
+                                <td class="text-center">{{ p.cantidad }}</td>
+                                <td class="text-right text-emerald font-bold">{{ p.ingreso_total | money }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
     </main>
 </div>
 
