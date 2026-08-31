@@ -211,3 +211,100 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
+from datetime import datetime
+
+@dashboard_bp.route("/estado-resultados")
+def estado_resultados():
+    conn = get_connection()
+    
+    # Año seleccionado o año actual por defecto
+    anio_seleccionado = request.args.get("anio", str(datetime.now().year))
+    
+    try:
+        with conn.cursor() as cursor:
+            # 1. Obtener años disponibles para el selector
+            cursor.execute("SELECT DISTINCT YEAR(fecha) AS anio FROM pedidos ORDER BY anio DESC")
+            anios_disponibles = [str(r["anio"]) for r in cursor.fetchall()]
+            if anio_seleccionado not in anios_disponibles and anios_disponibles:
+                anio_seleccionado = anios_disponibles[0]
+
+            # 2. Inicializar estructura de meses
+            nombres_meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+            data_meses = {str(i).zfill(2): {
+                "venta_bruta": Decimal("0"), "descuentos": Decimal("0"), "venta_neta": Decimal("0"), "iva": Decimal("0"),
+                "food_cost": Decimal("0"), "opex_total": Decimal("0"), "categorias_opex": {}
+            } for i in range(1, 13)}
+
+            # 3. Obtener Ventas por mes
+            cursor.execute("""
+                SELECT DATE_FORMAT(fecha, '%m') AS mes,
+                       SUM(total + COALESCE(descuento, 0)) AS venta_bruta,
+                       SUM(COALESCE(descuento, 0)) AS descuentos,
+                       SUM(total / 1.16) AS venta_neta,
+                       SUM(total - (total / 1.16)) AS iva
+                FROM pedidos
+                WHERE YEAR(fecha) = %s AND estado NOT IN ('abierto', 'cancelado')
+                GROUP BY mes
+            """, (anio_seleccionado,))
+            for r in cursor.fetchall():
+                m = r["mes"]
+                if m in data_meses:
+                    data_meses[m]["venta_bruta"] = Decimal(str(r["venta_bruta"] or 0))
+                    data_meses[m]["descuentos"] = Decimal(str(r["descuentos"] or 0))
+                    data_meses[m]["venta_neta"] = Decimal(str(r["venta_neta"] or 0))
+                    data_meses[m]["iva"] = Decimal(str(r["iva"] or 0))
+
+            # 4. Obtener Food Cost (Insumos) por mes
+            cursor.execute("""
+                SELECT DATE_FORMAT(fecha, '%m') AS mes, SUM(costo) AS food_cost
+                FROM insumos_compras
+                WHERE YEAR(fecha) = %s AND (LOWER(COALESCE(concepto, '')) NOT LIKE '%personal%')
+                GROUP BY mes
+            """, (anio_seleccionado,))
+            for r in cursor.fetchall():
+                m = r["mes"]
+                if m in data_meses:
+                    data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
+
+            # 5. Obtener OPEX por categoría y mes
+            cursor.execute("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
+            todas_categorias = [c["nombre"] for c in cursor.fetchall()]
+            for m in data_meses.values():
+                m["categorias_opex"] = {cat: Decimal("0") for cat in todas_categorias}
+
+            cursor.execute("""
+                SELECT DATE_FORMAT(g.fecha, '%m') AS mes, c.nombre AS categoria, SUM(g.monto) AS total
+                FROM gastos g
+                JOIN categorias_gastos c ON g.categoria_id = c.id
+                WHERE YEAR(g.fecha) = %s
+                GROUP BY mes, categoria
+            """, (anio_seleccionado,))
+            for r in cursor.fetchall():
+                m = r["mes"]
+                if m in data_meses:
+                    data_meses[m]["categorias_opex"][r["categoria"]] = Decimal(str(r["total"] or 0))
+                    data_meses[m]["opex_total"] += Decimal(str(r["total"] or 0))
+
+    finally:
+        conn.close()
+
+    # Calcular Totales Anuales
+    totales_anio = {
+        "venta_bruta": sum(m["venta_bruta"] for m in data_meses.values()),
+        "descuentos": sum(m["descuentos"] for m in data_meses.values()),
+        "venta_neta": sum(m["venta_neta"] for m in data_meses.values()),
+        "iva": sum(m["iva"] for m in data_meses.values()),
+        "food_cost": sum(m["food_cost"] for m in data_meses.values()),
+        "opex_total": sum(m["opex_total"] for m in data_meses.values()),
+        "categorias_opex": {cat: sum(m["categorias_opex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in todas_categorias}
+    }
+
+    return render_template(
+        "estado_resultados.html",
+        anio_seleccionado=anio_seleccionado,
+        anios_disponibles=anios_disponibles,
+        data_meses=data_meses,
+        nombres_meses=nombres_meses,
+        todas_categorias=todas_categorias,
+        totales_anio=totales_anio
+    )
