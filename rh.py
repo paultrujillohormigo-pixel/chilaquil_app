@@ -116,7 +116,7 @@ def checador():
         conn.close()
 
     return render_template("rh_checador.html", empleados=empleados, asistencias_hoy=asistencias_hoy)
-    @rh_bp.route("/nomina", methods=["GET", "POST"])
+@rh_bp.route("/nomina", methods=["GET", "POST"])
 def nomina():
     conn = get_connection()
     try:
