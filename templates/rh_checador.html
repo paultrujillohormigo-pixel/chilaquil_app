@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <h2 style="font-size: 28px; margin-bottom: 5px;">⏱️ Reloj Checador</h2>
+    <p class="text-muted" style="margin-bottom: 30px;">Selecciona tu nombre y marca tu entrada o salida del turno.</p>
+
+    <!-- KIOSCO DE REGISTRO -->
+    <div class="card" style="padding: 40px; margin-bottom: 40px; background: #fff; border: 2px solid #e2e8f0;">
+        <form action="{{ url_for('rh_bp.checador') }}" method="POST">
+            <div style="margin-bottom: 30px;">
+                <label style="font-size: 18px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 15px;">¿Quién eres?</label>
+                <select name="empleado_id" class="form-input" style="font-size: 18px; padding: 15px; background: #f8fafc; color: #0f172a; border: 2px solid #cbd5e1; text-align: center; max-width: 400px; margin: 0 auto;" required>
+                    <option value="">-- Selecciona tu nombre --</option>
+                    {% for emp in empleados %}
+                        <option value="{{ emp.id }}">{{ emp.nombre }} ({{ emp.puesto }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <button type="submit" name="accion" value="entrada" style="background: #10b981; color: white; border: none; padding: 20px 40px; font-size: 20px; font-weight: 800; border-radius: 12px; cursor: pointer; flex: 1; max-width: 250px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                    🟢 ENTRADA
+                </button>
+                <button type="submit" name="accion" value="salida" style="background: #f43f5e; color: white; border: none; padding: 20px 40px; font-size: 20px; font-weight: 800; border-radius: 12px; cursor: pointer; flex: 1; max-width: 250px; box-shadow: 0 4px 6px rgba(244, 63, 94, 0.2);">
+                    🔴 SALIDA
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TABLA DE ASISTENCIAS DEL DÍA -->
+    <h3 style="text-align: left; margin-bottom: 15px; color: #334155;">Actividad de Hoy</h3>
+    <div class="card" style="overflow-x: auto; padding: 0;">
+        <table class="bi-table" style="width: 100%; text-align: left;">
+            <thead style="background: #f1f5f9;">
+                <tr>
+                    <th style="padding: 15px;">Empleado</th>
+                    <th style="padding: 15px;">Hora Entrada</th>
+                    <th style="padding: 15px;">Hora Salida</th>
+                    <th style="padding: 15px;">Tiempo Trabajado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in asistencias_hoy %}
+                <tr>
+                    <td style="padding: 15px; font-weight: 700;">{{ a.nombre }} <span class="badge neutral">{{ a.puesto }}</span></td>
+                    <td style="padding: 15px; color: #10b981; font-weight: 600;">{{ a.hora_entrada.strftime('%I:%M %p') if a.hora_entrada else '--' }}</td>
+                    <td style="padding: 15px; color: #f43f5e; font-weight: 600;">{{ a.hora_salida.strftime('%I:%M %p') if a.hora_salida else 'En turno ⏳' }}</td>
+                    <td style="padding: 15px; color: #64748b;">
+                        {% if a.minutos_trabajados %}
+                            {% set horas = a.minutos_trabajados // 60 %}
+                            {% set mins = a.minutos_trabajados % 60 %}
+                            {{ horas }}h {{ mins }}m
+                        {% else %}
+                            --
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="padding: 30px; text-align: center; color: #94a3b8;">Nadie ha registrado entrada el día de hoy.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
