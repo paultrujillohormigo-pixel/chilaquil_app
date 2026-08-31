@@ -100,6 +100,14 @@
                 <div class="kpi-footer">Solo insumos / materia prima</div>
             </div>
 
+            <!-- NUEVA TARJETA DE OPEX -->
+            <div class="kpi-card">
+                <div class="kpi-title text-orange">🏢 Gastos Fijos (OPEX)</div>
+                <div class="kpi-value text-orange view-total">{{ total_opex | money }}</div>
+                <div class="kpi-value text-orange view-promedio">{{ (total_opex / dias_totales) | round(2) | money }}</div>
+                <div class="kpi-footer">Renta, Nómina, Luz, etc.</div>
+            </div>
+
             <!-- AQUÍ ESTÁ LA MAGIA DEL COSTO PRIMO -->
             <div class="kpi-card {% if prime_cost_pct > 65 %}alert-danger{% endif %}">
                 <div class="kpi-title">🔥 4. Costo Primo</div>
