@@ -1,9 +1,14 @@
 from flask import Blueprint, render_template, request
 from decimal import Decimal
+from datetime import datetime
 import json
 from db import get_connection
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
+
+# =========================================================
+# ================== HELPERS LOCALES ======================
+# =========================================================
 
 def get_previous_month(yyyy_mm: str) -> str | None:
     if not yyyy_mm or "-" not in yyyy_mm: return None
@@ -20,6 +25,11 @@ def get_previous_month(yyyy_mm: str) -> str | None:
 def calc_var(current: float, previous: float) -> float:
     if previous == 0: return 0.0 if current == 0 else 100.0
     return ((current - previous) / previous) * 100.0
+
+
+# =========================================================
+# ================== RUTAS DEL DASHBOARD ==================
+# =========================================================
 
 @dashboard_bp.route("/dashboard")
 def dashboard():
@@ -76,8 +86,8 @@ def dashboard():
 
             filtro_pedidos = build_where(conds_pedidos, "fecha", "origen")
             filtro_compras = build_where(conds_compras, "fecha")
-            filtro_gastos = build_where(conds_general, "fecha") # Para la tabla OPEX
-            filtro_gastos_g = build_where(conds_general, "g.fecha") # Para OPEX con JOIN
+            filtro_gastos = build_where(conds_general, "fecha") 
+            filtro_gastos_g = build_where(conds_general, "g.fecha") 
 
             # ---> VISIÓN INVERSIONISTA (P&L Base)
             conds_inv = list(conds_pedidos)
@@ -101,14 +111,10 @@ def dashboard():
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_food_cost = Decimal(str(cursor.fetchone()["total"] or 0))
 
-            # =========================================================
-            # ---> INTEGRACIÓN COMPLETA DE OPEX (GASTOS)
-            # =========================================================
-            # 1. Total OPEX (Todos los gastos operativos juntos)
+            # INTEGRACIÓN COMPLETA DE OPEX (GASTOS)
             cursor.execute(f"SELECT SUM(monto) AS total_opex FROM gastos {filtro_gastos}", params_general)
             total_opex = Decimal(str(cursor.fetchone()["total_opex"] or 0))
 
-            # 2. Solo Nómina (Para el Costo Primo)
             conds_nomina = list(conds_general)
             conds_nomina.append("c.nombre = 'Nómina'")
             cursor.execute(f"""
@@ -120,19 +126,11 @@ def dashboard():
             total_nomina = Decimal(str(cursor.fetchone()["total_nomina"] or 0))
 
             # Cálculos Maestros
-            # Costo Primo = (Food Cost + Nomina) / Venta Neta
             prime_cost_pct = ((total_food_cost + total_nomina) / Decimal(str(inv_venta_neta))) * 100 if inv_venta_neta > 0 else Decimal(0)
-            
-            # Utilidad = Venta Neta - Food Cost - TODO EL OPEX
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
             gross_margin_pct = (utilidad / Decimal(str(inv_venta_neta)) * 100) if inv_venta_neta > 0 else 0
 
-
-            # =========================================================
-            # ---> GRÁFICAS ACTUALIZADAS CON OPEX
-            # =========================================================
-            
-            # Evolución Financiera: Juntamos Food Cost y OPEX en la misma gráfica por día
+            # GRÁFICAS ACTUALIZADAS CON OPEX
             query_hist_gastos = f"""
                 SELECT f, SUM(total) as total FROM (
                     SELECT DATE(fecha) as f, costo as total FROM insumos_compras {filtro_compras}
@@ -147,7 +145,6 @@ def dashboard():
             cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha) ORDER BY f", params_pedidos)
             historico_ingresos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
-            # Gastos por Concepto (Ahora lee de la tabla 'gastos' para OPEX)
             cursor.execute(f"""
                 SELECT c.nombre AS concepto, SUM(g.monto) AS total
                 FROM gastos g
@@ -158,7 +155,6 @@ def dashboard():
             """, params_general)
             gastos_por_concepto = [{"concepto": str(r["concepto"]), "total": float(r["total"] or 0), "promedio": float(r["total"] or 0) / dias_totales} for r in cursor.fetchall()]
 
-            # Top 10 Gastos (Combinación de Food Cost mayor y OPEX mayor)
             cursor.execute(f"""
                 SELECT concepto, 'Insumo' AS tipo_costo, SUM(costo) AS total_gastado 
                 FROM insumos_compras {filtro_compras} GROUP BY concepto 
@@ -169,7 +165,6 @@ def dashboard():
             """, params_compras + params_general)
             top_gastos = cursor.fetchall()
 
-            # Ingeniería de Menú (BCG) y demás ventas (Se quedan igual)
             filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
             cursor.execute(f"""
                 SELECT p.nombre, SUM(pi.cantidad) AS cantidad, SUM(pi.subtotal) AS ingreso_total,
@@ -211,7 +206,11 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
-from datetime import datetime
+
+
+# =========================================================
+# ================== ESTADO DE RESULTADOS =================
+# =========================================================
 
 @dashboard_bp.route("/estado-resultados")
 def estado_resultados():
