@@ -49,6 +49,10 @@ app.register_blueprint(dashboard_bp) # <--- Y esta línea
 def index():
     return render_template("index.html")
 
+@app.route("/hub")
+def hub():
+    return render_template("hub.html")
+
 @app.route('/menu')
 def menu():
     conn = get_connection()
