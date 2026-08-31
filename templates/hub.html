@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="app-hub">
+  <header class="hub-header">
+    <h1>👋 Bienvenido, Señor Chilaquil</h1>
+    <p>Selecciona un módulo para comenzar a operar</p>
+  </header>
+
+  <!-- MÓDULO 1: OPERACIÓN Y POS -->
+  <section class="hub-category">
+    <h2 class="hub-category-title">👨‍🍳 Operación y Punto de Venta</h2>
+    <div class="hub-grid">
+      <a href="{{ url_for('nuevo_pedido') }}" class="hub-card">
+        <div class="hub-icon">🍔</div>
+        <div class="hub-info">
+          <h3>Nuevo Pedido</h3>
+          <p>Toma la orden, calcula totales y envía ticket por WhatsApp.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('pedidos_abiertos') }}" class="hub-card">
+        <div class="hub-icon">📋</div>
+        <div class="hub-info">
+          <h3>Pedidos Abiertos</h3>
+          <p>Controla los tickets activos y manda a cocina.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('productos') }}" class="hub-card">
+        <div class="hub-icon">🏷️</div>
+        <div class="hub-info">
+          <h3>Menú y Precios</h3>
+          <p>Actualiza el precio de venta de tus platillos y salsas.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- MÓDULO 2: FINANZAS Y BI -->
+  <section class="hub-category">
+    <h2 class="hub-category-title">📊 Finanzas y Business Intelligence</h2>
+    <div class="hub-grid">
+      <a href="{{ url_for('dashboard_bp.dashboard') }}" class="hub-card highlight-card">
+        <div class="hub-icon">📈</div>
+        <div class="hub-info">
+          <h3>Dashboard Ejecutivo</h3>
+          <p>Métricas en tiempo real, Costo Primo, rentabilidad y OPEX.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('corte_caja') }}" class="hub-card">
+        <div class="hub-icon">💵</div>
+        <div class="hub-info">
+          <h3>Corte de Caja</h3>
+          <p>Arqueo diario, control de efectivo y cuadre de terminales.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('gastos.gastos_index') }}" class="hub-card">
+        <div class="hub-icon">🏢</div>
+        <div class="hub-info">
+          <h3>Gastos Fijos (OPEX)</h3>
+          <p>Registra nóminas, rentas, luz y servicios operativos.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- MÓDULO 3: ALMACÉN Y COSTEO -->
+  <section class="hub-category">
+    <h2 class="hub-category-title">📦 Almacén y Costeo de Recetas</h2>
+    <div class="hub-grid">
+      <a href="{{ url_for('compras') }}" class="hub-card">
+        <div class="hub-icon">🛒</div>
+        <div class="hub-info">
+          <h3>Compras (Food Cost)</h3>
+          <p>Ingresa facturas de insumos y materia prima.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('costeo.recetas_index') }}" class="hub-card">
+        <div class="hub-icon">🧾</div>
+        <div class="hub-info">
+          <h3>Recetas (BOM)</h3>
+          <p>Configura ingredientes, mermas y porciones.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('costeo.costeo_index') }}" class="hub-card">
+        <div class="hub-icon">⚖️</div>
+        <div class="hub-info">
+          <h3>Análisis de Costeo</h3>
+          <p>Revisa el % de Food Cost real de cada platillo.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('ver_stock') }}" class="hub-card">
+        <div class="hub-icon">📦</div>
+        <div class="hub-info">
+          <h3>Inventario Actual</h3>
+          <p>Revisa existencias y haz ajustes manuales de stock.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- MÓDULO 4: CRM Y LEALTAD -->
+  <section class="hub-category">
+    <h2 class="hub-category-title">🤝 CRM y Clientes</h2>
+    <div class="hub-grid">
+      <a href="{{ url_for('lista_clientes') }}" class="hub-card">
+        <div class="hub-icon">👥</div>
+        <div class="hub-info">
+          <h3>Base de Clientes</h3>
+          <p>Administra los "Totopos" (puntos) y perfiles.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('campanas') }}" class="hub-card">
+        <div class="hub-icon">📢</div>
+        <div class="hub-info">
+          <h3>Campañas WhatsApp</h3>
+          <p>Recupera clientes inactivos con mensajes directos.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- MÓDULO 5: ADMIN Y PÚBLICO -->
+  <section class="hub-category">
+    <h2 class="hub-category-title">⚙️ Configuración y Enlaces Públicos</h2>
+    <div class="hub-grid">
+      <a href="{{ url_for('borrar_pedidos') }}" class="hub-card">
+        <div class="hub-icon">🕒</div>
+        <div class="hub-info">
+          <h3>Historial de Pedidos</h3>
+          <p>Auditoría, revisión y cancelación de tickets pasados.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('menu') }}" target="_blank" class="hub-card">
+        <div class="hub-icon">📱</div>
+        <div class="hub-info">
+          <h3>Ver Menú Digital</h3>
+          <p>Enlace público para que los clientes vean la carta.</p>
+        </div>
+      </a>
+      <a href="{{ url_for('mi_perfil') }}" target="_blank" class="hub-card">
+        <div class="hub-icon">💳</div>
+        <div class="hub-info">
+          <h3>App de Lealtad</h3>
+          <p>Enlace público para que los clientes vean sus Totopos.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+</div>
+
+<style>
+  /* Estilos del App Hub */
+  .app-hub { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+  .hub-header { text-align: center; margin-bottom: 50px; }
+  .hub-header h1 { font-size: 2.5rem; color: #0f172a; margin-bottom: 10px; letter-spacing: -1px; font-weight: 800;}
+  .hub-header p { color: #64748b; font-size: 1.1rem; }
+  
+  .hub-category { margin-bottom: 48px; }
+  .hub-category-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+  
+  .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  
+  .hub-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-decoration: none; color: inherit; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: flex-start; gap: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+  .hub-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(0,0,0,0.1); border-color: #b32417; }
+  
+  .hub-icon { font-size: 2rem; background: #f8fafc; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 14px; border: 1px solid #e2e8f0; transition: 0.2s;}
+  .hub-card:hover .hub-icon { background: #fee2e2; border-color: #fecaca; }
+  
+  .hub-info h3 { margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700; }
+  .hub-info p { margin: 6px 0 0; font-size: 0.9rem; color: #64748b; line-height: 1.5; }
+
+  /* Destacar el Dashboard */
+  .highlight-card { border-color: #cbd5e1; background: #f8fafc; }
+  .highlight-card:hover { border-color: #b32417; background: #fff; }
+</style>
+
+{% endblock %}
