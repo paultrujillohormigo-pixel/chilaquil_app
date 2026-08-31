@@ -10,15 +10,24 @@ from datetime import datetime, timedelta
 from db import get_connection
 from costeo import costeo_bp
 from dashboard import dashboard_bp
+
+from db import get_connection
+from costeo import costeo_bp
+from gastos import gastos_bp
+from dashboard import dashboard_bp
+from rh import rh_bp  # <--- Agrega esta línea
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
-
-
-
-
-
 # Arriba, en tus importaciones
 from gastos import gastos_bp
+
+
+
+app.register_blueprint(costeo_bp)
+app.register_blueprint(gastos_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(rh_bp) # <--- Agrega esta línea
+
 
 # Más abajo, donde registras tus blueprints
 app.register_blueprint(gastos_bp)
