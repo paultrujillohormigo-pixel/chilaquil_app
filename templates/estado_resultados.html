@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="max-width: 1200px; margin: 0 auto 20px;">
+    <h2>📊 Estado de Resultados (P&L)</h2>
+    
+    <form method="GET" action="{{ url_for('dashboard_bp.estado_resultados') }}" style="display:flex; gap:10px; align-items:center;">
+        <label style="font-weight: 600; margin: 0;">Seleccionar Año:</label>
+        <select name="anio" onchange="this.form.submit()" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #ccc; font-weight: bold;">
+            {% for a in anios_disponibles %}
+                <option value="{{ a }}" {% if a == anio_seleccionado %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="card" style="max-width: 1200px; margin: 0 auto; overflow-x: auto;">
+    <table class="pnl-table">
+        <thead>
+            <tr>
+                <th class="col-concepto">Concepto</th>
+                {% for mes in nombres_meses %}
+                    <th class="text-right">{{ mes }}</th>
+                {% endfor %}
+                <th class="text-right col-total">Total Año</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- INGRESOS -->
+            <tr class="row-header"><td colspan="14">1. INGRESOS</td></tr>
+            <tr>
+                <td class="col-concepto">Venta Bruta</td>
+                {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].venta_bruta | money }}</td>{% endfor %}
+                <td class="text-right col-total">{{ totales_anio.venta_bruta | money }}</td>
+            </tr>
+            <tr>
+                <td class="col-concepto text-muted">(-) Descuentos</td>
+                {% for i in range(1, 13) %}<td class="text-right text-rose">{{ data_meses["%02d"|format(i)].descuentos | money }}</td>{% endfor %}
+                <td class="text-right col-total text-rose">{{ totales_anio.descuentos | money }}</td>
+            </tr>
+            <tr class="row-subtotal">
+                <td class="col-concepto">Ventas Netas (Cobrado)</td>
+                {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].venta_neta | money }}</td>{% endfor %}
+                <td class="text-right col-total">{{ totales_anio.venta_neta | money }}</td>
+            </tr>
+            <tr>
+                <td class="col-concepto text-orange">Provisión IVA</td>
+                {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].iva | money }}</td>{% endfor %}
+                <td class="text-right col-total text-orange">{{ totales_anio.iva | money }}</td>
+            </tr>
+
+            <!-- COSTOS DIRECTOS -->
+            <tr class="row-header"><td colspan="14">2. COSTOS DIRECTOS (COGS)</td></tr>
+            <tr>
+                <td class="col-concepto">Food Cost (Insumos)</td>
+                {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].food_cost | money }}</td>{% endfor %}
+                <td class="text-right col-total">{{ totales_anio.food_cost | money }}</td>
+            </tr>
+
+            <!-- GASTOS OPERATIVOS -->
+            <tr class="row-header"><td colspan="14">3. GASTOS OPERATIVOS (OPEX)</td></tr>
+            {% for cat in todas_categorias %}
+            <tr>
+                <td class="col-concepto">{{ cat }}</td>
+                {% for i in range(1, 13) %}
+                    <td class="text-right">{{ data_meses["%02d"|format(i)].categorias_opex[cat] | money }}</td>
+                {% endfor %}
+                <td class="text-right col-total">{{ totales_anio.categorias_opex[cat] | money }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="row-subtotal">
+                <td class="col-concepto">Total OPEX</td>
+                {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].opex_total | money }}</td>{% endfor %}
+                <td class="text-right col-total">{{ totales_anio.opex_total | money }}</td>
+            </tr>
+
+            <!-- RESULTADOS Y KPI -->
+            <tr class="row-header"><td colspan="14">4. RENTABILIDAD</td></tr>
+            <tr class="row-master-total">
+                <td class="col-concepto">Utilidad Operativa (EBITDA)</td>
+                {% for i in range(1, 13) %}
+                    {% set util = data_meses["%02d"|format(i)].venta_neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    <td class="text-right {% if util < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util | money }}</td>
+                {% endfor %}
+                {% set util_total = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
+                <td class="text-right col-total {% if util_total < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_total | money }}</td>
+            </tr>
+            
+            <tr class="row-kpi">
+                <td class="col-concepto">Costo Primo % (Food Cost + Nómina)</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set nomina = data_meses["%02d"|format(i)].categorias_opex.get("Nómina", 0) %}
+                    {% set fc = data_meses["%02d"|format(i)].food_cost %}
+                    {% set pc_pct = ((fc + nomina) / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right {% if pc_pct > 65 %}text-rose font-bold{% endif %}">{{ pc_pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set nomina_t = totales_anio.categorias_opex.get("Nómina", 0) %}
+                {% set fc_t = totales_anio.food_cost %}
+                {% set pct_t = ((fc_t + nomina_t) / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total {% if pct_t > 65 %}text-rose font-bold{% endif %}">{{ pct_t | round(1) }}%</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .page-head { display: flex; justify-content: space-between; align-items: center; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    
+    .pnl-table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; }
+    .pnl-table th, .pnl-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    .pnl-table th { background: #f8fafc; font-weight: 700; color: #475569; position: sticky; top: 0; }
+    
+    .col-concepto { font-weight: 600; color: #1e293b; background: #fff; position: sticky; left: 0; z-index: 10; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); }
+    .col-total { background: #f1f5f9; font-weight: 800; border-left: 2px solid #cbd5e1; }
+    
+    .row-header td { background: #e2e8f0 !important; font-weight: 800 !important; color: #0f172a; text-transform: uppercase; padding-top: 16px; font-size: 12px; letter-spacing: 0.5px;}
+    .row-subtotal td { background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1; }
+    .row-master-total td { background: #0f172a !important; color: #fff !important; font-size: 15px; font-weight: 800; }
+    .row-kpi td { background: #fff8f1; font-weight: 700; color: #9a3412;}
+
+    .text-right { text-align: right; }
+    .text-rose { color: #e11d48; }
+    .text-emerald { color: #10b981; }
+    .text-orange { color: #ea580c; }
+    .text-muted { color: #64748b; font-weight: 400;}
+    .font-bold { font-weight: 800; }
+</style>
+
+{% endblock %}
