@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="max-width: 1100px; margin: 0 auto 20px;">
+    <h2>💰 Dispersión de Nómina</h2>
+    <p class="text-muted" style="margin-top: 5px;">Paga a tu equipo. Los montos se irán automáticamente a tus Gastos Operativos (OPEX).</p>
+</div>
+
+<div style="max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 30px;">
+    
+    <!-- PANEL DE EMPLEADOS ACTIVOS -->
+    <div class="card" style="padding: 0; overflow-x: auto;">
+        <table class="bi-table" style="width: 100%; text-align: left;">
+            <thead style="background: #f8fafc;">
+                <tr>
+                    <th style="padding: 15px;">Empleado</th>
+                    <th style="padding: 15px;">Sueldo Base</th>
+                    <th style="padding: 15px;">Último Pago</th>
+                    <th style="padding: 15px; text-align: right;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in empleados %}
+                <tr>
+                    <td style="padding: 15px; font-weight: 700;">{{ emp.nombre }} <span class="badge neutral">{{ emp.puesto }}</span></td>
+                    <td style="padding: 15px; color: #10b981; font-weight: 600;">${{ emp.salario_base }} <span style="font-size: 11px; color:#64748b;">/{{ emp.tipo_pago }}</span></td>
+                    <td style="padding: 15px; color: #64748b; font-size: 13px;">{{ emp.ultimo_pago if emp.ultimo_pago else 'Nunca' }}</td>
+                    <td style="padding: 15px; text-align: right;">
+                        <button onclick="abrirModalPago('{{ emp.id }}', '{{ emp.nombre }}', '{{ emp.salario_base }}')" class="btn-primary" style="padding: 8px 16px; font-size: 13px; width: auto;">
+                            Generar Pago
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="padding: 30px; text-align: center; color: #94a3b8;">No hay empleados activos.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- HISTORIAL DE PAGOS -->
+    <h3 style="margin-top: 10px; color: #334155;">Últimos Pagos Realizados</h3>
+    <div class="card" style="padding: 0; overflow-x: auto;">
+        <table class="bi-table" style="width: 100%; text-align: left;">
+            <thead>
+                <tr>
+                    <th style="padding: 12px 15px;">Fecha de Pago</th>
+                    <th style="padding: 12px 15px;">Empleado</th>
+                    <th style="padding: 12px 15px;">Periodo Cubierto</th>
+                    <th style="padding: 12px 15px; text-align: right;">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pago in ultimos_pagos %}
+                <tr>
+                    <td style="padding: 12px 15px; color: #64748b;">{{ pago.fecha_pago }}</td>
+                    <td style="padding: 12px 15px; font-weight: 600;">{{ pago.nombre }}</td>
+                    <td style="padding: 12px 15px; font-size: 13px;">Del {{ pago.periodo_inicio }} al {{ pago.periodo_fin }}</td>
+                    <td style="padding: 12px 15px; text-align: right; color: #e11d48; font-weight: 700;">-${{ pago.monto_pagado }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" style="padding: 20px; text-align: center; color: #94a3b8;">Aún no hay historial de pagos.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO -->
+<div id="modalPago" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content card" style="max-width: 450px; margin: 10% auto; padding: 30px; position: relative;">
+        <span onclick="document.getElementById('modalPago').style.display='none'" style="position: absolute; right: 20px; top: 15px; cursor: pointer; font-size: 20px;">✕</span>
+        <h2 style="margin-bottom: 20px;">Pagar a <span id="nombreEmpleadoTxt" style="color: #b32417;"></span></h2>
+        
+        <form action="{{ url_for('rh_bp.nomina') }}" method="POST">
+            <input type="hidden" name="empleado_id" id="empleadoIdInput">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label class="filter-label">Periodo Del:</label>
+                    <input type="date" name="periodo_inicio" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+                </div>
+                <div>
+                    <label class="filter-label">Al:</label>
+                    <input type="date" name="periodo_fin" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label class="filter-label">Monto a Pagar ($)</label>
+                <input type="number" step="0.01" name="monto" id="montoInput" class="form-input" style="background: #f8fafc; color: #0f172a; border: 2px solid #10b981; font-size: 20px; font-weight: bold; text-align: center;" required>
+                <p style="font-size: 11px; color: #64748b; margin-top: 5px;">* Puedes modificar este monto si hubo bonos, retardos o adelantos.</p>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label class="filter-label">Nota o Detalles</label>
+                <input type="text" name="nota" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" value="Pago de nómina">
+            </div>
+
+            <button type="submit" class="btn-primary" style="background: #10b981; font-size: 16px;">Confirmar y Registrar en OPEX</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function abrirModalPago(id, nombre, salarioBase) {
+        document.getElementById('empleadoIdInput').value = id;
+        document.getElementById('nombreEmpleadoTxt').innerText = nombre;
+        document.getElementById('montoInput').value = salarioBase;
+        document.getElementById('modalPago').style.display = 'block';
+    }
+</script>
+{% endblock %}
