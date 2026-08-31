@@ -68,6 +68,7 @@
     </div>
 </div>
 
+
 <!-- MODAL DE PAGO -->
 <div id="modalPago" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
     <div class="modal-content card" style="max-width: 450px; margin: 10% auto; padding: 30px; position: relative;">
@@ -80,18 +81,18 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
                     <label class="filter-label">Periodo Del:</label>
-                    <input type="date" name="periodo_inicio" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+                    <input type="date" name="periodo_inicio" id="fechaInicio" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
                 </div>
                 <div>
                     <label class="filter-label">Al:</label>
-                    <input type="date" name="periodo_fin" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
+                    <input type="date" name="periodo_fin" id="fechaFin" class="form-input" style="background: #fff; color: #000; border: 1px solid #cbd5e1;" required>
                 </div>
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label class="filter-label">Monto a Pagar ($)</label>
                 <input type="number" step="0.01" name="monto" id="montoInput" class="form-input" style="background: #f8fafc; color: #0f172a; border: 2px solid #10b981; font-size: 20px; font-weight: bold; text-align: center;" required>
-                <p style="font-size: 11px; color: #64748b; margin-top: 5px;">* Puedes modificar este monto si hubo bonos, retardos o adelantos.</p>
+                <p id="helperText" style="font-size: 12px; color: #64748b; margin-top: 5px; background: #f1f5f9; padding: 8px; border-radius: 6px;">* Selecciona las fechas para calcular automático.</p>
             </div>
 
             <div style="margin-bottom: 25px;">
@@ -105,11 +106,48 @@
 </div>
 
 <script>
+    const fechaInicio = document.getElementById('fechaInicio');
+    const fechaFin = document.getElementById('fechaFin');
+    const empleadoId = document.getElementById('empleadoIdInput');
+    const montoInput = document.getElementById('montoInput');
+    const helperText = document.getElementById('helperText');
+
     function abrirModalPago(id, nombre, salarioBase) {
         document.getElementById('empleadoIdInput').value = id;
         document.getElementById('nombreEmpleadoTxt').innerText = nombre;
-        document.getElementById('montoInput').value = salarioBase;
+        document.getElementById('montoInput').value = 0; // Empieza en 0 hasta seleccionar fechas
+        
+        // Limpiamos las fechas
+        fechaInicio.value = '';
+        fechaFin.value = '';
+        helperText.innerHTML = "* Selecciona las fechas para calcular automático.";
+        
         document.getElementById('modalPago').style.display = 'block';
     }
+
+    // Función que hace la magia de buscar los días en la base de datos
+    function calcularNominaAutomatica() {
+        const id = empleadoId.value;
+        const inicio = fechaInicio.value;
+        const fin = fechaFin.value;
+
+        if (id && inicio && fin) {
+            helperText.innerHTML = "⏳ Calculando asistencias...";
+            
+            fetch(`/rh/api/calcular-pago?empleado_id=${id}&inicio=${inicio}&fin=${fin}`)
+                .then(res => res.json())
+                .then(data => {
+                    montoInput.value = data.monto;
+                    helperText.innerHTML = `✅ Se detectaron <strong>${data.dias} días trabajados</strong>. Puedes ajustar el monto si es necesario.`;
+                })
+                .catch(err => {
+                    helperText.innerHTML = "❌ Hubo un error. Calcula el monto manualmente.";
+                });
+        }
+    }
+
+    // Escuchamos cada que cambias la fecha para lanzar el cálculo
+    fechaInicio.addEventListener('change', calcularNominaAutomatica);
+    fechaFin.addEventListener('change', calcularNominaAutomatica);
 </script>
 {% endblock %}
