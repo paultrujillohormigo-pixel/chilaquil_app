@@ -43,8 +43,9 @@
                 {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].venta_neta | money }}</td>{% endfor %}
                 <td class="text-right col-total">{{ totales_anio.venta_neta | money }}</td>
             </tr>
+            <!-- AQUÍ ESTÁ EL IVA -->
             <tr>
-                <td class="col-concepto text-orange">Provisión IVA</td>
+                <td class="col-concepto text-orange">Provisión IVA (16%)</td>
                 {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].iva | money }}</td>{% endfor %}
                 <td class="text-right col-total text-orange">{{ totales_anio.iva | money }}</td>
             </tr>
@@ -75,9 +76,9 @@
             </tr>
 
             <!-- RESULTADOS Y KPI -->
-            <tr class="row-header"><td colspan="14">4. RENTABILIDAD</td></tr>
+            <tr class="row-header"><td colspan="14">4. RENTABILIDAD Y KPIs</td></tr>
             <tr class="row-master-total">
-                <td class="col-concepto">Utilidad Operativa (EBITDA)</td>
+                <td class="col-concepto">Utilidad Operativa en $ (EBITDA)</td>
                 {% for i in range(1, 13) %}
                     {% set util = data_meses["%02d"|format(i)].venta_neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
                     <td class="text-right {% if util < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util | money }}</td>
@@ -86,6 +87,21 @@
                 <td class="text-right col-total {% if util_total < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_total | money }}</td>
             </tr>
             
+            <!-- NUEVA FILA: MARGEN DE RENTABILIDAD -->
+            <tr class="row-kpi">
+                <td class="col-concepto">Margen de Rentabilidad (%)</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set util = neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    {% set margen = (util / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right {% if margen < 15 %}text-rose font-bold{% else %}text-emerald font-bold{% endif %}">{{ margen | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set util_total = neta_t - totales_anio.food_cost - totales_anio.opex_total %}
+                {% set margen_t = (util_total / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total {% if margen_t < 15 %}text-rose font-bold{% else %}text-emerald font-bold{% endif %}">{{ margen_t | round(1) }}%</td>
+            </tr>
+
             <tr class="row-kpi">
                 <td class="col-concepto">Costo Primo % (Food Cost + Nómina)</td>
                 {% for i in range(1, 13) %}
@@ -111,7 +127,7 @@
     
     .pnl-table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; }
     .pnl-table th, .pnl-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
-    .pnl-table th { background: #f8fafc; font-weight: 700; color: #475569; position: sticky; top: 0; }
+    .pnl-table th { background: #f8fafc; font-weight: 700; color: #475569; position: sticky; top: 0; z-index: 20;}
     
     .col-concepto { font-weight: 600; color: #1e293b; background: #fff; position: sticky; left: 0; z-index: 10; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); }
     .col-total { background: #f1f5f9; font-weight: 800; border-left: 2px solid #cbd5e1; }
