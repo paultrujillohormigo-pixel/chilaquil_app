@@ -234,7 +234,7 @@ def estado_resultados():
                 "food_cost": Decimal("0"), "opex_total": Decimal("0"), "categorias_opex": {}
             } for i in range(1, 13)}
 
-            # 3. Obtener Ventas por mes (NOTA: Se usa %%m para escapar el porcentaje en PyMySQL)
+            # 3. Obtener Ventas por mes 
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes,
                        SUM(total + COALESCE(descuento, 0)) AS venta_bruta,
@@ -253,7 +253,7 @@ def estado_resultados():
                     data_meses[m]["venta_neta"] = Decimal(str(r["venta_neta"] or 0))
                     data_meses[m]["iva"] = Decimal(str(r["iva"] or 0))
 
-            # 4. Obtener Food Cost (Insumos) por mes
+            # 4. Obtener Food Cost (Insumos) por mes (AQUÍ YA EXCLUYE "PERSONAL")
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes, SUM(costo) AS food_cost
                 FROM insumos_compras
@@ -265,7 +265,7 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-            # 5. Obtener OPEX por categoría y mes
+            # 5. Obtener OPEX por categoría y mes (AQUÍ TAMBIÉN EXCLUIMOS YA "PERSONAL")
             cursor.execute("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
             todas_categorias = [c["nombre"] for c in cursor.fetchall()]
             for m in data_meses.values():
@@ -275,7 +275,8 @@ def estado_resultados():
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, c.nombre AS categoria, SUM(g.monto) AS total
                 FROM gastos g
                 JOIN categorias_gastos c ON g.categoria_id = c.id
-                WHERE YEAR(g.fecha) = %s
+                WHERE YEAR(g.fecha) = %s 
+                  AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
                 GROUP BY mes, categoria
             """, (anio_seleccionado,))
             for r in cursor.fetchall():
