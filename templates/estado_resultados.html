@@ -39,15 +39,13 @@
                 <td class="text-right col-total text-rose">{{ totales_anio.descuentos | money }}</td>
             </tr>
             <tr class="row-subtotal">
-                <td class="col-concepto">Ventas Netas (Cobrado)</td>
-                {% for i in range(1, 13) %}<td class="text-right">{{ data_meses["%02d"|format(i)].venta_neta | money }}</td>{% endfor %}
-                <td class="text-right col-total">{{ totales_anio.venta_neta | money }}</td>
-            </tr>
-            <!-- AQUÍ ESTÁ EL IVA -->
-            <tr>
-                <td class="col-concepto text-orange">Provisión IVA (16%)</td>
-                {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].iva | money }}</td>{% endfor %}
-                <td class="text-right col-total text-orange">{{ totales_anio.iva | money }}</td>
+                <td class="col-concepto">Ingresos Totales (Entrada en Caja)</td>
+                {% for i in range(1, 13) %}
+                    {% set caja = data_meses["%02d"|format(i)].venta_bruta - data_meses["%02d"|format(i)].descuentos %}
+                    <td class="text-right">{{ caja | money }}</td>
+                {% endfor %}
+                {% set caja_t = totales_anio.venta_bruta - totales_anio.descuentos %}
+                <td class="text-right col-total">{{ caja_t | money }}</td>
             </tr>
 
             <!-- COSTOS DIRECTOS -->
@@ -76,20 +74,41 @@
             </tr>
 
             <!-- RESULTADOS Y KPI -->
-            <tr class="row-header"><td colspan="14">4. RENTABILIDAD Y KPIs</td></tr>
-            <tr class="row-master-total">
-                <td class="col-concepto">Utilidad Operativa en $ (EBITDA)</td>
+            <tr class="row-header"><td colspan="14">4. RENTABILIDAD Y RESULTADOS</td></tr>
+            
+            <!-- Resultado Antes de Impuestos -->
+            <tr class="row-subtotal">
+                <td class="col-concepto">Resultado Operativo (Antes de Impuestos)</td>
                 {% for i in range(1, 13) %}
-                    {% set util = data_meses["%02d"|format(i)].venta_neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
-                    <td class="text-right {% if util < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util | money }}</td>
+                    {% set caja = data_meses["%02d"|format(i)].venta_bruta - data_meses["%02d"|format(i)].descuentos %}
+                    {% set util_antes = caja - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    <td class="text-right font-bold {% if util_antes < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_antes | money }}</td>
                 {% endfor %}
-                {% set util_total = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
-                <td class="text-right col-total {% if util_total < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_total | money }}</td>
+                {% set caja_t = totales_anio.venta_bruta - totales_anio.descuentos %}
+                {% set util_antes_t = caja_t - totales_anio.food_cost - totales_anio.opex_total %}
+                <td class="text-right col-total font-bold {% if util_antes_t < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_antes_t | money }}</td>
+            </tr>
+
+            <!-- IVA -->
+            <tr>
+                <td class="col-concepto text-orange">(-) Provisión IVA (16%)</td>
+                {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].iva | money }}</td>{% endfor %}
+                <td class="text-right col-total text-orange">{{ totales_anio.iva | money }}</td>
+            </tr>
+
+            <!-- Resultado Neto -->
+            <tr class="row-master-total">
+                <td class="col-concepto">Utilidad Neta (Después de Impuestos)</td>
+                {% for i in range(1, 13) %}
+                    {% set util_neta = data_meses["%02d"|format(i)].venta_neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    <td class="text-right {% if util_neta < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_neta | money }}</td>
+                {% endfor %}
+                {% set util_neta_t = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
+                <td class="text-right col-total {% if util_neta_t < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_neta_t | money }}</td>
             </tr>
             
-            <!-- NUEVA FILA: MARGEN DE RENTABILIDAD -->
             <tr class="row-kpi">
-                <td class="col-concepto">Margen de Rentabilidad (%)</td>
+                <td class="col-concepto">Margen Neto (%)</td>
                 {% for i in range(1, 13) %}
                     {% set neta = data_meses["%02d"|format(i)].venta_neta %}
                     {% set util = neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
