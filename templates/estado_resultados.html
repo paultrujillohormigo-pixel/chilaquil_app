@@ -14,7 +14,11 @@
     </form>
 </div>
 
-<div class="card" style="max-width: 1200px; margin: 0 auto; overflow-x: auto;">
+<!-- ========================================== -->
+<!-- SECCIÓN 1: REPORTE EN DINERO ($)           -->
+<!-- ========================================== -->
+<div class="card" style="max-width: 1200px; margin: 0 auto 40px; overflow-x: auto;">
+    <h3 style="margin: 0 0 15px 0; color: #1e293b;">💵 Valores Nominales (MXN)</h3>
     <table class="pnl-table">
         <thead>
             <tr>
@@ -76,7 +80,6 @@
             <!-- RESULTADOS Y KPI -->
             <tr class="row-header"><td colspan="14">4. RENTABILIDAD Y RESULTADOS</td></tr>
             
-            <!-- Resultado Antes de Impuestos -->
             <tr class="row-subtotal">
                 <td class="col-concepto">Resultado Operativo (Antes de Impuestos)</td>
                 {% for i in range(1, 13) %}
@@ -89,14 +92,12 @@
                 <td class="text-right col-total font-bold {% if util_antes_t < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_antes_t | money }}</td>
             </tr>
 
-            <!-- IVA -->
             <tr>
                 <td class="col-concepto text-orange">(-) Provisión IVA (16%)</td>
                 {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].iva | money }}</td>{% endfor %}
                 <td class="text-right col-total text-orange">{{ totales_anio.iva | money }}</td>
             </tr>
 
-            <!-- Resultado Neto -->
             <tr class="row-master-total">
                 <td class="col-concepto">Utilidad Neta (Después de Impuestos)</td>
                 {% for i in range(1, 13) %}
@@ -106,23 +107,86 @@
                 {% set util_neta_t = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
                 <td class="text-right col-total {% if util_neta_t < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_neta_t | money }}</td>
             </tr>
-            
-            <tr class="row-kpi">
-                <td class="col-concepto">Margen Neto (%)</td>
+        </tbody>
+    </table>
+</div>
+
+<!-- ========================================== -->
+<!-- SECCIÓN 2: ANÁLISIS PORCENTUAL (%)         -->
+<!-- ========================================== -->
+<div class="card" style="max-width: 1200px; margin: 0 auto; overflow-x: auto; border: 2px solid #818cf8;">
+    <h3 style="margin: 0 0 15px 0; color: #3730a3;">📈 Análisis Porcentual (% de Impacto sobre Venta Neta)</h3>
+    <table class="pnl-table pct-table">
+        <thead>
+            <tr>
+                <th class="col-concepto">Concepto</th>
+                {% for mes in nombres_meses %}
+                    <th class="text-right">{{ mes }}</th>
+                {% endfor %}
+                <th class="text-right col-total">Total Año</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- VENTA NETA BASE -->
+            <tr class="row-header"><td colspan="14">BASE 100% (VENTA SIN IVA)</td></tr>
+            <tr class="row-subtotal">
+                <td class="col-concepto">Venta Neta (Ingreso Real del Negocio)</td>
                 {% for i in range(1, 13) %}
                     {% set neta = data_meses["%02d"|format(i)].venta_neta %}
-                    {% set util = neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
-                    {% set margen = (util / neta * 100) if neta > 0 else 0 %}
-                    <td class="text-right {% if margen < 15 %}text-rose font-bold{% else %}text-emerald font-bold{% endif %}">{{ margen | round(1) }}%</td>
+                    <td class="text-right font-bold">{{ "100.0%" if neta > 0 else "0.0%" }}</td>
                 {% endfor %}
-                {% set neta_t = totales_anio.venta_neta %}
-                {% set util_total = neta_t - totales_anio.food_cost - totales_anio.opex_total %}
-                {% set margen_t = (util_total / neta_t * 100) if neta_t > 0 else 0 %}
-                <td class="text-right col-total {% if margen_t < 15 %}text-rose font-bold{% else %}text-emerald font-bold{% endif %}">{{ margen_t | round(1) }}%</td>
+                <td class="text-right col-total font-bold">{{ "100.0%" if totales_anio.venta_neta > 0 else "0.0%" }}</td>
             </tr>
 
+            <!-- IMPACTO FOOD COST -->
+            <tr class="row-header"><td colspan="14">IMPACTO DE COSTOS (FOOD COST)</td></tr>
+            <tr>
+                <td class="col-concepto">Food Cost (Insumos)</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set fc = data_meses["%02d"|format(i)].food_cost %}
+                    {% set pct = (fc / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right {% if pct > 35 %}text-rose font-bold{% endif %}">{{ pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set pct_t = (totales_anio.food_cost / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total {% if pct_t > 35 %}text-rose font-bold{% endif %}">{{ pct_t | round(1) }}%</td>
+            </tr>
+
+            <!-- IMPACTO OPEX -->
+            <tr class="row-header"><td colspan="14">IMPACTO DE GASTOS (OPEX)</td></tr>
+            {% for cat in todas_categorias %}
+            <tr>
+                <td class="col-concepto">{{ cat }}</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set gasto = data_meses["%02d"|format(i)].categorias_opex[cat] %}
+                    {% set pct = (gasto / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right">{{ pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set pct_t = (totales_anio.categorias_opex[cat] / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total">{{ pct_t | round(1) }}%</td>
+            </tr>
+            {% endfor %}
+            <tr class="row-subtotal">
+                <td class="col-concepto">Total Impacto OPEX</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set opex = data_meses["%02d"|format(i)].opex_total %}
+                    {% set pct = (opex / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right font-bold">{{ pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set pct_t = (totales_anio.opex_total / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total font-bold">{{ pct_t | round(1) }}%</td>
+            </tr>
+
+            <!-- RENTABILIDAD FINAL -->
+            <tr class="row-header"><td colspan="14">RESULTADO FINAL (MÁRGENES)</td></tr>
+            
             <tr class="row-kpi">
-                <td class="col-concepto">Costo Primo % (Food Cost + Nómina)</td>
+                <td class="col-concepto">Costo Primo (Food Cost + Nómina)</td>
                 {% for i in range(1, 13) %}
                     {% set neta = data_meses["%02d"|format(i)].venta_neta %}
                     {% set nomina = data_meses["%02d"|format(i)].categorias_opex.get("Nómina", 0) %}
@@ -135,6 +199,20 @@
                 {% set fc_t = totales_anio.food_cost %}
                 {% set pct_t = ((fc_t + nomina_t) / neta_t * 100) if neta_t > 0 else 0 %}
                 <td class="text-right col-total {% if pct_t > 65 %}text-rose font-bold{% endif %}">{{ pct_t | round(1) }}%</td>
+            </tr>
+
+            <tr class="row-master-total" style="background: #312e81 !important;">
+                <td class="col-concepto" style="background: #312e81 !important; color: white !important;">Margen Neto de Utilidad</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set util = neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    {% set margen = (util / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right {% if margen < 15 %}text-rose{% else %}text-emerald{% endif %}" style="background: #312e81 !important;">{{ margen | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set util_total = neta_t - totales_anio.food_cost - totales_anio.opex_total %}
+                {% set margen_t = (util_total / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total {% if margen_t < 15 %}text-rose{% else %}text-emerald{% endif %}" style="background: #1e1b4b !important; color: white;">{{ margen_t | round(1) }}%</td>
             </tr>
         </tbody>
     </table>
@@ -162,6 +240,14 @@
     .text-orange { color: #ea580c; }
     .text-muted { color: #64748b; font-weight: 400;}
     .font-bold { font-weight: 800; }
+
+    /* ESTILOS PARA LA TABLA DE PORCENTAJES (AZUL/ÍNDIGO) */
+    .pct-table th { background: #e0e7ff; color: #3730a3; }
+    .pct-table .col-concepto { background: #f5f3ff; color: #312e81; }
+    .pct-table .col-total { background: #c7d2fe; border-left: 2px solid #818cf8; color: #312e81;}
+    .pct-table .row-header td { background: #4f46e5 !important; color: #fff !important; }
+    .pct-table .row-subtotal td { background: #eef2ff; border-top: 2px solid #818cf8; }
+    .pct-table td { border-bottom: 1px solid #e0e7ff; }
 </style>
 
 {% endblock %}
