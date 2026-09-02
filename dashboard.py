@@ -212,29 +212,35 @@ def dashboard():
 # ================== ESTADO DE RESULTADOS =================
 # =========================================================
 
+# =========================================================
+# ================== ESTADO DE RESULTADOS =================
+# =========================================================
+
 @dashboard_bp.route("/estado-resultados")
 def estado_resultados():
-    conn = get_connection()
+    import calendar
+    from datetime import datetime
+    from decimal import Decimal
     
-    # Año seleccionado o año actual por defecto
+    conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
     
     try:
         with conn.cursor() as cursor:
-            # 1. Obtener años disponibles para el selector
+            # 1. Obtener años disponibles
             cursor.execute("SELECT DISTINCT YEAR(fecha) AS anio FROM pedidos ORDER BY anio DESC")
             anios_disponibles = [str(r["anio"]) for r in cursor.fetchall()]
             if anio_seleccionado not in anios_disponibles and anios_disponibles:
                 anio_seleccionado = anios_disponibles[0]
 
-            # 2. Inicializar estructura de meses
+            # 2. Inicializar estructura
             nombres_meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
             data_meses = {str(i).zfill(2): {
                 "venta_bruta": Decimal("0"), "descuentos": Decimal("0"), "venta_neta": Decimal("0"), "iva": Decimal("0"),
                 "food_cost": Decimal("0"), "opex_total": Decimal("0"), "categorias_opex": {}
             } for i in range(1, 13)}
 
-            # 3. Obtener Ventas por mes 
+            # 3. Ventas por mes 
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes,
                        SUM(total + COALESCE(descuento, 0)) AS venta_bruta,
@@ -253,11 +259,11 @@ def estado_resultados():
                     data_meses[m]["venta_neta"] = Decimal(str(r["venta_neta"] or 0))
                     data_meses[m]["iva"] = Decimal(str(r["iva"] or 0))
 
-            # 4. Obtener Food Cost (Insumos) por mes (AQUÍ YA EXCLUYE "PERSONAL")
+            # 4. Food Cost (Excluyendo personales)
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes, SUM(costo) AS food_cost
                 FROM insumos_compras
-                WHERE YEAR(fecha) = %s AND (LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%')
+                WHERE YEAR(fecha) = %s AND LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%'
                 GROUP BY mes
             """, (anio_seleccionado,))
             for r in cursor.fetchall():
@@ -265,25 +271,63 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-            # 5. Obtener OPEX por categoría y mes (AQUÍ TAMBIÉN EXCLUIMOS YA "PERSONAL")
+            # 5. Obtener todas las categorías de gastos
             cursor.execute("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
-            todas_categorias = [c["nombre"] for c in cursor.fetchall()]
-            for m in data_meses.values():
-                m["categorias_opex"] = {cat: Decimal("0") for cat in todas_categorias}
+            todas_categorias = {c["id"]: c["nombre"] for c in cursor.fetchall()}
+            nombres_categorias = list(todas_categorias.values())
+            
+            # Conocer el nombre exacto de la categoría de Renta (Asumimos ID = 2)
+            nombre_cat_renta = todas_categorias.get(2, "Renta")
 
+            for m in data_meses.values():
+                m["categorias_opex"] = {cat: Decimal("0") for cat in nombres_categorias}
+
+            # OPEX Físico: EXCLUIMOS LA RENTA (categoria_id != 2) para no duplicar y "personales"
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, c.nombre AS categoria, SUM(g.monto) AS total
                 FROM gastos g
                 JOIN categorias_gastos c ON g.categoria_id = c.id
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
+                  AND g.categoria_id != 2
                 GROUP BY mes, categoria
             """, (anio_seleccionado,))
+            
             for r in cursor.fetchall():
                 m = r["mes"]
                 if m in data_meses:
                     data_meses[m]["categorias_opex"][r["categoria"]] = Decimal(str(r["total"] or 0))
                     data_meses[m]["opex_total"] += Decimal(str(r["total"] or 0))
+
+            # 6. INYECCIÓN DE RENTA VIRTUAL DEVENGADA
+            hoy = datetime.now().date()
+            anio_int = int(anio_seleccionado)
+            renta_mensual = Decimal("10440.00")
+
+            for i in range(1, 13):
+                mes_str = str(i).zfill(2)
+                dias_del_mes = calendar.monthrange(anio_int, i)[1]
+                
+                # Calcular cuántos días han pasado de ese mes
+                if anio_int < hoy.year:
+                    dias_transcurridos = dias_del_mes
+                elif anio_int > hoy.year:
+                    dias_transcurridos = 0
+                else: # Mismo año
+                    if i < hoy.month:
+                        dias_transcurridos = dias_del_mes
+                    elif i == hoy.month:
+                        dias_transcurridos = hoy.day
+                    else:
+                        dias_transcurridos = 0
+                        
+                # Matemática: (10440 / días del mes) * días transcurridos
+                if dias_transcurridos > 0:
+                    renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
+                    renta_virtual = Decimal(str(round(renta_virtual, 2)))
+                    
+                    data_meses[mes_str]["categorias_opex"][nombre_cat_renta] = renta_virtual
+                    data_meses[mes_str]["opex_total"] += renta_virtual
 
     finally:
         conn.close()
@@ -296,7 +340,7 @@ def estado_resultados():
         "iva": sum(m["iva"] for m in data_meses.values()),
         "food_cost": sum(m["food_cost"] for m in data_meses.values()),
         "opex_total": sum(m["opex_total"] for m in data_meses.values()),
-        "categorias_opex": {cat: sum(m["categorias_opex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in todas_categorias}
+        "categorias_opex": {cat: sum(m["categorias_opex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in nombres_categorias}
     }
 
     return render_template(
@@ -305,6 +349,6 @@ def estado_resultados():
         anios_disponibles=anios_disponibles,
         data_meses=data_meses,
         nombres_meses=nombres_meses,
-        todas_categorias=todas_categorias,
+        todas_categorias=nombres_categorias,
         totales_anio=totales_anio
-    )
+    )    
