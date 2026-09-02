@@ -274,7 +274,7 @@ def estado_resultados():
                 "food_cost": Decimal("0"), "opex_total": Decimal("0"), "categorias_opex": {}
             } for i in range(1, 13)}
 
-            # 3. Ventas por mes 
+            # 3. Ventas por mes (AHORA INCLUYE MESAS ABIERTAS, SOLO IGNORA CANCELADOS)
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes,
                        SUM(total + COALESCE(descuento, 0)) AS venta_bruta,
@@ -282,7 +282,7 @@ def estado_resultados():
                        SUM(total / 1.16) AS venta_neta,
                        SUM(total - (total / 1.16)) AS iva
                 FROM pedidos
-                WHERE YEAR(fecha) = %s AND estado NOT IN ('abierto', 'cancelado')
+                WHERE YEAR(fecha) = %s AND estado != 'cancelado'
                 GROUP BY mes
             """, (anio_seleccionado,))
             for r in cursor.fetchall():
