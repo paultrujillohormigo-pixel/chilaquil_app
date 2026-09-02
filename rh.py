@@ -147,6 +147,8 @@ def checador():
         conn.close()
 
     return render_template("rh_checador.html", empleados=empleados, asistencias_hoy=asistencias_hoy)
+
+
 @rh_bp.route("/nomina", methods=["GET", "POST"])
 def nomina():
     conn = get_connection()
@@ -163,27 +165,20 @@ def nomina():
                     flash("Faltan datos para procesar el pago.", "error")
                     return redirect(url_for("rh_bp.nomina"))
 
-                # 1. Traer datos del empleado para armar el concepto
+                # Traer datos del empleado
                 cursor.execute("SELECT nombre FROM rh_empleados WHERE id = %s", (empleado_id,))
                 empleado = cursor.fetchone()
-                concepto_gasto = f"Sueldo {empleado['nombre']}"
 
-                # 2. Insertar directamente en la tabla de OPEX (gastos)
-                # categoria_id = 1 asumiendo que 1 es 'Nómina' en tu tabla categorias_gastos
-                cursor.execute("""
-                    INSERT INTO gastos (fecha, categoria_id, concepto, monto, nota)
-                    VALUES (CURRENT_DATE, 1, %s, %s, %s)
-                """, (concepto_gasto, monto, nota))
-                gasto_id = cursor.lastrowid # Obtenemos el ID del OPEX generado
-
-                # 3. Guardar el registro en el historial de RH
+                # 🚨 EL CAMBIO MAESTRO:
+                # Ya NO insertamos en la tabla `gastos` porque el checador lo hace día a día.
+                # Solo guardamos el recibo en el historial de RH y dejamos el gasto_id como NULL.
                 cursor.execute("""
                     INSERT INTO rh_nominas (empleado_id, fecha_pago, periodo_inicio, periodo_fin, monto_pagado, gasto_id)
-                    VALUES (%s, CURRENT_DATE, %s, %s, %s, %s)
-                """, (empleado_id, periodo_inicio, periodo_fin, monto, gasto_id))
+                    VALUES (%s, CURRENT_DATE, %s, %s, %s, NULL)
+                """, (empleado_id, periodo_inicio, periodo_fin, monto))
 
                 conn.commit()
-                flash(f"✅ Se pagaron ${monto} a {empleado['nombre']} y se registró en el OPEX automáticamente.", "success")
+                flash(f"✅ Se generó el recibo de ${monto} a {empleado['nombre']}. (El gasto ya está provisionado en tu OPEX diario)", "success")
                 return redirect(url_for("rh_bp.nomina"))
 
             # --- VISTA GET ---
@@ -208,6 +203,8 @@ def nomina():
             
     finally:
         conn.close()
+
+    return render_template("rh_nomina.html", empleados=empleados, ultimos_pagos=ultimos_pagos)
 
     return render_template("rh_nomina.html", empleados=empleados, ultimos_pagos=ultimos_pagos)
 @rh_bp.route("/api/calcular-pago", methods=["GET"])
