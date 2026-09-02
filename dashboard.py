@@ -31,6 +31,10 @@ def calc_var(current: float, previous: float) -> float:
 # ================== RUTAS DEL DASHBOARD ==================
 # =========================================================
 
+# =========================================================
+# ================== RUTAS DEL DASHBOARD ==================
+# =========================================================
+
 @dashboard_bp.route("/dashboard")
 def dashboard():
     meses_seleccionados = request.args.getlist("mes")
@@ -80,18 +84,29 @@ def dashboard():
             conds_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
             params_compras.append('%personal%')
 
+            # --- FILTROS DE GASTOS CORREGIDOS (Sin Renta y Sin Personales) ---
+            conds_gastos = list(conds_general)
+            conds_gastos.append("LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%'")
+            conds_gastos.append("categoria_id != 2")
+            
+            conds_gastos_g = list(conds_general)
+            conds_gastos_g.append("LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'")
+            conds_gastos_g.append("g.categoria_id != 2")
+
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
                 return "WHERE " + " AND ".join([c.replace("{campo_fecha}", c_fecha).replace("{campo_origen}", c_origen) for c in conds])
 
             filtro_pedidos = build_where(conds_pedidos, "fecha", "origen")
             filtro_compras = build_where(conds_compras, "fecha")
-            filtro_gastos = build_where(conds_general, "fecha") 
-            filtro_gastos_g = build_where(conds_general, "g.fecha") 
+            filtro_gastos = build_where(conds_gastos, "fecha") 
+            filtro_gastos_g = build_where(conds_gastos_g, "g.fecha") 
 
             # ---> VISIÓN INVERSIONISTA (P&L Base)
             conds_inv = list(conds_pedidos)
-            conds_inv.append("estado NOT IN ('abierto', 'cancelado')")
+            # 🚨 CAMBIO AQUÍ: Ignoramos solo cancelados para que sume las mesas "abiertas" a tu liquidez
+            conds_inv.append("estado != 'cancelado'")
+            
             cursor.execute(f"""
                 SELECT SUM(total + COALESCE(descuento, 0)) AS venta_bruta, SUM(COALESCE(descuento, 0)) AS descuentos,
                        SUM(total / 1.16) AS venta_neta, SUM(total - (total / 1.16)) AS iva
@@ -111,9 +126,20 @@ def dashboard():
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_food_cost = Decimal(str(cursor.fetchone()["total"] or 0))
 
-            # INTEGRACIÓN COMPLETA DE OPEX (GASTOS)
+            # INTEGRACIÓN COMPLETA DE OPEX (FÍSICO)
             cursor.execute(f"SELECT SUM(monto) AS total_opex FROM gastos {filtro_gastos}", params_general)
             total_opex = Decimal(str(cursor.fetchone()["total_opex"] or 0))
+
+            # 🚨 INYECCIÓN DE RENTA VIRTUAL DINÁMICA
+            from zoneinfo import ZoneInfo
+            import calendar
+            hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
+            dias_del_mes = calendar.monthrange(hoy.year, hoy.month)[1]
+            renta_mensual = Decimal("10440.00")
+            
+            # Se cobra la renta exacta multiplicada por los días que tiene tu filtro actual
+            renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
+            total_opex += renta_virtual
 
             conds_nomina = list(conds_general)
             conds_nomina.append("c.nombre = 'Nómina'")
@@ -154,6 +180,15 @@ def dashboard():
                 ORDER BY total DESC
             """, params_general)
             gastos_por_concepto = [{"concepto": str(r["concepto"]), "total": float(r["total"] or 0), "promedio": float(r["total"] or 0) / dias_totales} for r in cursor.fetchall()]
+
+            # 🚨 INYECTAMOS LA RENTA VIRTUAL A LAS GRÁFICAS DE PASTEL/BARRAS
+            if renta_virtual > 0:
+                gastos_por_concepto.append({
+                    "concepto": "Renta (Provisión Virtual)",
+                    "total": float(renta_virtual),
+                    "promedio": float(renta_virtual / Decimal(str(dias_totales)))
+                })
+                gastos_por_concepto = sorted(gastos_por_concepto, key=lambda x: x["total"], reverse=True)
 
             cursor.execute(f"""
                 SELECT concepto, 'Insumo' AS tipo_costo, SUM(costo) AS total_gastado 
@@ -206,7 +241,6 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
-
 
 # =========================================================
 # ================== ESTADO DE RESULTADOS =================
