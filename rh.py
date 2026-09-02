@@ -85,17 +85,48 @@ def checador():
                     elif registro.get("hora_salida"):
                         flash("Ya tienes una salida registrada el día de hoy.", "warning")
                     else:
-                        # Registramos la salida y calculamos los minutos trabajados con TIMESTAMPDIFF de SQL
+                        # 1. Registramos la salida y calculamos minutos
                         cursor.execute("""
                             UPDATE rh_asistencias 
                             SET hora_salida = NOW(), 
                                 minutos_trabajados = TIMESTAMPDIFF(MINUTE, hora_entrada, NOW()) 
                             WHERE id = %s
                         """, (registro["id"],))
+                        
+                        # 2. Obtenemos los datos para calcular su pago de este turno
+                        cursor.execute("""
+                            SELECT a.minutos_trabajados, e.nombre, e.salario_base, e.tipo_pago 
+                            FROM rh_asistencias a 
+                            JOIN rh_empleados e ON a.empleado_id = e.id 
+                            WHERE a.id = %s
+                        """, (registro["id"],))
+                        datos = cursor.fetchone()
+                        
+                        minutos = datos["minutos_trabajados"] or 0
+                        salario = float(datos["salario_base"])
+                        tipo = datos["tipo_pago"]
+                        
+                        # 3. Calculamos cuánto le toca hoy dependiendo su esquema
+                        monto_turno = 0
+                        if tipo == "dia":
+                            monto_turno = salario
+                        elif tipo == "hora":
+                            monto_turno = (minutos / 60.0) * salario
+                        elif tipo == "semana":
+                            monto_turno = salario / 7.0
+                        elif tipo == "quincena":
+                            monto_turno = salario / 15.0
+                            
+                        # 4. Inyectamos este turno directo a los Gastos (Categoría 1 = Nómina)
+                        if monto_turno > 0:
+                            concepto = f"Provisión Sueldo {datos['nombre']}"
+                            cursor.execute("""
+                                INSERT INTO gastos (fecha, categoria_id, concepto, monto, nota)
+                                VALUES (CURRENT_DATE, 1, %s, %s, 'Gasto generado automático al marcar salida')
+                            """, (concepto, round(monto_turno, 2)))
+                            
                         conn.commit()
-                        flash("👋 Salida registrada con éxito. ¡Buen descanso!", "success")
-                
-                return redirect(url_for("rh_bp.checador"))
+                        flash("👋 Salida registrada y gasto sumado a la operación diaria. ¡Buen descanso!", "success")
 
             # --- VISTA GET (Cargar la pantalla) ---
             # 1. Traer empleados activos para el selector
