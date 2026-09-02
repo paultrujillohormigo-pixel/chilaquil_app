@@ -300,7 +300,7 @@ def estado_resultados():
                     data_meses[m]["opex_total"] += Decimal(str(r["total"] or 0))
 
             # 6. INYECCIÓN DE RENTA VIRTUAL DEVENGADA
-           from zoneinfo import ZoneInfo
+            from zoneinfo import ZoneInfo
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
             renta_mensual = Decimal("10440.00")
