@@ -305,7 +305,7 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-            # 5. Obtener todas las categorías de gastos
+            # 5. Obtener todas las categorías de gastos y preparar desglose
             cursor.execute("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
             todas_categorias = {c["id"]: c["nombre"] for c in cursor.fetchall()}
             nombres_categorias = list(todas_categorias.values())
@@ -313,25 +313,37 @@ def estado_resultados():
             # Conocer el nombre exacto de la categoría de Renta (Asumimos ID = 2)
             nombre_cat_renta = todas_categorias.get(2, "Renta")
 
+            # NUEVO: Diccionario para guardar el desglose de cada concepto
+            detalles_opex = {str(i).zfill(2): {cat: [] for cat in nombres_categorias} for i in range(1, 13)}
+
             for m in data_meses.values():
                 m["categorias_opex"] = {cat: Decimal("0") for cat in nombres_categorias}
 
-            # OPEX Físico: EXCLUIMOS LA RENTA (categoria_id != 2) para no duplicar y "personales"
+            # OPEX Físico: Ahora agrupamos también por "concepto" (Ej. Diana, Jimena, Luz, Agua)
             cursor.execute("""
-                SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, c.nombre AS categoria, SUM(g.monto) AS total
+                SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
+                       c.nombre AS categoria, 
+                       COALESCE(g.concepto, 'Gastos Varios') AS concepto,
+                       SUM(g.monto) AS total
                 FROM gastos g
                 JOIN categorias_gastos c ON g.categoria_id = c.id
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
                   AND g.categoria_id != 2
-                GROUP BY mes, categoria
+                GROUP BY mes, categoria, concepto
             """, (anio_seleccionado,))
             
             for r in cursor.fetchall():
                 m = r["mes"]
+                cat = r["categoria"]
+                concepto = r["concepto"]
+                monto = Decimal(str(r["total"] or 0))
+
                 if m in data_meses:
-                    data_meses[m]["categorias_opex"][r["categoria"]] = Decimal(str(r["total"] or 0))
-                    data_meses[m]["opex_total"] += Decimal(str(r["total"] or 0))
+                    data_meses[m]["categorias_opex"][cat] += monto
+                    data_meses[m]["opex_total"] += monto
+                    # Guardamos el detalle para el acordeón
+                    detalles_opex[m][cat].append({"concepto": concepto, "monto": monto})
 
             # 6. INYECCIÓN DE RENTA VIRTUAL DEVENGADA
             from zoneinfo import ZoneInfo
@@ -356,17 +368,19 @@ def estado_resultados():
                     else:
                         dias_transcurridos = 0
                         
-                # Matemática: (10440 / días del mes) * días transcurridos
+                # Matemática: Renta
                 if dias_transcurridos > 0:
                     renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
                     renta_virtual = Decimal(str(round(renta_virtual, 2)))
                     
-                    data_meses[mes_str]["categorias_opex"][nombre_cat_renta] = renta_virtual
+                    data_meses[mes_str]["categorias_opex"][nombre_cat_renta] += renta_virtual
                     data_meses[mes_str]["opex_total"] += renta_virtual
+                    
+                    # Agregamos la renta al desglose
+                    detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
 
     finally:
         conn.close()
-
     # Calcular Totales Anuales
     totales_anio = {
         "venta_bruta": sum(m["venta_bruta"] for m in data_meses.values()),
@@ -379,7 +393,9 @@ def estado_resultados():
     }
 
     return render_template(
+        
         "estado_resultados.html",
+        detalles_opex=detalles_opex,
         anio_seleccionado=anio_seleccionado,
         anios_disponibles=anios_disponibles,
         data_meses=data_meses,
