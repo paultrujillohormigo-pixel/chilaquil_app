@@ -45,6 +45,12 @@
           <h3>Dashboard Ejecutivo</h3>
           <p>Métricas en tiempo real, Costo Primo, rentabilidad y OPEX.</p>
         </div>
+      <a href="{{ url_for('dashboard_bp.inversiones') }}" class="hub-card">
+      <div class="hub-icon">🏗️</div>
+      <div class="hub-info">
+          <h3>Inversiones (CAPEX)</h3>
+          <p>Registra activos fijos, mobiliario, remodelaciones y pago de deudas.</p>
+      </div>
       </a>
       <a href="{{ url_for('corte_caja') }}" class="hub-card">
         <div class="hub-icon">💵</div>
@@ -105,7 +111,7 @@
     </div>
   </section>
 
-  <!-- MÓDULO 4: CRM Y L -->
+  <!-- MÓDULO 4: CRM -->
   <section class="hub-category">
     <h2 class="hub-category-title">🤝 CRM y Clientes</h2>
     <div class="hub-grid">
