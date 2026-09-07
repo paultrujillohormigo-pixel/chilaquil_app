@@ -28,8 +28,51 @@ def calc_var(current: float, previous: float) -> float:
 
 
 # =========================================================
-# ================== RUTAS DEL DASHBOARD ==================
+# ================== CAPEX ==================
 # =========================================================
+
+from flask import render_template, request, redirect, url_for
+
+@dashboard_bp.route("/inversiones", methods=["GET", "POST"])
+def inversiones():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # === GUARDAR UNA NUEVA INVERSIÓN ===
+            if request.method == "POST":
+                fecha = request.form.get("fecha")
+                categoria_id = request.form.get("categoria_id")
+                concepto = request.form.get("concepto")
+                monto = request.form.get("monto")
+                
+                cursor.execute("""
+                    INSERT INTO gastos (fecha, categoria_id, concepto, monto)
+                    VALUES (%s, %s, %s, %s)
+                """, (fecha, categoria_id, concepto, monto))
+                conn.commit()
+                return redirect(url_for("dashboard_bp.inversiones"))
+            
+            # === MOSTRAR LA PANTALLA (GET) ===
+            # 1. Obtener solo las categorías de tipo CAPEX para el select
+            cursor.execute("SELECT id, nombre FROM categorias_gastos WHERE tipo = 'CAPEX' ORDER BY nombre")
+            categorias_capex = cursor.fetchall()
+            
+            # 2. Obtener el historial de pagos para la tabla
+            cursor.execute("""
+                SELECT g.fecha, c.nombre as categoria, g.concepto, g.monto 
+                FROM gastos g
+                JOIN categorias_gastos c ON g.categoria_id = c.id
+                WHERE c.tipo = 'CAPEX'
+                ORDER BY g.fecha DESC
+                LIMIT 20
+            """)
+            historial_capex = cursor.fetchall()
+            
+    finally:
+        conn.close()
+        
+    return render_template("inversiones.html", categorias=categorias_capex, inversiones=historial_capex)
+
 
 # =========================================================
 # ================== RUTAS DEL DASHBOARD ==================
