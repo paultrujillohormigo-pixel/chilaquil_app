@@ -252,6 +252,35 @@
                 <td class="text-right col-total font-bold">{{ pct_t | round(1) }}%</td>
             </tr>
 
+            <!-- IMPACTO CAPEX -->
+            <tr class="row-header"><td colspan="14">IMPACTO DE INVERSIONES (CAPEX)</td></tr>
+            {% for cat in categorias_capex %}
+            <tr>
+                <td class="col-concepto">{{ cat }}</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set gasto = data_meses["%02d"|format(i)].categorias_capex[cat] %}
+                    {% set pct = (gasto / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right">{{ pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set pct_t = (totales_anio.categorias_capex[cat] / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total">{{ pct_t | round(1) }}%</td>
+            </tr>
+            {% endfor %}
+            <tr class="row-subtotal">
+                <td class="col-concepto text-orange">Total Impacto CAPEX</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set capex = data_meses["%02d"|format(i)].capex_total %}
+                    {% set pct = (capex / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right font-bold text-orange">{{ pct | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set pct_t = (totales_anio.capex_total / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total font-bold text-orange">{{ pct_t | round(1) }}%</td>
+            </tr>
+
             <!-- RENTABILIDAD FINAL -->
             <tr class="row-header"><td colspan="14">RESULTADO FINAL (MÁRGENES)</td></tr>
             
@@ -283,6 +312,22 @@
                 {% set util_total = neta_t - totales_anio.food_cost - totales_anio.opex_total %}
                 {% set margen_t = (util_total / neta_t * 100) if neta_t > 0 else 0 %}
                 <td class="text-right col-total {% if margen_t < 15 %}text-rose{% else %}text-emerald{% endif %}" style="background: #1e1b4b !important; color: white;">{{ margen_t | round(1) }}%</td>
+            </tr>
+
+            <tr class="row-master-total" style="background: #020617 !important;">
+                <td class="col-concepto" style="background: #020617 !important; color: #10b981 !important;">Margen Flujo de Caja Libre</td>
+                {% for i in range(1, 13) %}
+                    {% set neta = data_meses["%02d"|format(i)].venta_neta %}
+                    {% set util = neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    {% set flujo = util - data_meses["%02d"|format(i)].capex_total %}
+                    {% set margen_flujo = (flujo / neta * 100) if neta > 0 else 0 %}
+                    <td class="text-right {% if margen_flujo < 10 %}text-rose{% else %}text-emerald{% endif %}" style="background: #020617 !important;">{{ margen_flujo | round(1) }}%</td>
+                {% endfor %}
+                {% set neta_t = totales_anio.venta_neta %}
+                {% set util_total = neta_t - totales_anio.food_cost - totales_anio.opex_total %}
+                {% set flujo_t = util_total - totales_anio.capex_total %}
+                {% set margen_flujo_t = (flujo_t / neta_t * 100) if neta_t > 0 else 0 %}
+                <td class="text-right col-total {% if margen_flujo_t < 10 %}text-rose{% else %}text-emerald{% endif %}" style="background: #0f172a !important; color: white;">{{ margen_flujo_t | round(1) }}%</td>
             </tr>
         </tbody>
     </table>
