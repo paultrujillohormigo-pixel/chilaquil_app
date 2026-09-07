@@ -348,24 +348,32 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-            # 5. Obtener todas las categorías de gastos y preparar desglose
-            cursor.execute("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
-            todas_categorias = {c["id"]: c["nombre"] for c in cursor.fetchall()}
-            nombres_categorias = list(todas_categorias.values())
+# 5. Obtener todas las categorías y SEPARAR OPEX de CAPEX
+            cursor.execute("SELECT id, nombre, tipo FROM categorias_gastos ORDER BY nombre")
+            todas_categorias = cursor.fetchall()
             
-            # Conocer el nombre exacto de la categoría de Renta (Asumimos ID = 2)
-            nombre_cat_renta = todas_categorias.get(2, "Renta")
+            # Clasificamos usando la columna tipo que agregaste
+            categorias_opex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'OPEX']
+            categorias_capex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'CAPEX']
+            
+            # Nombre exacto para inyectar la renta virtual
+            nombre_cat_renta = next((c["nombre"] for c in todas_categorias if c["id"] == 2), "Renta")
 
-            # NUEVO: Diccionario para guardar el desglose de cada concepto
-            detalles_opex = {str(i).zfill(2): {cat: [] for cat in nombres_categorias} for i in range(1, 13)}
+            # Estructuras para guardar los desgloses
+            detalles_opex = {str(i).zfill(2): {cat: [] for cat in categorias_opex} for i in range(1, 13)}
+            detalles_capex = {str(i).zfill(2): {cat: [] for cat in categorias_capex} for i in range(1, 13)}
 
             for m in data_meses.values():
-                m["categorias_opex"] = {cat: Decimal("0") for cat in nombres_categorias}
+                m["categorias_opex"] = {cat: Decimal("0") for cat in categorias_opex}
+                m["categorias_capex"] = {cat: Decimal("0") for cat in categorias_capex}
+                m["opex_total"] = Decimal("0")
+                m["capex_total"] = Decimal("0")
 
-            # OPEX Físico: Ahora agrupamos también por "concepto" (Ej. Diana, Jimena, Luz, Agua)
+            # 6. Consultar todos los gastos físicos y asignarlos a su "bolsa"
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
-                       c.nombre AS categoria, 
+                       c.nombre AS categoria,
+                       c.tipo AS tipo_categoria,
                        COALESCE(g.concepto, 'Gastos Varios') AS concepto,
                        SUM(g.monto) AS total
                 FROM gastos g
@@ -373,22 +381,27 @@ def estado_resultados():
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
                   AND g.categoria_id != 2
-                GROUP BY mes, categoria, concepto
+                GROUP BY mes, categoria, tipo_categoria, concepto
             """, (anio_seleccionado,))
             
             for r in cursor.fetchall():
                 m = r["mes"]
                 cat = r["categoria"]
+                tipo_cat = r["tipo_categoria"]
                 concepto = r["concepto"]
                 monto = Decimal(str(r["total"] or 0))
 
                 if m in data_meses:
-                    data_meses[m]["categorias_opex"][cat] += monto
-                    data_meses[m]["opex_total"] += monto
-                    # Guardamos el detalle para el acordeón
-                    detalles_opex[m][cat].append({"concepto": concepto, "monto": monto})
+                    if tipo_cat == 'OPEX':
+                        data_meses[m]["categorias_opex"][cat] += monto
+                        data_meses[m]["opex_total"] += monto
+                        detalles_opex[m][cat].append({"concepto": concepto, "monto": monto})
+                    elif tipo_cat == 'CAPEX':
+                        data_meses[m]["categorias_capex"][cat] += monto
+                        data_meses[m]["capex_total"] += monto
+                        detalles_capex[m][cat].append({"concepto": concepto, "monto": monto})
 
-            # 6. INYECCIÓN DE RENTA VIRTUAL DEVENGADA
+            # 7. INYECCIÓN DE RENTA VIRTUAL DEVENGADA (Solo va al OPEX)
             from zoneinfo import ZoneInfo
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
@@ -398,12 +411,11 @@ def estado_resultados():
                 mes_str = str(i).zfill(2)
                 dias_del_mes = calendar.monthrange(anio_int, i)[1]
                 
-                # Calcular cuántos días han pasado de ese mes
                 if anio_int < hoy.year:
                     dias_transcurridos = dias_del_mes
                 elif anio_int > hoy.year:
                     dias_transcurridos = 0
-                else: # Mismo año
+                else: 
                     if i < hoy.month:
                         dias_transcurridos = dias_del_mes
                     elif i == hoy.month:
@@ -411,20 +423,18 @@ def estado_resultados():
                     else:
                         dias_transcurridos = 0
                         
-                # Matemática: Renta
                 if dias_transcurridos > 0:
                     renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
                     renta_virtual = Decimal(str(round(renta_virtual, 2)))
                     
                     data_meses[mes_str]["categorias_opex"][nombre_cat_renta] += renta_virtual
                     data_meses[mes_str]["opex_total"] += renta_virtual
-                    
-                    # Agregamos la renta al desglose
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
 
     finally:
         conn.close()
-    # Calcular Totales Anuales
+
+    # 8. Totales Anuales Separados
     totales_anio = {
         "venta_bruta": sum(m["venta_bruta"] for m in data_meses.values()),
         "descuentos": sum(m["descuentos"] for m in data_meses.values()),
@@ -432,17 +442,20 @@ def estado_resultados():
         "iva": sum(m["iva"] for m in data_meses.values()),
         "food_cost": sum(m["food_cost"] for m in data_meses.values()),
         "opex_total": sum(m["opex_total"] for m in data_meses.values()),
-        "categorias_opex": {cat: sum(m["categorias_opex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in nombres_categorias}
+        "capex_total": sum(m["capex_total"] for m in data_meses.values()),
+        "categorias_opex": {cat: sum(m["categorias_opex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in categorias_opex},
+        "categorias_capex": {cat: sum(m["categorias_capex"].get(cat, Decimal("0")) for m in data_meses.values()) for cat in categorias_capex}
     }
 
     return render_template(
-        
         "estado_resultados.html",
-        detalles_opex=detalles_opex,
         anio_seleccionado=anio_seleccionado,
         anios_disponibles=anios_disponibles,
         data_meses=data_meses,
         nombres_meses=nombres_meses,
-        todas_categorias=nombres_categorias,
+        categorias_opex=categorias_opex,
+        categorias_capex=categorias_capex,
+        detalles_opex=detalles_opex,
+        detalles_capex=detalles_capex,
         totales_anio=totales_anio
-    )    
+    )
