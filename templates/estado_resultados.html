@@ -60,11 +60,10 @@
                 <td class="text-right col-total">{{ totales_anio.food_cost | money }}</td>
             </tr>
 
-            <!-- GASTOS OPERATIVOS CON DRILL-DOWN -->
+            <!-- GASTOS OPERATIVOS (SOLO OPEX) -->
             <tr class="row-header"><td colspan="14">3. GASTOS OPERATIVOS (OPEX)</td></tr>
-            {% for cat in todas_categorias %}
-            <!-- Fila Principal Clickable -->
-            <tr onclick="document.getElementById('detalle-{{ loop.index }}').style.display = document.getElementById('detalle-{{ loop.index }}').style.display === 'none' ? 'table-row' : 'none';" style="cursor: pointer;" title="Clic para ver desglose">
+            {% for cat in categorias_opex %}
+            <tr onclick="document.getElementById('detalle-opex-{{ loop.index }}').style.display = document.getElementById('detalle-opex-{{ loop.index }}').style.display === 'none' ? 'table-row' : 'none';" style="cursor: pointer;" title="Clic para ver desglose">
                 <td class="col-concepto" style="transition: background 0.2s;"><span style="font-size: 0.8em; color: #64748b; margin-right: 4px;">▶</span> {{ cat }}</td>
                 {% for i in range(1, 13) %}
                     <td class="text-right">{{ data_meses["%02d"|format(i)].categorias_opex[cat] | money }}</td>
@@ -72,8 +71,7 @@
                 <td class="text-right col-total">{{ totales_anio.categorias_opex[cat] | money }}</td>
             </tr>
             
-            <!-- Fila Oculta de Desglose -->
-            <tr id="detalle-{{ loop.index }}" style="display: none; background-color: #f8fafc;">
+            <tr id="detalle-opex-{{ loop.index }}" style="display: none; background-color: #f8fafc;">
                 <td class="col-concepto" style="background-color: #f8fafc; padding-left: 25px; font-size: 0.85em; font-weight: normal;"><small class="text-muted"><em>Desglose interno</em></small></td>
                 {% for i in range(1, 13) %}
                     <td class="text-right" style="vertical-align: top; background-color: #f8fafc;">
@@ -86,7 +84,6 @@
                         {% endfor %}
                     </td>
                 {% endfor %}
-                <!-- Columna de Total Año del desglose (se deja vacía visualmente para no saturar) -->
                 <td class="col-total" style="background-color: #f1f5f9;"></td>
             </tr>
             {% endfor %}
@@ -127,6 +124,57 @@
                 {% set util_neta_t = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
                 <td class="text-right col-total {% if util_neta_t < 0 %}text-rose{% else %}text-emerald{% endif %}">{{ util_neta_t | money }}</td>
             </tr>
+
+            <!-- ========================================== -->
+            <!-- NUEVA SECCIÓN 5: CAPEX E INVERSIONES       -->
+            <!-- ========================================== -->
+            <tr class="row-header"><td colspan="14">5. EGRESOS NO OPERATIVOS (CAPEX)</td></tr>
+            {% for cat in categorias_capex %}
+            <tr onclick="document.getElementById('detalle-capex-{{ loop.index }}').style.display = document.getElementById('detalle-capex-{{ loop.index }}').style.display === 'none' ? 'table-row' : 'none';" style="cursor: pointer;" title="Clic para ver desglose">
+                <td class="col-concepto" style="transition: background 0.2s; color: #475569;"><span style="font-size: 0.8em; color: #94a3b8; margin-right: 4px;">▶</span> {{ cat }}</td>
+                {% for i in range(1, 13) %}
+                    <td class="text-right text-orange">{{ data_meses["%02d"|format(i)].categorias_capex[cat] | money }}</td>
+                {% endfor %}
+                <td class="text-right col-total text-orange">{{ totales_anio.categorias_capex[cat] | money }}</td>
+            </tr>
+            
+            <tr id="detalle-capex-{{ loop.index }}" style="display: none; background-color: #f8fafc;">
+                <td class="col-concepto" style="background-color: #f8fafc; padding-left: 25px; font-size: 0.85em; font-weight: normal;"><small class="text-muted"><em>Desglose interno</em></small></td>
+                {% for i in range(1, 13) %}
+                    <td class="text-right" style="vertical-align: top; background-color: #f8fafc;">
+                        {% set m_str = "%02d"|format(i) %}
+                        {% for det in detalles_capex[m_str][cat] %}
+                            <div style="font-size: 0.85em; border-bottom: 1px solid #e2e8f0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px;">
+                                <span class="text-muted" style="text-align: left; overflow: hidden; text-overflow: ellipsis;">{{ det.concepto }}:</span>
+                                <strong>{{ det.monto | money }}</strong>
+                            </div>
+                        {% endfor %}
+                    </td>
+                {% endfor %}
+                <td class="col-total" style="background-color: #f1f5f9;"></td>
+            </tr>
+            {% endfor %}
+
+            <tr class="row-subtotal">
+                <td class="col-concepto text-orange">Total CAPEX (Pagos e Inversión)</td>
+                {% for i in range(1, 13) %}<td class="text-right text-orange">{{ data_meses["%02d"|format(i)].capex_total | money }}</td>{% endfor %}
+                <td class="text-right col-total text-orange">{{ totales_anio.capex_total | money }}</td>
+            </tr>
+
+            <!-- FLUJO DE CAJA LIBRE (EL DINERO REAL) -->
+            <tr class="row-master-total" style="background: #020617 !important;">
+                <td class="col-concepto" style="background: #020617 !important; color: #10b981 !important;">Flujo de Caja Libre (Dinero Real en Banco)</td>
+                {% for i in range(1, 13) %}
+                    {% set util_neta = data_meses["%02d"|format(i)].venta_neta - data_meses["%02d"|format(i)].food_cost - data_meses["%02d"|format(i)].opex_total %}
+                    {% set flujo_caja = util_neta - data_meses["%02d"|format(i)].capex_total %}
+                    <td class="text-right {% if flujo_caja < 0 %}text-rose{% else %}text-emerald{% endif %}" style="background: #020617 !important;">{{ flujo_caja | money }}</td>
+                {% endfor %}
+                
+                {% set util_neta_t = totales_anio.venta_neta - totales_anio.food_cost - totales_anio.opex_total %}
+                {% set flujo_caja_t = util_neta_t - totales_anio.capex_total %}
+                <td class="text-right col-total {% if flujo_caja_t < 0 %}text-rose{% else %}text-emerald{% endif %}" style="background: #0f172a !important; color: white !important;">{{ flujo_caja_t | money }}</td>
+            </tr>
+
         </tbody>
     </table>
 </div>
@@ -175,7 +223,7 @@
 
             <!-- IMPACTO OPEX -->
             <tr class="row-header"><td colspan="14">IMPACTO DE GASTOS (OPEX)</td></tr>
-            {% for cat in todas_categorias %}
+            {% for cat in categorias_opex %}
             <tr>
                 <td class="col-concepto">{{ cat }}</td>
                 {% for i in range(1, 13) %}
