@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="max-width: 1100px; margin: 0 auto 20px;">
+    <h2>🏗️ Inversiones y CAPEX</h2>
+    <p class="text-muted" style="margin-top: 5px;">Registra activos fijos, proyectos y pago de deudas. Estos montos se irán directo al Flujo de Caja sin afectar tu OPEX.</p>
+</div>
+
+<div style="max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 30px;">
+    
+    <!-- FORMULARIO DIRECTO DE REGISTRO -->
+    <div class="card" style="padding: 25px;">
+        <h3 style="margin-top: 0; margin-bottom: 20px; color: #334155;">Registrar Nuevo Pago o Inversión</h3>
+        
+        <form action="{{ url_for('dashboard_bp.inversiones') }}" method="POST" style="display: grid; grid-template-columns: 1fr 1.5fr 2fr 1fr auto; gap: 15px; align-items: end;">
+            
+            <div>
+                <label class="filter-label" style="display:block; margin-bottom:5px;">Fecha:</label>
+                <input type="date" name="fecha" id="fechaInput" class="form-input" style="background: #fff; border: 1px solid #cbd5e1; width: 100%;" required>
+            </div>
+
+            <!-- SELECT DINÁMICO DE CATEGORÍAS CAPEX -->
+            <div>
+                <label class="filter-label" style="display:block; margin-bottom:5px;">Categoría CAPEX:</label>
+                <select name="categoria_id" class="form-input" style="background: #fff; border: 1px solid #cbd5e1; width: 100%; font-weight: 600;" required>
+                    <option value="">-- Selecciona --</option>
+                    {% for cat in categorias %}
+                        <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="filter-label" style="display:block; margin-bottom:5px;">Concepto / Detalle:</label>
+                <input type="text" name="concepto" placeholder="Ej. Mensualidad 2/12 Sillas y Mesas" class="form-input" style="background: #fff; border: 1px solid #cbd5e1; width: 100%;" required>
+            </div>
+            
+            <div>
+                <label class="filter-label" style="display:block; margin-bottom:5px;">Monto Total ($):</label>
+                <input type="number" step="0.01" name="monto" class="form-input" style="background: #f8fafc; border: 2px solid #10b981; width: 100%; font-weight: bold;" required>
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-primary" style="background: #10b981; padding: 10px 20px; height: 100%;">Guardar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- HISTORIAL DE INVERSIONES -->
+    <h3 style="margin-top: 10px; color: #334155;">Historial de Inversiones</h3>
+    <div class="card" style="padding: 0; overflow-x: auto;">
+        <table class="bi-table" style="width: 100%; text-align: left;">
+            <thead style="background: #f8fafc;">
+                <tr>
+                    <th style="padding: 15px;">Fecha</th>
+                    <th style="padding: 15px;">Categoría</th>
+                    <th style="padding: 15px;">Concepto / Detalle</th>
+                    <th style="padding: 15px; text-align: right;">Monto Pagado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in inversiones %}
+                <tr>
+                    <td style="padding: 15px; color: #64748b; width: 120px;">{{ inv.fecha }}</td>
+                    <td style="padding: 15px; font-weight: 600; color: #475569;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{ inv.categoria }}</span></td>
+                    <td style="padding: 15px; font-weight: 600; color: #1e293b;">{{ inv.concepto }}</td>
+                    <td style="padding: 15px; text-align: right; color: #e11d48; font-weight: 700;">-${{ inv.monto | money }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="padding: 30px; text-align: center; color: #94a3b8;">Aún no has registrado ninguna inversión o pago de deuda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Pone la fecha de hoy automáticamente
+    document.addEventListener('DOMContentLoaded', (event) => {
+        document.getElementById('fechaInput').valueAsDate = new Date();
+    });
+</script>
+{% endblock %}
