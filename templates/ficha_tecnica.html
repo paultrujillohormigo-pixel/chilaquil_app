@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Técnica - {{ platillo.nombre if platillo else 'Platillo' }}</title>
+    <style>
+        /* Variables de color (tonos cálidos, ideales para comida) */
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --accent-color: #e63946; /* Un rojo/naranja vibrante que abre el apetito y resalta */
+            --border-color: #dee2e6;
+            --success-color: #2a9d8f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .ficha-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* Encabezado e Imagen */
+        .ficha-header {
+            position: relative;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+        }
+
+        .ficha-imagen {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            opacity: 0.85;
+            display: block;
+        }
+
+        .ficha-titulo {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 30px 20px 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            text-align: left;
+        }
+
+        .ficha-titulo h1 {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .badges {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        /* Contenido a dos columnas */
+        .ficha-body {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .ficha-body {
+                grid-template-columns: 1fr; /* Se apila en pantallas pequeñas */
+            }
+            .ficha-imagen {
+                height: 200px;
+            }
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Lista de Ingredientes (Clickables) */
+        .ingredientes-list {
+            list-style: none;
+        }
+
+        .ingrediente-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: var(--bg-color);
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid var(--border-color);
+        }
+
+        .ingrediente-item:hover {
+            background: #e9ecef;
+        }
+
+        .ingrediente-item.checked {
+            opacity: 0.5;
+            text-decoration: line-through;
+            border-left-color: var(--success-color);
+            background: #e6f4ea;
+        }
+
+        .ingrediente-qty {
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .ingrediente-item.checked .ingrediente-qty {
+            color: var(--success-color);
+        }
+
+        /* Pasos de Preparación */
+        .instrucciones-box {
+            font-size: 1.2rem;
+            white-space: pre-line; /* Respeta los saltos de línea de la BD */
+            color: #333;
+        }
+
+        /* Equipo necesario */
+        .equipo-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        /* Botón de impresión/regreso */
+        .flotante-nav {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .btn {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    {% if platillo %}
+    <div class="ficha-container">
+        
+        <!-- HEADER -->
+        <header class="ficha-header">
+            <!-- Si no hay imagen, mostramos un fondo gris u oscuro -->
+            <img class="ficha-imagen" 
+                 src="{{ platillo.imagen_url if platillo.imagen_url else 'https://via.placeholder.com/1000x300?text=Sin+Foto' }}" 
+                 alt="Foto de {{ platillo.nombre }}">
+            
+            <div class="ficha-titulo">
+                <h1>{{ platillo.nombre }}</h1>
+                <div class="badges">
+                    {% if platillo.tiempo_prep_min %}
+                    <span class="badge">⏱️ {{ platillo.tiempo_prep_min }} min</span>
+                    {% endif %}
+                    <span class="badge">💲 Costo/Venta: ${{ platillo.precio_actual }}</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- BODY -->
+        <div class="ficha-body">
+            
+            <!-- COLUMNA IZQUIERDA: INGREDIENTES -->
+            <div class="col-ingredientes">
+                <h2>Ingredientes</h2>
+                <ul class="ingredientes-list">
+                    {% for ing in ingredientes %}
+                    <li class="ingrediente-item" onclick="toggleCheck(this)">
+                        <span class="ingrediente-nombre">{{ ing.nombre }}</span>
+                        <span class="ingrediente-qty">{{ ing.cantidad_base }} {{ ing.unidad_base }}</span>
+                    </li>
+                    {% else %}
+                    <li class="ingrediente-item">No hay ingredientes registrados.</li>
+                    {% endfor %}
+                </ul>
+
+                {% if platillo.equipo_necesario %}
+                <div class="equipo-box">
+                    <strong>🍳 Equipo necesario:</strong><br>
+                    {{ platillo.equipo_necesario }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- COLUMNA DERECHA: PREPARACIÓN -->
+            <div class="col-instrucciones">
+                <h2>Preparación paso a paso</h2>
+                <div class="instrucciones-box">
+                    {% if platillo.instrucciones %}
+                        {{ platillo.instrucciones }}
+                    {% else %}
+                        <i>Las instrucciones paso a paso aún no han sido capturadas para este platillo.</i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="ficha-container" style="padding: 50px; text-align: center;">
+        <h2>Platillo no encontrado</h2>
+        <p>No se encontró la ficha técnica solicitada.</p>
+    </div>
+    {% endif %}
+
+    <!-- Botón para regresar al listado de recetas o panel -->
+    <div class="flotante-nav">
+        <a href="javascript:history.back()" class="btn">🔙 Volver</a>
+    </div>
+
+    <!-- Script para tachar ingredientes al tocarlos (UX para cocina) -->
+    <script>
+        function toggleCheck(elemento) {
+            elemento.classList.toggle('checked');
+        }
+    </script>
+</body>
+</html>
