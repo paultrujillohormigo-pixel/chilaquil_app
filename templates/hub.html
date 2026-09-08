@@ -32,6 +32,14 @@
           <p>Actualiza el precio de venta de tus platillos y salsas.</p>
         </div>
       </a>
+      <!-- NUEVO BOTÓN: FICHA TÉCNICA / RECETARIO -->
+      <a href="{{ url_for('cocina.index_recetario') }}" class="hub-card">
+        <div class="hub-icon">🍳</div>
+        <div class="hub-info">
+          <h3>Recetario Visual</h3>
+          <p>Consulta las fichas técnicas, fotos y paso a paso para cocina.</p>
+        </div>
+      </a>
     </div>
   </section>
 
@@ -45,6 +53,7 @@
           <h3>Dashboard Ejecutivo</h3>
           <p>Métricas en tiempo real, Costo Primo, rentabilidad y OPEX.</p>
         </div>
+      </a>
       <a href="{{ url_for('dashboard_bp.inversiones') }}" class="hub-card">
       <div class="hub-icon">🏗️</div>
       <div class="hub-info">
@@ -132,9 +141,9 @@
     </div>
   </section>
 
-   <!-- MÓDULO 4: CRM Y L -->
+   <!-- MÓDULO 4: RECURSOS HUMANOS -->
   <section class="hub-category">
-    <h2 class="hub-category-title"> Recursos Humanos</h2>
+    <h2 class="hub-category-title">🧑‍💼 Recursos Humanos</h2>
     <div class="hub-grid">
       <a href="{{ url_for('rh_bp.directorio') }}" class="hub-card">
         <div class="hub-icon">🪪</div>
