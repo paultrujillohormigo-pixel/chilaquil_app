@@ -21,7 +21,11 @@ app.secret_key = "super_secret_key"
 # Arriba, en tus importaciones
 from gastos import gastos_bp
 app.register_blueprint(rh_bp) # <--- Agrega esta línea
+# Hasta arriba en tus importaciones
+from cocina import cocina_bp
 
+# Donde tienes los app.register_blueprint(...)
+app.register_blueprint(cocina_bp)
 
 # Más abajo, donde registras tus blueprints
 app.register_blueprint(gastos_bp)
