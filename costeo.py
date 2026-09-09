@@ -52,7 +52,8 @@ def execute_many(sql, rows):
 @costeo_bp.get("/platillos")
 def platillos_index():
     try:
-        platillos = query_all("SELECT id, nombre, precio_actual, proteina_cantidad_base FROM platillos ORDER BY nombre")
+        # Se agregaron los campos extra aquí si algún día quieres mostrarlos en la tabla
+        platillos = query_all("SELECT id, nombre, precio_actual, proteina_cantidad_base, imagen_url FROM platillos ORDER BY nombre")
     except Exception:
         platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
     return render_template("admin/platillos_index.html", platillos=platillos)
@@ -207,7 +208,8 @@ def recetas_index():
 
 @costeo_bp.get("/recetas/<int:platillo_id>")
 def recetas_edit(platillo_id):
-    platillo = query_one("SELECT id, nombre, proteina_cantidad_base FROM platillos WHERE id=%s", (platillo_id,))
+    # Traemos todos los campos visuales para inyectarlos en el HTML
+    platillo = query_one("SELECT id, nombre, proteina_cantidad_base, imagen_url, tiempo_prep_min, equipo_necesario, instrucciones FROM platillos WHERE id=%s", (platillo_id,))
     if not platillo:
         flash("Platillo no encontrado.", "error")
         return redirect(url_for("costeo.recetas_index"))
@@ -240,6 +242,7 @@ def recetas_edit(platillo_id):
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
 def recetas_save(platillo_id):
+    # 1. Recuperar los datos de la proteína base
     prot_txt = (request.form.get("proteina_cantidad_base") or "").strip()
     prot_val = None
     if prot_txt:
@@ -250,6 +253,20 @@ def recetas_save(platillo_id):
         except Exception:
             prot_val = None
 
+    # 2. Recuperar los nuevos campos visuales para la Ficha Técnica
+    imagen_url = (request.form.get("imagen_url") or "").strip() or None
+    tiempo_prep_txt = (request.form.get("tiempo_prep_min") or "").strip()
+    equipo_necesario = (request.form.get("equipo_necesario") or "").strip() or None
+    instrucciones = (request.form.get("instrucciones") or "").strip() or None
+    
+    tiempo_prep_val = None
+    if tiempo_prep_txt:
+        try:
+            tiempo_prep_val = int(tiempo_prep_txt)
+        except ValueError:
+            pass
+
+    # 3. Recuperar los insumos (BOM)
     insumo_ids = request.form.getlist("insumo_id[]")
     cantidades = request.form.getlist("cantidad_base[]")
 
@@ -273,31 +290,45 @@ def recetas_save(platillo_id):
         rows.append((platillo_id, insumo_id_int, c, 0, None))
         keep_insumo_ids.append(insumo_id_int)
 
-    if not rows:
-        flash("No hay ingredientes válidos.", "warning")
+    if not rows and not imagen_url and not instrucciones:
+        flash("No hay ingredientes válidos ni datos que guardar.", "warning")
         return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
-    execute_many("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
+    if rows:
+        execute_many("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            placeholders = ",".join(["%s"] * len(keep_insumo_ids))
-            cursor.execute(
-                f"DELETE FROM recetas WHERE platillo_id=%s AND insumo_id NOT IN ({placeholders})",
-                (platillo_id, *keep_insumo_ids)
-            )
+            # Borramos los insumos que fueron removidos de la lista
+            if keep_insumo_ids:
+                placeholders = ",".join(["%s"] * len(keep_insumo_ids))
+                cursor.execute(
+                    f"DELETE FROM recetas WHERE platillo_id=%s AND insumo_id NOT IN ({placeholders})",
+                    (platillo_id, *keep_insumo_ids)
+                )
+            else:
+                cursor.execute("DELETE FROM recetas WHERE platillo_id=%s", (platillo_id,))
 
+            # Actualizamos el platillo con TODOS los campos visuales nuevos
             cursor.execute(
-                "UPDATE platillos SET proteina_cantidad_base=%s WHERE id=%s",
-                (prot_val, platillo_id)
+                """
+                UPDATE platillos 
+                SET proteina_cantidad_base=%s,
+                    imagen_url=%s,
+                    tiempo_prep_min=%s,
+                    equipo_necesario=%s,
+                    instrucciones=%s
+                WHERE id=%s
+                """,
+                (prot_val, imagen_url, tiempo_prep_val, equipo_necesario, instrucciones, platillo_id)
             )
 
         conn.commit()
     finally:
         conn.close()
 
-    flash("Receta guardada correctamente con base en el historial de compras.", "success")
+    flash("Receta y ficha técnica guardadas correctamente.", "success")
     return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
 
 
@@ -316,11 +347,22 @@ def receta_eliminar_completa(platillo_id):
             # 2. Borramos la vinculación de proteína estándar si es que tiene una
             cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
             
-            # 3. Limpiamos el gramaje base del platillo
-            cursor.execute("UPDATE platillos SET proteina_cantidad_base = NULL WHERE id = %s", (platillo_id,))
+            # 3. Limpiamos el gramaje base del platillo y la ficha visual
+            cursor.execute(
+                """
+                UPDATE platillos 
+                SET proteina_cantidad_base = NULL, 
+                    imagen_url = NULL, 
+                    tiempo_prep_min = NULL, 
+                    equipo_necesario = NULL, 
+                    instrucciones = NULL 
+                WHERE id = %s
+                """, 
+                (platillo_id,)
+            )
             
             conn.commit()
-            flash("Receta vaciada correctamente. Todos los insumos fueron removidos.", "success")
+            flash("Receta vaciada correctamente. Todos los insumos y la ficha técnica fueron removidos.", "success")
     except Exception as e:
         try: conn.rollback()
         except: pass
