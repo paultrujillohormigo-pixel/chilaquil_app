@@ -29,7 +29,7 @@
         {% endfor %}
     </div>
     
-    <div style="text-align: center; margin-top: 40px;">
+    <div style="text-align: center; margin-top: 50px;">
         <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn-volver">🔙 Volver al Hub</a>
     </div>
 </div>
@@ -42,95 +42,107 @@
         font-family: 'Segoe UI', system-ui, sans-serif;
     }
 
-    .recetario-header {
-        text-align: center;
-        margin-bottom: 40px;
-    }
-
-    .recetario-header h1 {
-        font-size: 2.5rem;
-        color: #e63946; /* Rojo apetitoso */
-        margin-bottom: 10px;
-    }
-
-    .recetario-header p {
-        color: #6c757d;
-        font-size: 1.1rem;
-    }
+    .recetario-header { text-align: center; margin-bottom: 40px; }
+    .recetario-header h1 { font-size: 2.5rem; color: #e63946; margin-bottom: 10px; }
+    .recetario-header p { color: #6c757d; font-size: 1.1rem; }
 
     .platillos-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         gap: 25px;
     }
 
+    /* Ajuste perfecto de la tarjeta */
     .platillo-card {
-        background: #fff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        background: #ffffff;
+        border-radius: 16px; 
+        overflow: hidden; /* Esto asegura que la foto respete las esquinas curvas */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         text-decoration: none;
         color: #212529;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid #dee2e6;
         display: flex;
         flex-direction: column;
+        border: 2px solid transparent;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
     .platillo-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        transform: translateY(-6px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.12);
         border-color: #e63946;
     }
 
+    /* Contenedor de la foto fijo */
     .platillo-img-wrapper {
         position: relative;
-        height: 180px;
-        overflow: hidden;
+        width: 100%;
+        height: 200px; /* Altura estandarizada para todas las tarjetas */
+        background-color: #f1f3f5;
     }
 
+    /* La foto se adapta sin deformarse ni salirse */
     .platillo-img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: cover; /* Rellena el contenedor recortando los excesos suavemente */
+        display: block;
+        border: none;
+        outline: none;
     }
 
     .tiempo-badge {
         position: absolute;
-        bottom: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.7);
+        bottom: 12px;
+        right: 12px;
+        background: rgba(0,0,0,0.75);
         color: white;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 0.85rem;
-        font-weight: bold;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
     }
 
     .platillo-info {
-        padding: 15px;
+        padding: 20px;
         text-align: center;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .platillo-info h2 {
-        font-size: 1.2rem;
+        font-size: 1.25rem;
         margin: 0;
-        font-weight: 600;
+        font-weight: 700;
+        color: #1f2937;
     }
 
     .btn-volver {
         display: inline-block;
-        background-color: #212529;
-        color: white;
-        padding: 12px 25px;
+        background-color: #f1f5f9;
+        color: #475569;
+        padding: 12px 28px;
         border-radius: 50px;
         text-decoration: none;
-        font-weight: bold;
-        transition: background 0.2s;
+        font-weight: 600;
+        border: 1px solid #cbd5e1;
+        transition: all 0.2s;
     }
 
     .btn-volver:hover {
-        background-color: #495057;
+        background-color: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .no-data {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 40px;
+        background: #f8fafc;
+        border-radius: 12px;
+        color: #64748b;
     }
 </style>
 {% endblock %}
