@@ -1,16 +1,15 @@
 from flask import Blueprint, render_template
-import db # Asegúrate de que este import coincida con cómo llamas a tu base de datos
+import db
 
 cocina_bp = Blueprint('cocina', __name__)
 
 # 1. Ruta para ver el índice (La lista de todos los platillos)
 @cocina_bp.route('/recetario')
 def index_recetario():
-    conexion = db.obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
+    conexion = db.get_connection()
+    cursor = conexion.cursor() # Tu db.py ya lo hace DictCursor automáticamente
     
     # Traemos todos los platillos ordenados alfabéticamente
-    # Si hiciste el ALTER TABLE, aquí ya traemos la imagen y el tiempo
     cursor.execute("""
         SELECT id, nombre, imagen_url, tiempo_prep_min 
         FROM platillos 
@@ -26,8 +25,8 @@ def index_recetario():
 # 2. Ruta para ver la ficha técnica de un platillo en específico
 @cocina_bp.route('/recetario/ficha/<int:platillo_id>')
 def ver_ficha(platillo_id):
-    conexion = db.obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
+    conexion = db.get_connection()
+    cursor = conexion.cursor()
     
     # Datos generales del platillo
     cursor.execute("SELECT * FROM platillos WHERE id = %s", (platillo_id,))
