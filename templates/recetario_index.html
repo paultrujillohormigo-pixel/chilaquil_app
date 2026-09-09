@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="recetario-container">
+    <header class="recetario-header">
+        <h1>🍳 Recetario Visual</h1>
+        <p>Selecciona un platillo para ver su ficha técnica, ingredientes y preparación.</p>
+    </header>
+
+    <div class="platillos-grid">
+        {% for platillo in platillos %}
+        <a href="{{ url_for('cocina.ver_ficha', platillo_id=platillo.id) }}" class="platillo-card">
+            <div class="platillo-img-wrapper">
+                <img src="{{ platillo.imagen_url if platillo.imagen_url else 'https://via.placeholder.com/400x300?text=Sin+Foto' }}" 
+                     alt="Foto de {{ platillo.nombre }}" 
+                     class="platillo-img">
+                {% if platillo.tiempo_prep_min %}
+                <span class="tiempo-badge">⏱️ {{ platillo.tiempo_prep_min }} min</span>
+                {% endif %}
+            </div>
+            <div class="platillo-info">
+                <h2>{{ platillo.nombre }}</h2>
+            </div>
+        </a>
+        {% else %}
+        <div class="no-data">
+            <p>No hay platillos registrados en la base de datos.</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn-volver">🔙 Volver al Hub</a>
+    </div>
+</div>
+
+<style>
+    .recetario-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .recetario-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .recetario-header h1 {
+        font-size: 2.5rem;
+        color: #e63946; /* Rojo apetitoso */
+        margin-bottom: 10px;
+    }
+
+    .recetario-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+
+    .platillos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 25px;
+    }
+
+    .platillo-card {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        text-decoration: none;
+        color: #212529;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #dee2e6;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .platillo-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        border-color: #e63946;
+    }
+
+    .platillo-img-wrapper {
+        position: relative;
+        height: 180px;
+        overflow: hidden;
+    }
+
+    .platillo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .tiempo-badge {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+
+    .platillo-info {
+        padding: 15px;
+        text-align: center;
+    }
+
+    .platillo-info h2 {
+        font-size: 1.2rem;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .btn-volver {
+        display: inline-block;
+        background-color: #212529;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+
+    .btn-volver:hover {
+        background-color: #495057;
+    }
+</style>
+{% endblock %}
