@@ -4,7 +4,7 @@
 <div class="bi-header">
   <div>
     <h1 class="page-title">Ficha Técnica: {{ platillo.nombre }}</h1>
-    <p class="page-subtitle">Análisis de costo dinámico basado en historial de compras (FIFO)</p>
+    <p class="page-subtitle">Análisis de costo dinámico y configuración visual para cocina</p>
   </div>
   <div>
     <a class="btn-secondary" style="display:inline-block; padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:white; text-decoration:none;" href="{{ url_for('costeo.recetas_index') }}">← Volver al Menú</a>
@@ -99,6 +99,36 @@
         </div>
       </div>
       <button type="button" class="btn-primary" onclick="agregarInsumo()" style="margin-top: 16px;">➕ Insertar a la Receta</button>
+    </div>
+  </div>
+
+  <!-- TARJETA: DATOS VISUALES PARA COCINA -->
+  <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--blue);">
+    <div class="card-header">
+      <h2>📷 Datos para Recetario Visual (Cocina)</h2>
+      <p class="page-subtitle" style="margin-bottom: 16px;">Llena estos datos para que los cocineros vean la ficha técnica paso a paso.</p>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <label class="filter-label">RUTA DE LA IMAGEN (GitHub)</label>
+        <input type="text" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" name="imagen_url" value="{{ platillo.imagen_url if platillo.imagen_url else '' }}" placeholder="/static/img/platillos/caramel_macciato.png">
+        <p style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Ej: /static/img/platillos/nombre_foto.png</p>
+      </div>
+      <div>
+        <label class="filter-label">TIEMPO DE PREP. (Minutos)</label>
+        <input type="number" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" name="tiempo_prep_min" value="{{ platillo.tiempo_prep_min if platillo.tiempo_prep_min else '' }}" placeholder="Ej. 12">
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label class="filter-label">EQUIPO NECESARIO</label>
+      <input type="text" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" name="equipo_necesario" value="{{ platillo.equipo_necesario if platillo.equipo_necesario else '' }}" placeholder="Ej. Licuadora, Sartén, Espátula">
+    </div>
+
+    <div>
+      <label class="filter-label">INSTRUCCIONES PASO A PASO</label>
+      <textarea class="form-input" style="background:white; color:#334155; border:1px solid var(--border); min-height: 100px; resize: vertical;" name="instrucciones" placeholder="1. Calentar el sartén...&#10;2. Freír los totopos...">{{ platillo.instrucciones if platillo.instrucciones else '' }}</textarea>
     </div>
   </div>
 
