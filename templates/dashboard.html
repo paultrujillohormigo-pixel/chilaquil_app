@@ -149,7 +149,7 @@
                         </select>
                         <select id="chart-format" class="form-input" style="width: auto; padding: 6px 10px; font-size: 12px; cursor: pointer; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0;" onchange="updateFinancialChart()">
                             <option value="diario">Diario (Líneas)</option>
-                            <option value="ma7">Tendencia (Suavizado 7 días)</option>
+                            <option value="diario_barras">Diario (Barras)</option>
                             <option value="mensual">Agrupado Mensual (Barras)</option>
                         </select>
                     </div>
@@ -264,18 +264,7 @@ const allDates = [...new Set([...histIngresos.map(d=>d.fecha), ...histGastos.map
 const alignedIngresos = allDates.map(date => { const f = histIngresos.find(d => d.fecha === date); return f ? f.total : 0; });
 const alignedGastos = allDates.map(date => { const f = histGastos.find(d => d.fecha === date); return f ? f.total : 0; });
 
-// --- NUEVAS FUNCIONES AUXILIARES PARA TRANSFORMAR DATOS ---
-function getMovingAverage(data, window_size) {
-    let result = [];
-    for (let i = 0; i < data.length; i++) {
-        let start = Math.max(0, i - window_size + 1);
-        let subset = data.slice(start, i + 1);
-        let sum = subset.reduce((a, b) => a + b, 0);
-        result.push(sum / subset.length);
-    }
-    return result;
-}
-
+// --- FUNCIONES AUXILIARES PARA TRANSFORMAR DATOS ---
 function getMonthlyData(dates, ingresos, gastos) {
     let monthly = {};
     dates.forEach((date, i) => {
@@ -301,9 +290,8 @@ function updateFinancialChart() {
     let chartGastos = alignedGastos;
     let chartType = 'line';
 
-    if (formato === 'ma7') {
-        chartIngresos = getMovingAverage(alignedIngresos, 7);
-        chartGastos = getMovingAverage(alignedGastos, 7);
+    if (formato === 'diario_barras') {
+        chartType = 'bar';
     } else if (formato === 'mensual') {
         const monthlyData = getMonthlyData(allDates, alignedIngresos, alignedGastos);
         chartLabels = monthlyData.labels;
@@ -432,7 +420,6 @@ h2 { font-size: 16px; font-weight: 600; color: #0f172a; }
 #bi-dashboard.mode-totales .view-promedio { display: none !important; }
 #bi-dashboard.mode-promedios .view-total { display: none !important; }
 
-/* NUEVO: CLASE PARA ALERTA ROJA (COSTO PRIMO > 65%) */
 .alert-danger { background-color: #fef2f2 !important; border-color: #fecaca !important; }
 .alert-danger .kpi-title, .alert-danger .kpi-value, .alert-danger .kpi-footer { color: #b91c1c !important; }
 
@@ -467,7 +454,6 @@ h2 { font-size: 16px; font-weight: 600; color: #0f172a; }
 .btn-secondary { display: block; width: 100%; text-align: center; padding: 10px; color: #94a3b8; font-size: 12px; text-decoration: underline; }
 .mt-4 { margin-top: 16px; } .mt-6 { margin-top: 24px; } .mb-2 { margin-bottom: 8px; }
 
-/* NUEVOS ESTILOS PARA LOS DROPDOWNS DENTRO DE LAS TARJETAS BANCAS */
 .card-header .form-input { background: #ffffff !important; color: #0f172a !important; border: 1px solid #e2e8f0 !important; }
 
 .mobile-header { display: none; }
