@@ -108,7 +108,7 @@
                 <div class="kpi-footer">Renta, Nómina, Luz, etc.</div>
             </div>
 
-            <!-- AQUÍ ESTÁ LA MAGIA DEL COSTO PRIMO -->
+            <!-- COSTO PRIMO -->
             <div class="kpi-card {% if prime_cost_pct > 65 %}alert-danger{% endif %}">
                 <div class="kpi-title">🔥 4. Costo Primo</div>
                 <div class="kpi-value view-total">{{ prime_cost_pct | round(1) }}%</div>
@@ -134,9 +134,25 @@
         <!-- SECCIÓN 2: SALUD FINANCIERA (GRÁFICA PRINCIPAL) -->
         <section class="chart-section wide">
             <div class="card">
-                <div class="card-header">
-                    <h2>Evolución Financiera (Ingresos vs Gastos)</h2>
-                    <span class="badge neutral">Flujo de Caja</span>
+                <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2>Evolución Financiera</h2>
+                        <span class="badge neutral">Flujo de Caja</span>
+                    </div>
+                    
+                    <!-- NUEVOS CONTROLES DE LA GRÁFICA -->
+                    <div style="display: flex; gap: 10px; margin-left: auto;">
+                        <select id="chart-view" class="form-input" style="width: auto; padding: 6px 10px; font-size: 12px; cursor: pointer; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0;" onchange="updateFinancialChart()">
+                            <option value="ambos">Ver Ambos</option>
+                            <option value="ingresos">Solo Ingresos</option>
+                            <option value="gastos">Solo Gastos</option>
+                        </select>
+                        <select id="chart-format" class="form-input" style="width: auto; padding: 6px 10px; font-size: 12px; cursor: pointer; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0;" onchange="updateFinancialChart()">
+                            <option value="diario">Diario (Líneas)</option>
+                            <option value="ma7">Tendencia (Suavizado 7 días)</option>
+                            <option value="mensual">Agrupado Mensual (Barras)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="canvas-container" style="height: 350px;">
                     <canvas id="financialChart"></canvas>
@@ -165,8 +181,6 @@
                 </div>
             </div>
         </section>
-
-
 
         <!-- SECCIÓN 4: TABLAS DE CONTROL EJECUTIVO -->
         <section class="table-section">
@@ -250,6 +264,73 @@ const allDates = [...new Set([...histIngresos.map(d=>d.fecha), ...histGastos.map
 const alignedIngresos = allDates.map(date => { const f = histIngresos.find(d => d.fecha === date); return f ? f.total : 0; });
 const alignedGastos = allDates.map(date => { const f = histGastos.find(d => d.fecha === date); return f ? f.total : 0; });
 
+// --- NUEVAS FUNCIONES AUXILIARES PARA TRANSFORMAR DATOS ---
+function getMovingAverage(data, window_size) {
+    let result = [];
+    for (let i = 0; i < data.length; i++) {
+        let start = Math.max(0, i - window_size + 1);
+        let subset = data.slice(start, i + 1);
+        let sum = subset.reduce((a, b) => a + b, 0);
+        result.push(sum / subset.length);
+    }
+    return result;
+}
+
+function getMonthlyData(dates, ingresos, gastos) {
+    let monthly = {};
+    dates.forEach((date, i) => {
+        let month = date.substring(0, 7);
+        if (!monthly[month]) monthly[month] = { ing: 0, gas: 0 };
+        monthly[month].ing += ingresos[i];
+        monthly[month].gas += gastos[i];
+    });
+    return {
+        labels: Object.keys(monthly),
+        ingresos: Object.values(monthly).map(m => m.ing),
+        gastos: Object.values(monthly).map(m => m.gas)
+    };
+}
+
+// --- FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN ---
+function updateFinancialChart() {
+    const vista = document.getElementById('chart-view').value;
+    const formato = document.getElementById('chart-format').value;
+
+    let chartLabels = allDates;
+    let chartIngresos = alignedIngresos;
+    let chartGastos = alignedGastos;
+    let chartType = 'line';
+
+    if (formato === 'ma7') {
+        chartIngresos = getMovingAverage(alignedIngresos, 7);
+        chartGastos = getMovingAverage(alignedGastos, 7);
+    } else if (formato === 'mensual') {
+        const monthlyData = getMonthlyData(allDates, alignedIngresos, alignedGastos);
+        chartLabels = monthlyData.labels;
+        chartIngresos = monthlyData.ingresos;
+        chartGastos = monthlyData.gastos;
+        chartType = 'bar';
+    }
+
+    financialChartObj.config.type = chartType;
+    financialChartObj.data.labels = chartLabels;
+    financialChartObj.data.datasets[0].data = chartIngresos;
+    financialChartObj.data.datasets[1].data = chartGastos;
+
+    financialChartObj.data.datasets[0].hidden = (vista === 'gastos');
+    financialChartObj.data.datasets[1].hidden = (vista === 'ingresos');
+
+    if(chartType === 'bar') {
+        financialChartObj.data.datasets[0].backgroundColor = '#10b981';
+        financialChartObj.data.datasets[1].backgroundColor = '#f43f5e';
+    } else {
+        financialChartObj.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.1)';
+        financialChartObj.data.datasets[1].backgroundColor = 'rgba(244, 63, 94, 0.05)';
+    }
+
+    financialChartObj.update();
+}
+
 function initCharts() {
     financialChartObj = new Chart(document.getElementById('financialChart').getContext('2d'), {
         type: 'line',
@@ -293,6 +374,9 @@ function initCharts() {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => fmt.format(c.raw) } } }, scales: { y: { ticks: { callback: (v) => fmt.format(v) } }, x: { grid: { display: false } } } }
     });
+
+    // Actualiza la gráfica al inicio para aplicar la vista predeterminada de los dropdowns
+    updateFinancialChart();
 }
 
 function toggleViewMode(mode) {
@@ -382,6 +466,9 @@ h2 { font-size: 16px; font-weight: 600; color: #0f172a; }
 .btn-primary { width: 100%; padding: 12px; background: var(--emerald); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
 .btn-secondary { display: block; width: 100%; text-align: center; padding: 10px; color: #94a3b8; font-size: 12px; text-decoration: underline; }
 .mt-4 { margin-top: 16px; } .mt-6 { margin-top: 24px; } .mb-2 { margin-bottom: 8px; }
+
+/* NUEVOS ESTILOS PARA LOS DROPDOWNS DENTRO DE LAS TARJETAS BANCAS */
+.card-header .form-input { background: #ffffff !important; color: #0f172a !important; border: 1px solid #e2e8f0 !important; }
 
 .mobile-header { display: none; }
 @media (max-width: 1024px) {
