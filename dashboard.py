@@ -242,22 +242,27 @@ def dashboard():
                 ORDER BY total_gastado DESC LIMIT 10
             """, params_compras + params_general)
             top_gastos = cursor.fetchall()
-
-            # --- MATRIZ BCG CORREGIDA (Usa p.costo_total_real) ---
+            
+                # --- MATRIZ BCG 100% AUTOMÁTICA (Lee de las compras en tiempo real) ---
             filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
             cursor.execute(f"""
-                SELECT p.nombre, SUM(pi.cantidad) AS cantidad, SUM(pi.subtotal) AS ingreso_total,
-                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo_total_real, 0)) AS margen_unitario
+                SELECT 
+                    p.nombre, 
+                    SUM(pi.cantidad) AS cantidad, 
+                    SUM(pi.subtotal) AS ingreso_total,
+                    -- Calculamos la ganancia restando el costo total real y dinámico de la vista
+                    ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(vc.costo_total, 0)) AS margen_unitario
                 FROM pedido_items pi 
                 JOIN pedidos pe ON pe.id = pi.pedido_id 
                 JOIN productos p ON p.id = pi.producto_id
+                -- Aquí conectamos el platillo con tu cálculo dinámico
+                LEFT JOIN v_costeo_platillos_compras vc ON vc.platillo_id = p.platillo_id
                 {filtro_bcg} 
-                GROUP BY p.id, p.nombre, p.costo_total_real 
+                GROUP BY p.id, p.nombre, vc.costo_total 
                 ORDER BY ingreso_total DESC
             """, params_pedidos)
             bcg_raw = cursor.fetchall()
             menu_engineering_data = [{"nombre": i["nombre"], "x": float(i["cantidad"]), "x_promedio": float(i["cantidad"] or 0)/dias_totales, "y": float(i["margen_unitario"]), "y_promedio": float(i["margen_unitario"])} for i in bcg_raw]
-
             cursor.execute(f"SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio, SUM(total_del_dia) AS total FROM (SELECT DAYOFWEEK(fecha) AS dia_num, CASE DAYOFWEEK(fecha) WHEN 1 THEN 'Dom' WHEN 2 THEN 'Lun' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Mie' WHEN 5 THEN 'Jue' WHEN 6 THEN 'Vie' WHEN 7 THEN 'Sab' END AS nombre, DATE(fecha) AS f, SUM(total) AS total_del_dia FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha), dia_num, nombre) t GROUP BY dia_num, nombre ORDER BY dia_num", params_pedidos)
             ventas_semana = [{"nombre": v["nombre"], "promedio": float(v["promedio"] or 0), "total": float(v["total"] or 0)} for v in cursor.fetchall()]
 
