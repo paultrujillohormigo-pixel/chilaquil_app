@@ -345,9 +345,8 @@ def recetas_save(platillo_id):
             )
             
             # ---> GUARDADO FINAL EN TABLA PRODUCTOS PARA LA MATRIZ BCG
-            # OJO: Aquí se define el costo operativo. En el ejemplo anterior la diferencia era $13.20. 
-            # Puedes cambiar este 13.20 por una consulta a tu BD si tienes los operativos dinámicos.
-            costo_operativo = Decimal("13.20") 
+            # Tu regla de negocio: Operativos = 75% del costo de materia prima
+            costo_operativo = costo_materia_prima * Decimal("0.75") 
             costo_total_real = costo_materia_prima + costo_operativo
             
             cursor.execute("""
