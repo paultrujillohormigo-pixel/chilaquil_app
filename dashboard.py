@@ -243,12 +243,17 @@ def dashboard():
             """, params_compras + params_general)
             top_gastos = cursor.fetchall()
 
+            # --- MATRIZ BCG CORREGIDA (Usa p.costo_total_real) ---
             filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
             cursor.execute(f"""
                 SELECT p.nombre, SUM(pi.cantidad) AS cantidad, SUM(pi.subtotal) AS ingreso_total,
-                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo, 0)) AS margen_unitario
-                FROM pedido_items pi JOIN pedidos pe ON pe.id = pi.pedido_id JOIN productos p ON p.id = pi.producto_id
-                {filtro_bcg} GROUP BY p.id, p.nombre, p.costo ORDER BY ingreso_total DESC
+                       ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(p.costo_total_real, 0)) AS margen_unitario
+                FROM pedido_items pi 
+                JOIN pedidos pe ON pe.id = pi.pedido_id 
+                JOIN productos p ON p.id = pi.producto_id
+                {filtro_bcg} 
+                GROUP BY p.id, p.nombre, p.costo_total_real 
+                ORDER BY ingreso_total DESC
             """, params_pedidos)
             bcg_raw = cursor.fetchall()
             menu_engineering_data = [{"nombre": i["nombre"], "x": float(i["cantidad"]), "x_promedio": float(i["cantidad"] or 0)/dias_totales, "y": float(i["margen_unitario"]), "y_promedio": float(i["margen_unitario"])} for i in bcg_raw]
@@ -284,10 +289,6 @@ def dashboard():
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado
     )
-
-# =========================================================
-# ================== ESTADO DE RESULTADOS =================
-# =========================================================
 
 # =========================================================
 # ================== ESTADO DE RESULTADOS =================
@@ -348,7 +349,7 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-# 5. Obtener todas las categorías y SEPARAR OPEX de CAPEX
+            # 5. Obtener todas las categorías y SEPARAR OPEX de CAPEX
             cursor.execute("SELECT id, nombre, tipo FROM categorias_gastos ORDER BY nombre")
             todas_categorias = cursor.fetchall()
             
