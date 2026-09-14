@@ -272,34 +272,54 @@ def recetas_save(platillo_id):
 
     rows = []
     keep_insumo_ids = []
-
-    for insumo_id, cant in zip(insumo_ids, cantidades):
-        if not insumo_id:
-            continue
-
-        try:
-            insumo_id_int = int(insumo_id)
-            c = Decimal(cant)
-        except Exception:
-            continue
-
-        if c <= 0:
-            continue
-
-        # Inyectamos 0 y None permanentemente para anular la configuración manual vieja en BD
-        rows.append((platillo_id, insumo_id_int, c, 0, None))
-        keep_insumo_ids.append(insumo_id_int)
-
-    if not rows and not imagen_url and not instrucciones:
-        flash("No hay ingredientes válidos ni datos que guardar.", "warning")
-        return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
-
-    if rows:
-        execute_many("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
+    
+    # NUEVO: Variables para calcular el costo real de la receta en tiempo de guardado
+    costo_materia_prima = Decimal("0.0")
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            for insumo_id, cant in zip(insumo_ids, cantidades):
+                if not insumo_id:
+                    continue
+
+                try:
+                    insumo_id_int = int(insumo_id)
+                    c = Decimal(cant)
+                except Exception:
+                    continue
+
+                if c <= 0:
+                    continue
+                
+                # ---> CÁLCULO DE COSTO EN TIEMPO REAL CON LA ÚLTIMA COMPRA
+                cursor.execute("""
+                    SELECT i.merma_pct, cv.costo_unitario 
+                    FROM insumos i 
+                    LEFT JOIN v_insumo_costo_vigente cv ON i.id = cv.insumo_id 
+                    WHERE i.id = %s
+                """, (insumo_id_int,))
+                insumo_data = cursor.fetchone()
+                
+                if insumo_data and insumo_data["costo_unitario"]:
+                    costo_unitario = Decimal(str(insumo_data["costo_unitario"]))
+                    merma = Decimal(str(insumo_data["merma_pct"] or 0))
+                    
+                    # Fórmula: Cantidad * (1 + Merma) * Costo Unitario
+                    cantidad_con_merma = c * (1 + (merma / 100))
+                    costo_materia_prima += (cantidad_con_merma * costo_unitario)
+
+                # Inyectamos 0 y None permanentemente para anular la configuración manual vieja en BD
+                rows.append((platillo_id, insumo_id_int, c, 0, None))
+                keep_insumo_ids.append(insumo_id_int)
+
+            if not rows and not imagen_url and not instrucciones:
+                flash("No hay ingredientes válidos ni datos que guardar.", "warning")
+                return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
+
+            if rows:
+                cursor.executemany("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
+
             # Borramos los insumos que fueron removidos de la lista
             if keep_insumo_ids:
                 placeholders = ",".join(["%s"] * len(keep_insumo_ids))
@@ -323,8 +343,25 @@ def recetas_save(platillo_id):
                 """,
                 (prot_val, imagen_url, tiempo_prep_val, equipo_necesario, instrucciones, platillo_id)
             )
+            
+            # ---> GUARDADO FINAL EN TABLA PRODUCTOS PARA LA MATRIZ BCG
+            # OJO: Aquí se define el costo operativo. En el ejemplo anterior la diferencia era $13.20. 
+            # Puedes cambiar este 13.20 por una consulta a tu BD si tienes los operativos dinámicos.
+            costo_operativo = Decimal("13.20") 
+            costo_total_real = costo_materia_prima + costo_operativo
+            
+            cursor.execute("""
+                UPDATE productos 
+                SET costo_total_real = %s 
+                WHERE platillo_id = %s
+            """, (costo_total_real, platillo_id))
 
-        conn.commit()
+            conn.commit()
+            
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error al guardar la receta: {e}", "error")
+        return redirect(url_for("costeo.recetas_edit", platillo_id=platillo_id))
     finally:
         conn.close()
 
