@@ -1,8 +1,10 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect, url_for
 from decimal import Decimal
 from datetime import datetime
 import json
 from db import get_connection
+import calendar
+from zoneinfo import ZoneInfo
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
@@ -26,19 +28,15 @@ def calc_var(current: float, previous: float) -> float:
     if previous == 0: return 0.0 if current == 0 else 100.0
     return ((current - previous) / previous) * 100.0
 
-
 # =========================================================
 # ================== CAPEX ==================
 # =========================================================
-
-from flask import render_template, request, redirect, url_for
 
 @dashboard_bp.route("/inversiones", methods=["GET", "POST"])
 def inversiones():
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # === GUARDAR UNA NUEVA INVERSIÓN ===
             if request.method == "POST":
                 fecha = request.form.get("fecha")
                 categoria_id = request.form.get("categoria_id")
@@ -52,12 +50,9 @@ def inversiones():
                 conn.commit()
                 return redirect(url_for("dashboard_bp.inversiones"))
             
-            # === MOSTRAR LA PANTALLA (GET) ===
-            # 1. Obtener solo las categorías de tipo CAPEX para el select
             cursor.execute("SELECT id, nombre FROM categorias_gastos WHERE tipo = 'CAPEX' ORDER BY nombre")
             categorias_capex = cursor.fetchall()
             
-            # 2. Obtener el historial de pagos para la tabla
             cursor.execute("""
                 SELECT g.fecha, c.nombre as categoria, g.concepto, g.monto 
                 FROM gastos g
@@ -73,7 +68,6 @@ def inversiones():
         
     return render_template("inversiones.html", categorias=categorias_capex, inversiones=historial_capex)
 
-
 # =========================================================
 # ================== RUTAS DEL DASHBOARD ==================
 # =========================================================
@@ -86,10 +80,15 @@ def dashboard():
     dias_seleccionados = request.args.getlist("dia_semana")
     origen_seleccionado = request.args.get("origen", "")
 
+    # ---> CONFIGURACIÓN DE IDS Y MONTOS (AJUSTA ESTO A TU REALIDAD) <---
+    ID_RENTA = 2
+    ID_NOMINA = 3 # Cambia por el ID de tu categoría "Nómina" en la BD
+    renta_mensual = Decimal("10440.00")
+    nomina_mensual = Decimal("8960.00") # Suma real del sueldo mensual de todo tu equipo
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # 1. Filtros
             cursor.execute("SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes FROM pedidos ORDER BY mes DESC")
             meses_disponibles = [m["mes"] for m in cursor.fetchall()]
 
@@ -127,14 +126,14 @@ def dashboard():
             conds_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
             params_compras.append('%personal%')
 
-            # --- FILTROS DE GASTOS CORREGIDOS (Sin Renta y Sin Personales) ---
+            # Excluimos la renta y la nómina física de los gastos dinámicos
             conds_gastos = list(conds_general)
             conds_gastos.append("LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos.append("categoria_id != 2")
+            conds_gastos.append(f"categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
             
             conds_gastos_g = list(conds_general)
             conds_gastos_g.append("LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos_g.append("g.categoria_id != 2")
+            conds_gastos_g.append(f"g.categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
 
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
@@ -145,9 +144,7 @@ def dashboard():
             filtro_gastos = build_where(conds_gastos, "fecha") 
             filtro_gastos_g = build_where(conds_gastos_g, "g.fecha") 
 
-            # ---> VISIÓN INVERSIONISTA (P&L Base)
             conds_inv = list(conds_pedidos)
-            # 🚨 CAMBIO AQUÍ: Ignoramos solo cancelados para que sume las mesas "abiertas" a tu liquidez
             conds_inv.append("estado != 'cancelado'")
             
             cursor.execute(f"""
@@ -159,7 +156,6 @@ def dashboard():
             inv_venta_neta = float((inv_data and inv_data["venta_neta"]) or 0)
             inv_iva = float((inv_data and inv_data["iva"]) or 0)
 
-            # Métricas de Totales
             cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             
@@ -169,37 +165,24 @@ def dashboard():
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_food_cost = Decimal(str(cursor.fetchone()["total"] or 0))
 
-            # INTEGRACIÓN COMPLETA DE OPEX (FÍSICO)
             cursor.execute(f"SELECT SUM(monto) AS total_opex FROM gastos {filtro_gastos}", params_general)
             total_opex = Decimal(str(cursor.fetchone()["total_opex"] or 0))
 
-            # 🚨 INYECCIÓN DE RENTA VIRTUAL DINÁMICA
-            from zoneinfo import ZoneInfo
-            import calendar
+            # --- INYECCIÓN DE RENTA Y NÓMINA VIRTUAL EN DASHBOARD ---
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             dias_del_mes = calendar.monthrange(hoy.year, hoy.month)[1]
-            renta_mensual = Decimal("10440.00")
             
-            # Se cobra la renta exacta multiplicada por los días que tiene tu filtro actual
             renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
+            nomina_virtual = (nomina_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
+            
             total_opex += renta_virtual
+            total_opex += nomina_virtual
+            total_nomina = nomina_virtual
 
-            conds_nomina = list(conds_general)
-            conds_nomina.append("c.nombre = 'Nómina'")
-            cursor.execute(f"""
-                SELECT SUM(g.monto) as total_nomina
-                FROM gastos g
-                JOIN categorias_gastos c ON g.categoria_id = c.id
-                {build_where(conds_nomina, "g.fecha")}
-            """, params_general)
-            total_nomina = Decimal(str(cursor.fetchone()["total_nomina"] or 0))
-
-            # Cálculos Maestros
             prime_cost_pct = ((total_food_cost + total_nomina) / Decimal(str(inv_venta_neta))) * 100 if inv_venta_neta > 0 else Decimal(0)
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
             gross_margin_pct = (utilidad / Decimal(str(inv_venta_neta)) * 100) if inv_venta_neta > 0 else 0
 
-            # GRÁFICAS ACTUALIZADAS CON OPEX
             query_hist_gastos = f"""
                 SELECT f, SUM(total) as total FROM (
                     SELECT DATE(fecha) as f, costo as total FROM insumos_compras {filtro_compras}
@@ -224,14 +207,20 @@ def dashboard():
             """, params_general)
             gastos_por_concepto = [{"concepto": str(r["concepto"]), "total": float(r["total"] or 0), "promedio": float(r["total"] or 0) / dias_totales} for r in cursor.fetchall()]
 
-            # 🚨 INYECTAMOS LA RENTA VIRTUAL A LAS GRÁFICAS DE PASTEL/BARRAS
             if renta_virtual > 0:
                 gastos_por_concepto.append({
                     "concepto": "Renta (Provisión Virtual)",
                     "total": float(renta_virtual),
                     "promedio": float(renta_virtual / Decimal(str(dias_totales)))
                 })
-                gastos_por_concepto = sorted(gastos_por_concepto, key=lambda x: x["total"], reverse=True)
+            if nomina_virtual > 0:
+                gastos_por_concepto.append({
+                    "concepto": "Nómina (Provisión Dinámica)",
+                    "total": float(nomina_virtual),
+                    "promedio": float(nomina_virtual / Decimal(str(dias_totales)))
+                })
+                
+            gastos_por_concepto = sorted(gastos_por_concepto, key=lambda x: x["total"], reverse=True)
 
             cursor.execute(f"""
                 SELECT concepto, 'Insumo' AS tipo_costo, SUM(costo) AS total_gastado 
@@ -243,19 +232,16 @@ def dashboard():
             """, params_compras + params_general)
             top_gastos = cursor.fetchall()
             
-                # --- MATRIZ BCG 100% AUTOMÁTICA (Lee de las compras en tiempo real) ---
             filtro_bcg = build_where(conds_pedidos, "pe.fecha", "pe.origen")
             cursor.execute(f"""
                 SELECT 
                     p.nombre, 
                     SUM(pi.cantidad) AS cantidad, 
                     SUM(pi.subtotal) AS ingreso_total,
-                    -- Calculamos la ganancia restando el costo total real y dinámico de la vista
                     ((SUM(pi.subtotal) / SUM(pi.cantidad)) - COALESCE(vc.costo_total, 0)) AS margen_unitario
                 FROM pedido_items pi 
                 JOIN pedidos pe ON pe.id = pi.pedido_id 
                 JOIN productos p ON p.id = pi.producto_id
-                -- Aquí conectamos el platillo con tu cálculo dinámico
                 LEFT JOIN v_costeo_platillos_compras vc ON vc.platillo_id = p.platillo_id
                 {filtro_bcg} 
                 GROUP BY p.id, p.nombre, vc.costo_total 
@@ -263,6 +249,7 @@ def dashboard():
             """, params_pedidos)
             bcg_raw = cursor.fetchall()
             menu_engineering_data = [{"nombre": i["nombre"], "x": float(i["cantidad"]), "x_promedio": float(i["cantidad"] or 0)/dias_totales, "y": float(i["margen_unitario"]), "y_promedio": float(i["margen_unitario"])} for i in bcg_raw]
+            
             cursor.execute(f"SELECT dia_num, nombre, ROUND(AVG(total_del_dia), 2) AS promedio, SUM(total_del_dia) AS total FROM (SELECT DAYOFWEEK(fecha) AS dia_num, CASE DAYOFWEEK(fecha) WHEN 1 THEN 'Dom' WHEN 2 THEN 'Lun' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Mie' WHEN 5 THEN 'Jue' WHEN 6 THEN 'Vie' WHEN 7 THEN 'Sab' END AS nombre, DATE(fecha) AS f, SUM(total) AS total_del_dia FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha), dia_num, nombre) t GROUP BY dia_num, nombre ORDER BY dia_num", params_pedidos)
             ventas_semana = [{"nombre": v["nombre"], "promedio": float(v["promedio"] or 0), "total": float(v["total"] or 0)} for v in cursor.fetchall()]
 
@@ -301,29 +288,28 @@ def dashboard():
 
 @dashboard_bp.route("/estado-resultados")
 def estado_resultados():
-    import calendar
-    from datetime import datetime
-    from decimal import Decimal
-    
     conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
     
+    # ---> CONFIGURACIÓN DE IDS Y MONTOS (AJUSTA ESTO A TU REALIDAD) <---
+    ID_RENTA = 2
+    ID_NOMINA = 3 # Cambia por el ID de tu categoría "Nómina" en la BD
+    renta_mensual = Decimal("10440.00")
+    nomina_mensual = Decimal("8960.00") # Suma real del sueldo mensual de todo tu equipo
+    
     try:
         with conn.cursor() as cursor:
-            # 1. Obtener años disponibles
             cursor.execute("SELECT DISTINCT YEAR(fecha) AS anio FROM pedidos ORDER BY anio DESC")
             anios_disponibles = [str(r["anio"]) for r in cursor.fetchall()]
             if anio_seleccionado not in anios_disponibles and anios_disponibles:
                 anio_seleccionado = anios_disponibles[0]
 
-            # 2. Inicializar estructura
             nombres_meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
             data_meses = {str(i).zfill(2): {
                 "venta_bruta": Decimal("0"), "descuentos": Decimal("0"), "venta_neta": Decimal("0"), "iva": Decimal("0"),
-                "food_cost": Decimal("0"), "opex_total": Decimal("0"), "categorias_opex": {}
+                "food_cost": Decimal("0"), "opex_total": Decimal("0"), "capex_total": Decimal("0"), "categorias_opex": {}, "categorias_capex": {}
             } for i in range(1, 13)}
 
-            # 3. Ventas por mes (AHORA INCLUYE MESAS ABIERTAS, SOLO IGNORA CANCELADOS)
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes,
                        SUM(total + COALESCE(descuento, 0)) AS venta_bruta,
@@ -342,7 +328,6 @@ def estado_resultados():
                     data_meses[m]["venta_neta"] = Decimal(str(r["venta_neta"] or 0))
                     data_meses[m]["iva"] = Decimal(str(r["iva"] or 0))
 
-            # 4. Food Cost (Excluyendo personales)
             cursor.execute("""
                 SELECT DATE_FORMAT(fecha, '%%m') AS mes, SUM(costo) AS food_cost
                 FROM insumos_compras
@@ -354,28 +339,23 @@ def estado_resultados():
                 if m in data_meses:
                     data_meses[m]["food_cost"] = Decimal(str(r["food_cost"] or 0))
 
-            # 5. Obtener todas las categorías y SEPARAR OPEX de CAPEX
             cursor.execute("SELECT id, nombre, tipo FROM categorias_gastos ORDER BY nombre")
             todas_categorias = cursor.fetchall()
             
-            # Clasificamos usando la columna tipo que agregaste
             categorias_opex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'OPEX']
             categorias_capex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'CAPEX']
             
-            # Nombre exacto para inyectar la renta virtual
-            nombre_cat_renta = next((c["nombre"] for c in todas_categorias if c["id"] == 2), "Renta")
+            nombre_cat_renta = next((c["nombre"] for c in todas_categorias if c["id"] == ID_RENTA), "Renta")
+            nombre_cat_nomina = next((c["nombre"] for c in todas_categorias if c["id"] == ID_NOMINA), "Nómina")
 
-            # Estructuras para guardar los desgloses
             detalles_opex = {str(i).zfill(2): {cat: [] for cat in categorias_opex} for i in range(1, 13)}
             detalles_capex = {str(i).zfill(2): {cat: [] for cat in categorias_capex} for i in range(1, 13)}
 
             for m in data_meses.values():
                 m["categorias_opex"] = {cat: Decimal("0") for cat in categorias_opex}
                 m["categorias_capex"] = {cat: Decimal("0") for cat in categorias_capex}
-                m["opex_total"] = Decimal("0")
-                m["capex_total"] = Decimal("0")
 
-            # 6. Consultar todos los gastos físicos y asignarlos a su "bolsa"
+            # Consultamos los gastos excluyendo los estáticos de Renta y Nómina
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
                        c.nombre AS categoria,
@@ -386,9 +366,9 @@ def estado_resultados():
                 JOIN categorias_gastos c ON g.categoria_id = c.id
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
-                  AND g.categoria_id != 2
+                  AND g.categoria_id NOT IN (%s, %s)
                 GROUP BY mes, categoria, tipo_categoria, concepto
-            """, (anio_seleccionado,))
+            """, (anio_seleccionado, ID_RENTA, ID_NOMINA))
             
             for r in cursor.fetchall():
                 m = r["mes"]
@@ -407,11 +387,9 @@ def estado_resultados():
                         data_meses[m]["capex_total"] += monto
                         detalles_capex[m][cat].append({"concepto": concepto, "monto": monto})
 
-            # 7. INYECCIÓN DE RENTA VIRTUAL DEVENGADA (Solo va al OPEX)
-            from zoneinfo import ZoneInfo
+            # --- INYECCIÓN DE NÓMINA Y RENTA DEVENGADA EN ESTADO DE RESULTADOS ---
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
-            renta_mensual = Decimal("10440.00")
 
             for i in range(1, 13):
                 mes_str = str(i).zfill(2)
@@ -431,16 +409,22 @@ def estado_resultados():
                         
                 if dias_transcurridos > 0:
                     renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
+                    nomina_virtual = (nomina_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
+                    
                     renta_virtual = Decimal(str(round(renta_virtual, 2)))
+                    nomina_virtual = Decimal(str(round(nomina_virtual, 2)))
                     
                     data_meses[mes_str]["categorias_opex"][nombre_cat_renta] += renta_virtual
                     data_meses[mes_str]["opex_total"] += renta_virtual
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
+                    
+                    data_meses[mes_str]["categorias_opex"][nombre_cat_nomina] += nomina_virtual
+                    data_meses[mes_str]["opex_total"] += nomina_virtual
+                    detalles_opex[mes_str][nombre_cat_nomina].append({"concepto": f"Nómina Proporcional ({dias_transcurridos} días)", "monto": nomina_virtual})
 
     finally:
         conn.close()
 
-    # 8. Totales Anuales Separados
     totales_anio = {
         "venta_bruta": sum(m["venta_bruta"] for m in data_meses.values()),
         "descuentos": sum(m["descuentos"] for m in data_meses.values()),
