@@ -80,11 +80,12 @@ def dashboard():
     dias_seleccionados = request.args.getlist("dia_semana")
     origen_seleccionado = request.args.get("origen", "")
 
-    # ---> CONFIGURACIÓN DE IDS Y MONTOS (AJUSTA ESTO A TU REALIDAD) <---
+    # ---> CONFIGURACIÓN EXACTA DE IDS (CONFIRMADA POR BD) <---
+    ID_NOMINA = 1
     ID_RENTA = 2
-    ID_NOMINA = 3 # Cambia por el ID de tu categoría "Nómina" en la BD
     renta_mensual = Decimal("10440.00")
-    nomina_mensual = Decimal("8960.00") # Suma real del sueldo mensual de todo tu equipo
+    # 🔥 IMPORTANTE: CAMBIA ESTE MONTO POR LA SUMA MENSUAL REAL DE TU EQUIPO
+    nomina_mensual = Decimal("8960.00") 
 
     conn = get_connection()
     try:
@@ -291,11 +292,12 @@ def estado_resultados():
     conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
     
-    # ---> CONFIGURACIÓN DE IDS Y MONTOS (AJUSTA ESTO A TU REALIDAD) <---
+    # ---> CONFIGURACIÓN EXACTA DE IDS (CONFIRMADA POR BD) <---
+    ID_NOMINA = 1
     ID_RENTA = 2
-    ID_NOMINA = 3 # Cambia por el ID de tu categoría "Nómina" en la BD
     renta_mensual = Decimal("10440.00")
-    nomina_mensual = Decimal("8960.00") # Suma real del sueldo mensual de todo tu equipo
+    # 🔥 IMPORTANTE: CAMBIA ESTE MONTO POR LA SUMA MENSUAL REAL DE TU EQUIPO
+    nomina_mensual = Decimal("8960.00") 
     
     try:
         with conn.cursor() as cursor:
