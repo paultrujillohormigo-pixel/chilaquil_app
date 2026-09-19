@@ -80,12 +80,8 @@ def dashboard():
     dias_seleccionados = request.args.getlist("dia_semana")
     origen_seleccionado = request.args.get("origen", "")
 
-    # ---> CONFIGURACIÓN EXACTA DE IDS (CONFIRMADA POR BD) <---
-    ID_NOMINA = 1
     ID_RENTA = 2
     renta_mensual = Decimal("10440.00")
-    # 🔥 IMPORTANTE: CAMBIA ESTE MONTO POR LA SUMA MENSUAL REAL DE TU EQUIPO
-    nomina_mensual = Decimal("8960.00") 
 
     conn = get_connection()
     try:
@@ -127,14 +123,14 @@ def dashboard():
             conds_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
             params_compras.append('%personal%')
 
-            # Excluimos la renta y la nómina física de los gastos dinámicos
+            # Excluimos SOLO la renta de los gastos físicos, permitiendo que pase la Nómina real del módulo RH
             conds_gastos = list(conds_general)
             conds_gastos.append("LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos.append(f"categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
+            conds_gastos.append(f"categoria_id != {ID_RENTA}")
             
             conds_gastos_g = list(conds_general)
             conds_gastos_g.append("LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos_g.append(f"g.categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
+            conds_gastos_g.append(f"g.categoria_id != {ID_RENTA}")
 
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
@@ -169,16 +165,22 @@ def dashboard():
             cursor.execute(f"SELECT SUM(monto) AS total_opex FROM gastos {filtro_gastos}", params_general)
             total_opex = Decimal(str(cursor.fetchone()["total_opex"] or 0))
 
-            # --- INYECCIÓN DE RENTA Y NÓMINA VIRTUAL EN DASHBOARD ---
+            # INYECCIÓN VIRTUAL SOLO DE LA RENTA
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             dias_del_mes = calendar.monthrange(hoy.year, hoy.month)[1]
-            
             renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
-            nomina_virtual = (nomina_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
-            
             total_opex += renta_virtual
-            total_opex += nomina_virtual
-            total_nomina = nomina_virtual
+            
+            # Obtenemos la suma de Nómina real para los KPIs
+            conds_nomina = list(conds_general)
+            conds_nomina.append("c.nombre = 'Nómina'")
+            cursor.execute(f"""
+                SELECT SUM(g.monto) as total_nomina
+                FROM gastos g
+                JOIN categorias_gastos c ON g.categoria_id = c.id
+                {build_where(conds_nomina, "g.fecha")}
+            """, params_general)
+            total_nomina = Decimal(str(cursor.fetchone()["total_nomina"] or 0))
 
             prime_cost_pct = ((total_food_cost + total_nomina) / Decimal(str(inv_venta_neta))) * 100 if inv_venta_neta > 0 else Decimal(0)
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
@@ -214,13 +216,7 @@ def dashboard():
                     "total": float(renta_virtual),
                     "promedio": float(renta_virtual / Decimal(str(dias_totales)))
                 })
-            if nomina_virtual > 0:
-                gastos_por_concepto.append({
-                    "concepto": "Nómina (Provisión Dinámica)",
-                    "total": float(nomina_virtual),
-                    "promedio": float(nomina_virtual / Decimal(str(dias_totales)))
-                })
-                
+            
             gastos_por_concepto = sorted(gastos_por_concepto, key=lambda x: x["total"], reverse=True)
 
             cursor.execute(f"""
@@ -292,12 +288,8 @@ def estado_resultados():
     conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
     
-    # ---> CONFIGURACIÓN EXACTA DE IDS (CONFIRMADA POR BD) <---
-    ID_NOMINA = 1
     ID_RENTA = 2
     renta_mensual = Decimal("10440.00")
-    # 🔥 IMPORTANTE: CAMBIA ESTE MONTO POR LA SUMA MENSUAL REAL DE TU EQUIPO
-    nomina_mensual = Decimal("8960.00") 
     
     try:
         with conn.cursor() as cursor:
@@ -348,7 +340,6 @@ def estado_resultados():
             categorias_capex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'CAPEX']
             
             nombre_cat_renta = next((c["nombre"] for c in todas_categorias if c["id"] == ID_RENTA), "Renta")
-            nombre_cat_nomina = next((c["nombre"] for c in todas_categorias if c["id"] == ID_NOMINA), "Nómina")
 
             detalles_opex = {str(i).zfill(2): {cat: [] for cat in categorias_opex} for i in range(1, 13)}
             detalles_capex = {str(i).zfill(2): {cat: [] for cat in categorias_capex} for i in range(1, 13)}
@@ -357,7 +348,7 @@ def estado_resultados():
                 m["categorias_opex"] = {cat: Decimal("0") for cat in categorias_opex}
                 m["categorias_capex"] = {cat: Decimal("0") for cat in categorias_capex}
 
-            # Consultamos los gastos excluyendo los estáticos de Renta y Nómina
+            # Consultamos los gastos físicos (La Nómina generada por el módulo de RH ahora SÍ pasa libremente)
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
                        c.nombre AS categoria,
@@ -368,9 +359,9 @@ def estado_resultados():
                 JOIN categorias_gastos c ON g.categoria_id = c.id
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
-                  AND g.categoria_id NOT IN (%s, %s)
+                  AND g.categoria_id != %s
                 GROUP BY mes, categoria, tipo_categoria, concepto
-            """, (anio_seleccionado, ID_RENTA, ID_NOMINA))
+            """, (anio_seleccionado, ID_RENTA))
             
             for r in cursor.fetchall():
                 m = r["mes"]
@@ -389,7 +380,7 @@ def estado_resultados():
                         data_meses[m]["capex_total"] += monto
                         detalles_capex[m][cat].append({"concepto": concepto, "monto": monto})
 
-            # --- INYECCIÓN DE NÓMINA Y RENTA DEVENGADA EN ESTADO DE RESULTADOS ---
+            # Inyección de Renta Virtual
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
 
@@ -411,18 +402,11 @@ def estado_resultados():
                         
                 if dias_transcurridos > 0:
                     renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
-                    nomina_virtual = (nomina_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_transcurridos))
-                    
                     renta_virtual = Decimal(str(round(renta_virtual, 2)))
-                    nomina_virtual = Decimal(str(round(nomina_virtual, 2)))
                     
                     data_meses[mes_str]["categorias_opex"][nombre_cat_renta] += renta_virtual
                     data_meses[mes_str]["opex_total"] += renta_virtual
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
-                    
-                    data_meses[mes_str]["categorias_opex"][nombre_cat_nomina] += nomina_virtual
-                    data_meses[mes_str]["opex_total"] += nomina_virtual
-                    detalles_opex[mes_str][nombre_cat_nomina].append({"concepto": f"Nómina Proporcional ({dias_transcurridos} días)", "monto": nomina_virtual})
 
     finally:
         conn.close()
