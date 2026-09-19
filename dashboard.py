@@ -80,6 +80,7 @@ def dashboard():
     dias_seleccionados = request.args.getlist("dia_semana")
     origen_seleccionado = request.args.get("origen", "")
 
+    ID_NOMINA = 1
     ID_RENTA = 2
     renta_mensual = Decimal("10440.00")
 
@@ -123,14 +124,14 @@ def dashboard():
             conds_compras.append("LOWER(COALESCE(concepto, '')) NOT LIKE %s")
             params_compras.append('%personal%')
 
-            # Excluimos SOLO la renta de los gastos físicos, permitiendo que pase la Nómina real del módulo RH
+            # EXCLUIMOS tanto la nómina física como la renta física para que no se dupliquen
             conds_gastos = list(conds_general)
             conds_gastos.append("LOWER(COALESCE(concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos.append(f"categoria_id != {ID_RENTA}")
+            conds_gastos.append(f"categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
             
             conds_gastos_g = list(conds_general)
             conds_gastos_g.append("LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'")
-            conds_gastos_g.append(f"g.categoria_id != {ID_RENTA}")
+            conds_gastos_g.append(f"g.categoria_id NOT IN ({ID_RENTA}, {ID_NOMINA})")
 
             def build_where(conds, c_fecha, c_origen="origen"):
                 if not conds: return ""
@@ -140,6 +141,9 @@ def dashboard():
             filtro_compras = build_where(conds_compras, "fecha")
             filtro_gastos = build_where(conds_gastos, "fecha") 
             filtro_gastos_g = build_where(conds_gastos_g, "g.fecha") 
+            
+            # Filtro para las asistencias de RH
+            filtro_asistencias = build_where(conds_general, "a.fecha")
 
             conds_inv = list(conds_pedidos)
             conds_inv.append("estado != 'cancelado'")
@@ -165,22 +169,42 @@ def dashboard():
             cursor.execute(f"SELECT SUM(monto) AS total_opex FROM gastos {filtro_gastos}", params_general)
             total_opex = Decimal(str(cursor.fetchone()["total_opex"] or 0))
 
-            # INYECCIÓN VIRTUAL SOLO DE LA RENTA
+            # RENTA VIRTUAL
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             dias_del_mes = calendar.monthrange(hoy.year, hoy.month)[1]
             renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
             total_opex += renta_virtual
             
-            # Obtenemos la suma de Nómina real para los KPIs
-            conds_nomina = list(conds_general)
-            conds_nomina.append("c.nombre = 'Nómina'")
+            # 🚨 NÓMINA DINÁMICA DESDE EL RELOJ CHECADOR
+            # Si en rh_asistencias la columna de fecha se llama diferente (ej. hora_entrada), cámbiala abajo (a.fecha)
             cursor.execute(f"""
-                SELECT SUM(g.monto) as total_nomina
-                FROM gastos g
-                JOIN categorias_gastos c ON g.categoria_id = c.id
-                {build_where(conds_nomina, "g.fecha")}
+                SELECT e.nombre,
+                       COUNT(DISTINCT DATE(a.fecha)) AS dias_trabajados,
+                       e.salario_base,
+                       (COUNT(DISTINCT DATE(a.fecha)) * e.salario_base) AS total_devengado
+                FROM rh_asistencias a
+                JOIN rh_empleados e ON a.empleado_id = e.id
+                {filtro_asistencias}
+                GROUP BY e.id, e.nombre, e.salario_base
             """, params_general)
-            total_nomina = Decimal(str(cursor.fetchone()["total_nomina"] or 0))
+            
+            asistencias_data = cursor.fetchall()
+            total_nomina = Decimal("0.0")
+            gastos_por_concepto_nomina = []
+
+            for row in asistencias_data:
+                devengado = Decimal(str(row["total_devengado"] or 0))
+                dias_trabajados = row["dias_trabajados"]
+                
+                if devengado > 0:
+                    total_nomina += devengado
+                    gastos_por_concepto_nomina.append({
+                        "concepto": f"Nómina - {row['nombre']}",
+                        "total": float(devengado),
+                        "promedio": float(devengado / Decimal(str(dias_totales)))
+                    })
+
+            total_opex += total_nomina
 
             prime_cost_pct = ((total_food_cost + total_nomina) / Decimal(str(inv_venta_neta))) * 100 if inv_venta_neta > 0 else Decimal(0)
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
@@ -217,6 +241,7 @@ def dashboard():
                     "promedio": float(renta_virtual / Decimal(str(dias_totales)))
                 })
             
+            gastos_por_concepto.extend(gastos_por_concepto_nomina)
             gastos_por_concepto = sorted(gastos_por_concepto, key=lambda x: x["total"], reverse=True)
 
             cursor.execute(f"""
@@ -288,6 +313,7 @@ def estado_resultados():
     conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
     
+    ID_NOMINA = 1
     ID_RENTA = 2
     renta_mensual = Decimal("10440.00")
     
@@ -340,6 +366,7 @@ def estado_resultados():
             categorias_capex = [c["nombre"] for c in todas_categorias if c["tipo"] == 'CAPEX']
             
             nombre_cat_renta = next((c["nombre"] for c in todas_categorias if c["id"] == ID_RENTA), "Renta")
+            nombre_cat_nomina = next((c["nombre"] for c in todas_categorias if c["id"] == ID_NOMINA), "Nómina")
 
             detalles_opex = {str(i).zfill(2): {cat: [] for cat in categorias_opex} for i in range(1, 13)}
             detalles_capex = {str(i).zfill(2): {cat: [] for cat in categorias_capex} for i in range(1, 13)}
@@ -348,7 +375,7 @@ def estado_resultados():
                 m["categorias_opex"] = {cat: Decimal("0") for cat in categorias_opex}
                 m["categorias_capex"] = {cat: Decimal("0") for cat in categorias_capex}
 
-            # Consultamos los gastos físicos (La Nómina generada por el módulo de RH ahora SÍ pasa libremente)
+            # Consultamos todos los gastos operativos, PERO BLOQUEAMOS LOS PAGOS MANUALES DE NÓMINA (y la renta física)
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
                        c.nombre AS categoria,
@@ -359,9 +386,9 @@ def estado_resultados():
                 JOIN categorias_gastos c ON g.categoria_id = c.id
                 WHERE YEAR(g.fecha) = %s 
                   AND LOWER(COALESCE(g.concepto, '')) NOT LIKE '%%personal%%'
-                  AND g.categoria_id != %s
+                  AND g.categoria_id NOT IN (%s, %s)
                 GROUP BY mes, categoria, tipo_categoria, concepto
-            """, (anio_seleccionado, ID_RENTA))
+            """, (anio_seleccionado, ID_RENTA, ID_NOMINA))
             
             for r in cursor.fetchall():
                 m = r["mes"]
@@ -380,10 +407,10 @@ def estado_resultados():
                         data_meses[m]["capex_total"] += monto
                         detalles_capex[m][cat].append({"concepto": concepto, "monto": monto})
 
-            # Inyección de Renta Virtual
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
 
+            # Renta Virtual Devengada
             for i in range(1, 13):
                 mes_str = str(i).zfill(2)
                 dias_del_mes = calendar.monthrange(anio_int, i)[1]
@@ -407,6 +434,36 @@ def estado_resultados():
                     data_meses[mes_str]["categorias_opex"][nombre_cat_renta] += renta_virtual
                     data_meses[mes_str]["opex_total"] += renta_virtual
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
+
+            # 🚨 INYECCIÓN DE NÓMINA DEVENGADA DESDE RH_ASISTENCIAS
+            cursor.execute("""
+                SELECT DATE_FORMAT(a.fecha, '%%m') AS mes,
+                       e.nombre,
+                       COUNT(DISTINCT DATE(a.fecha)) AS dias_trabajados,
+                       e.salario_base,
+                       (COUNT(DISTINCT DATE(a.fecha)) * e.salario_base) AS total_devengado
+                FROM rh_asistencias a
+                JOIN rh_empleados e ON a.empleado_id = e.id
+                WHERE YEAR(a.fecha) = %s
+                GROUP BY mes, e.id, e.nombre, e.salario_base
+            """, (anio_seleccionado,))
+            
+            asistencias_por_mes = cursor.fetchall()
+            
+            for r in asistencias_por_mes:
+                m = r["mes"]
+                if m in data_meses:
+                    devengado = Decimal(str(r["total_devengado"] or 0))
+                    dias_trabajados = r["dias_trabajados"]
+                    nombre_empleado = r["nombre"]
+                    
+                    if devengado > 0:
+                        data_meses[m]["categorias_opex"][nombre_cat_nomina] += devengado
+                        data_meses[m]["opex_total"] += devengado
+                        detalles_opex[m][nombre_cat_nomina].append({
+                            "concepto": f"{nombre_empleado} ({dias_trabajados} días)",
+                            "monto": devengado
+                        })
 
     finally:
         conn.close()
