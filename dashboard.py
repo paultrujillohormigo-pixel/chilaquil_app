@@ -142,8 +142,8 @@ def dashboard():
             filtro_gastos = build_where(conds_gastos, "fecha") 
             filtro_gastos_g = build_where(conds_gastos_g, "g.fecha") 
             
-            # Filtro para las asistencias de RH
-            filtro_asistencias = build_where(conds_general, "a.fecha")
+            # Filtro para las nóminas de RH
+            filtro_nominas = build_where(conds_general, "n.fecha_pago")
 
             conds_inv = list(conds_pedidos)
             conds_inv.append("estado != 'cancelado'")
@@ -175,26 +175,22 @@ def dashboard():
             renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
             total_opex += renta_virtual
             
-            # 🚨 NÓMINA DINÁMICA DESDE EL RELOJ CHECADOR
-            # Si en rh_asistencias la columna de fecha se llama diferente (ej. hora_entrada), cámbiala abajo (a.fecha)
+            # 🚨 NÓMINA REAL DESDE RH_NOMINAS
             cursor.execute(f"""
                 SELECT e.nombre,
-                       COUNT(DISTINCT DATE(a.fecha)) AS dias_trabajados,
-                       e.salario_base,
-                       (COUNT(DISTINCT DATE(a.fecha)) * e.salario_base) AS total_devengado
-                FROM rh_asistencias a
-                JOIN rh_empleados e ON a.empleado_id = e.id
-                {filtro_asistencias}
-                GROUP BY e.id, e.nombre, e.salario_base
+                       SUM(n.monto_pagado) AS total_devengado
+                FROM rh_nominas n
+                JOIN rh_empleados e ON n.empleado_id = e.id
+                {filtro_nominas}
+                GROUP BY e.id, e.nombre
             """, params_general)
             
-            asistencias_data = cursor.fetchall()
+            nominas_data = cursor.fetchall()
             total_nomina = Decimal("0.0")
             gastos_por_concepto_nomina = []
 
-            for row in asistencias_data:
+            for row in nominas_data:
                 devengado = Decimal(str(row["total_devengado"] or 0))
-                dias_trabajados = row["dias_trabajados"]
                 
                 if devengado > 0:
                     total_nomina += devengado
@@ -435,33 +431,30 @@ def estado_resultados():
                     data_meses[mes_str]["opex_total"] += renta_virtual
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
 
-            # 🚨 INYECCIÓN DE NÓMINA DEVENGADA DESDE RH_ASISTENCIAS
+            # 🚨 INYECCIÓN DE NÓMINA REAL DESDE RH_NOMINAS
             cursor.execute("""
-                SELECT DATE_FORMAT(a.fecha, '%%m') AS mes,
+                SELECT DATE_FORMAT(n.fecha_pago, '%%m') AS mes,
                        e.nombre,
-                       COUNT(DISTINCT DATE(a.fecha)) AS dias_trabajados,
-                       e.salario_base,
-                       (COUNT(DISTINCT DATE(a.fecha)) * e.salario_base) AS total_devengado
-                FROM rh_asistencias a
-                JOIN rh_empleados e ON a.empleado_id = e.id
-                WHERE YEAR(a.fecha) = %s
-                GROUP BY mes, e.id, e.nombre, e.salario_base
+                       SUM(n.monto_pagado) AS total_devengado
+                FROM rh_nominas n
+                JOIN rh_empleados e ON n.empleado_id = e.id
+                WHERE YEAR(n.fecha_pago) = %s
+                GROUP BY mes, e.id, e.nombre
             """, (anio_seleccionado,))
             
-            asistencias_por_mes = cursor.fetchall()
+            nominas_por_mes = cursor.fetchall()
             
-            for r in asistencias_por_mes:
+            for r in nominas_por_mes:
                 m = r["mes"]
                 if m in data_meses:
                     devengado = Decimal(str(r["total_devengado"] or 0))
-                    dias_trabajados = r["dias_trabajados"]
                     nombre_empleado = r["nombre"]
                     
                     if devengado > 0:
                         data_meses[m]["categorias_opex"][nombre_cat_nomina] += devengado
                         data_meses[m]["opex_total"] += devengado
                         detalles_opex[m][nombre_cat_nomina].append({
-                            "concepto": f"{nombre_empleado} ({dias_trabajados} días)",
+                            "concepto": f"{nombre_empleado}",
                             "monto": devengado
                         })
 
