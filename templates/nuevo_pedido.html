@@ -482,7 +482,6 @@ function productoTieneModificadores(nombre, categoria){
   return !NO_MOD_KEYWORDS.some(kw => nom.includes(kw));
 }
 
-/* --- CORRECCIÓN EN LA BÚSQUEDA DE ID DEL EXTRA OBLIGATORIA --- */
 function encontrarProductoExtraId(nombreBuscar) {
   const botones = document.querySelectorAll('.js-add');
   const nomNorm = normaliza(nombreBuscar);
@@ -518,7 +517,6 @@ function encontrarProductoExtraId(nombreBuscar) {
     const precio = Number(b.dataset.precio || 0);
 
     if (btnNombreNorm.includes(nomNorm) && !btnNombreNorm.includes('chilaquil') && !btnNombreNorm.includes('envuelto')) {
-      // Filtro de seguridad: ignorar platillos principales caros si estamos buscando un extra
       if (precio < 90) {
         return b.dataset.id;
       }
@@ -793,6 +791,8 @@ function abrirCustomModal(uid = null) {
 
   const nomNorm = normaliza(productoNombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
+  const esChilaquiles = nomNorm.includes("chilaquil"); 
+  const traeHuevoExtra = customData.extras && customData.extras.includes("Huevo");
 
   const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
   const contenedorSalsas = document.getElementById('salsaRadios').closest('.custom-section');
@@ -815,7 +815,8 @@ function abrirCustomModal(uid = null) {
     document.getElementById('extrasChecks').innerHTML = htmlSabores;
 
   } else {
-    if (contenedorHuevo) contenedorHuevo.style.display = "block";
+    if (contenedorHuevo) contenedorHuevo.style.display = (esChilaquiles || traeHuevoExtra) ? "block" : "none";
+    
     if (contenedorSalsas) contenedorSalsas.style.display = "block";
     if (contenedorSin) contenedorSin.style.display = "block";
     if (tituloExtras) tituloExtras.innerText = "Proteínas Extra (Opcional)";
@@ -823,6 +824,9 @@ function abrirCustomModal(uid = null) {
     let htmlProt = "";
     OPCIONES_HUEVO.forEach(opc => {
       let checked = (opc === customData.proteina) ? "checked" : "";
+      if (!esChilaquiles && !traeHuevoExtra && opc === "Sin proteina") checked = "checked";
+      else if (!esChilaquiles && !traeHuevoExtra) checked = "";
+
       htmlProt += `<label class="custom-pill"><input type="radio" name="modal_prot" value="${opc}" ${checked}><span>${opc}</span></label>`;
     });
     document.getElementById('proteinaRadios').innerHTML = htmlProt;
@@ -842,6 +846,21 @@ function abrirCustomModal(uid = null) {
     document.getElementById('salsaRadios').innerHTML = htmlSal;
 
     setTimeout(() => {
+      if (!esChilaquiles && contenedorHuevo) {
+        const checksExtra = document.querySelectorAll('.check-extra');
+        checksExtra.forEach(chk => {
+          if (chk.value === "Huevo") {
+            chk.addEventListener('change', (e) => {
+              contenedorHuevo.style.display = e.target.checked ? "block" : "none";
+              if (!e.target.checked) {
+                const radioSin = document.querySelector('input[name="modal_prot"][value="Sin proteina"]');
+                if (radioSin) radioSin.checked = true;
+              }
+            });
+          }
+        });
+      }
+
       const checksSalsa = document.querySelectorAll('.check-salsa:not(#salsa_ninguna)');
       const btnNinguna = document.getElementById('salsa_ninguna');
       if (btnNinguna) {
@@ -885,6 +904,7 @@ function confirmarCustom() {
   
   const nomNorm = normaliza(carrito[editandoUid].nombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
+  const esChilaquiles = nomNorm.includes("chilaquil");
 
   let protSelected = "Sin proteina";
   let salIdParaDB = "";
@@ -898,8 +918,13 @@ function confirmarCustom() {
     const saborRadio = document.querySelector('input[name="modal_sabor_agua"]:checked');
     if (saborRadio) saborAgua = saborRadio.value;
   } else {
+    const extraNodos = document.querySelectorAll('.check-extra:checked');
+    extraArr = Array.from(extraNodos).map(n => n.value);
+
     const pSel = document.querySelector('input[name="modal_prot"]:checked');
-    if(pSel) protSelected = pSel.value;
+    if(pSel && (esChilaquiles || extraArr.includes("Huevo"))) {
+        protSelected = pSel.value;
+    }
     
     const salNodos = document.querySelectorAll('.check-salsa:not(#salsa_ninguna):checked');
     salIdsArr = Array.from(salNodos).map(n => n.value);
@@ -909,9 +934,6 @@ function confirmarCustom() {
 
     const sinNodos = document.querySelectorAll('.check-sin:checked');
     sinArr = Array.from(sinNodos).map(n => n.value);
-
-    const extraNodos = document.querySelectorAll('.check-extra:checked');
-    extraArr = Array.from(extraNodos).map(n => n.value);
   }
 
   carrito[editandoUid].custom = {
