@@ -45,9 +45,14 @@
           </select>
         </div> 
 
+        <!-- CAMBIO: Ya no es un input manual, muestra el usuario de la sesión -->
         <div>
-          <label>Mesero</label>
-          <input type="text" name="mesero" placeholder="Nombre" value="{{ pedido.mesero or '' }}">
+          <label>Atendido por</label>
+          <div style="padding: 10px; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; font-weight: 600;">
+             👤 {{ session.get('nombre', 'Usuario Desconocido') }}
+          </div>
+          <!-- Ocultamos el campo name="mesero" con el valor de la sesión para compatibilidad con tu BD -->
+          <input type="hidden" name="mesero" value="{{ session.get('nombre', 'Usuario Desconocido') }}">
         </div>
 
         <div style="position: relative; grid-column: 1 / -1;">
