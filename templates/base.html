@@ -85,7 +85,8 @@
 
     /* Evitar que los últimos menús se salgan de la pantalla a la derecha */
     .nav-dd:nth-last-child(1) .nav-dd-menu,
-    .nav-dd:nth-last-child(2) .nav-dd-menu {
+    .nav-dd:nth-last-child(2) .nav-dd-menu,
+    .nav-dd:nth-last-child(3) .nav-dd-menu {
       left: auto;
       right: 0;
     }
@@ -115,6 +116,31 @@
       .nav-dd:hover > .nav-dd-menu { display: block; }
       .nav-dd:hover .nav-dd-btn { background: #fee2e2; color: #b32417; }
     }
+    
+    /* Estilos para el logout superior derecho */
+    .user-actions {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-left: auto;
+    }
+    .user-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .logout-btn {
+      color: #ef4444;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .logout-btn:hover {
+      background: #fef2f2;
+    }
   </style>
 </head>
 
@@ -127,29 +153,46 @@
 
     <div class="nav-links">
 
+      <!-- 1. Ventas y Pedidos -->
+      {% if 'all' in session.permisos or 'pedidos' in session.permisos or 'finanzas' in session.permisos %}
       <div class="nav-dd" role="navigation">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Ventas <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
+          {% if 'all' in session.permisos or 'pedidos' in session.permisos %}
           <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">🍔 Nuevo pedido</a>
           <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">📋 Pedidos abiertos</a>
+          {% endif %}
+          
+          {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
           <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">🕒 Historial pedidos</a>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
 
       <!-- 2. Catálogos y CRM -->
+      {% if 'all' in session.permisos or 'menu_admin' in session.permisos or 'clientes' in session.permisos %}
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Catálogos <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
+          {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
           <a role="menuitem" href="{{ url_for('productos') }}">⚙️ Menú y Precios</a>
+          {% endif %}
+          
+          {% if 'all' in session.permisos or 'clientes' in session.permisos %}
           <a role="menuitem" href="{{ url_for('lista_clientes') }}">👥 Clientes y Totopos</a>
-          <a role="menuitem" href="{{ url_for('campanas') }}">📢 Campañas (Retención)</a> <!-- LÍNEA NUEVA -->
+          <a role="menuitem" href="{{ url_for('campanas') }}">📢 Campañas (Retención)</a>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
 
+      <!-- 3. Inventario -->
+      {% if 'all' in session.permisos or 'inventario' in session.permisos %}
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Inventario <span class="nav-caret" aria-hidden="true">▾</span>
@@ -159,7 +202,10 @@
           <a role="menuitem" href="{{ url_for('ver_stock') }}">📦 Stock actual</a>
         </div>
       </div>
+      {% endif %}
 
+      <!-- 4. Costeos y Recetario -->
+      {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Costeos <span class="nav-caret" aria-hidden="true">▾</span>
@@ -171,17 +217,23 @@
           <a role="menuitem" href="{{ url_for('costeo.costeo_index') }}">📈 Rentabilidad</a>
         </div>
       </div>
+      {% endif %}
 
+      <!-- 5. Admin Finanzas -->
+      {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false">
           Admin <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
           <a role="menuitem" href="{{ url_for('dashboard_bp.dashboard') }}">📊 Dashboard Finanzas</a>
+          <a role="menuitem" href="{{ url_for('corte_caja') }}">💵 Corte de Caja</a>
           <a role="menuitem" href="{{ url_for('raw_data') }}">🗄️ Base de datos</a>
         </div>
       </div>
+      {% endif %}
 
+      <!-- 6. Enlaces Públicos (Siempre visibles para todos los logueados) -->
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false" style="color: #b32417; background: #fff1f2;">
           Público <span class="nav-caret" aria-hidden="true">▾</span>
@@ -192,7 +244,14 @@
         </div>
       </div>
 
+    </div> <!-- Fin nav-links -->
+
+    <!-- Nombre de usuario y Cerrar Sesión -->
+    <div class="user-actions">
+      <span class="user-name">👤 {{ session.get('nombre', 'Usuario') }}</span>
+      <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar Sesión</a>
     </div>
+
   </nav>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
