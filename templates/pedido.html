@@ -808,7 +808,10 @@ function abrirCustomModal(uid = null) {
 
   const nomNorm = normaliza(productoNombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
-  const esChilaquiles = nomNorm.includes("chilaquil"); 
+  
+  // EXCLUSIÓN DE LA TORTA: detecta "chilaquil" pero asegura que no traiga la palabra "torta"
+  const esChilaquiles = nomNorm.includes("chilaquil") && !nomNorm.includes("torta");
+
   const traeHuevoExtra = customData.extras && customData.extras.includes("Huevo");
 
   const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
@@ -923,7 +926,9 @@ function confirmarCustom() {
   
   const nomNorm = normaliza(carrito[editandoUid].nombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
-  const esChilaquiles = nomNorm.includes("chilaquil");
+  
+  // EXCLUSIÓN DE LA TORTA: detecta "chilaquil" pero asegura que no traiga la palabra "torta"
+  const esChilaquiles = nomNorm.includes("chilaquil") && !nomNorm.includes("torta");
 
   let protSelected = "Sin proteina";
   let salIdParaDB = "";
