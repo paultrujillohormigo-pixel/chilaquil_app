@@ -486,7 +486,6 @@ function encontrarProductoExtraId(nombreBuscar) {
   const botones = document.querySelectorAll('.js-add');
   const nomNorm = normaliza(nombreBuscar);
   
-  // 1. Intentar match EXACTO del nombre (Ej: "huevo" con "huevo")
   for (let b of botones) {
     const btnNombreNorm = normaliza(b.dataset.nombre);
     if (btnNombreNorm === nomNorm) {
@@ -494,7 +493,6 @@ function encontrarProductoExtraId(nombreBuscar) {
     }
   }
 
-  // 2. Buscar si el botón contiene explícitamente la palabra "extra " + el ingrediente
   for (let b of botones) {
     const btnNombreNorm = normaliza(b.dataset.nombre);
     if (btnNombreNorm === "extra " + nomNorm || btnNombreNorm === "extra: " + nomNorm) {
@@ -502,7 +500,6 @@ function encontrarProductoExtraId(nombreBuscar) {
     }
   }
 
-  // 3. Buscar por la categoría "extras" que tenga el nombre del ingrediente
   for (let b of botones) {
     const btnNombreNorm = normaliza(b.dataset.nombre);
     const btnCatNorm = normaliza(b.dataset.categoria || b.dataset.category || "");
@@ -511,7 +508,6 @@ function encontrarProductoExtraId(nombreBuscar) {
     }
   }
 
-  // 4. Último recurso: match parcial filtrando "chilaquiles", "envuelto" y protegiendo por precio.
   for (let b of botones) {
     const btnNombreNorm = normaliza(b.dataset.nombre);
     const precio = Number(b.dataset.precio || 0);
@@ -791,7 +787,10 @@ function abrirCustomModal(uid = null) {
 
   const nomNorm = normaliza(productoNombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
-  const esChilaquiles = nomNorm.includes("chilaquil"); 
+  
+  // EXCLUSIÓN DE LA TORTA: detecta "chilaquil" pero asegura que no traiga la palabra "torta"
+  const esChilaquiles = nomNorm.includes("chilaquil") && !nomNorm.includes("torta"); 
+  
   const traeHuevoExtra = customData.extras && customData.extras.includes("Huevo");
 
   const contenedorHuevo = document.getElementById('proteinaRadios').closest('.custom-section');
@@ -904,7 +903,9 @@ function confirmarCustom() {
   
   const nomNorm = normaliza(carrito[editandoUid].nombre);
   const esAguaSabor = nomNorm.includes("agua de sabor") || nomNorm.includes("aguas de sabor");
-  const esChilaquiles = nomNorm.includes("chilaquil");
+  
+  // EXCLUSIÓN DE LA TORTA: detecta "chilaquil" pero asegura que no traiga la palabra "torta"
+  const esChilaquiles = nomNorm.includes("chilaquil") && !nomNorm.includes("torta");
 
   let protSelected = "Sin proteina";
   let salIdParaDB = "";
