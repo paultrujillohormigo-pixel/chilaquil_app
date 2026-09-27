@@ -42,6 +42,10 @@ app.register_blueprint(seguridad_bp)
 # ================== LOGIN Y LOGOUT =======================
 # =========================================================
 
+# =========================================================
+# ================== LOGIN Y LOGOUT =======================
+# =========================================================
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -59,11 +63,8 @@ def login():
                     session['nombre'] = usuario['nombre']
                     session['rol_id'] = usuario['rol_id']
                     
-                    # --- INICIO DE LO NUEVO ---
-                    # Cargamos sus permisos en la sesión para ocultar botones en el HTML
                     session['permisos'] = []
                     if usuario['rol_id'] == 1:
-                        # El Modo Dios tiene 'all'
                         session['permisos'] = ['all']
                     else:
                         cursor.execute("""
@@ -73,7 +74,6 @@ def login():
                         """, (usuario['rol_id'],))
                         modulos_db = cursor.fetchall()
                         session['permisos'] = [mod['nombre'] for mod in modulos_db]
-                    # --- FIN DE LO NUEVO ---
 
                     flash(f"Bienvenido {usuario['nombre']}", "success")
                     return redirect(url_for('hub'))
@@ -84,9 +84,13 @@ def login():
 
     return render_template("login.html")
 
-# =========================================================
-# ================== RUTAS PÚBLICAS (SIN CANDADO) =========
-# =========================================================
+# --------- ESTA ES LA FUNCIÓN QUE FALTA ---------
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Sesión cerrada correctamente.", "success")
+    return redirect(url_for('login'))
+# ------------------------------------------------
 
 @app.route('/privacy', methods=['GET'])
 def privacy_policy():
