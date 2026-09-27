@@ -60,24 +60,12 @@
    ========================================================= #}
 <form method="post" id="recetaForm">
 
-  <div class="chart-section half" style="margin-bottom: 24px;">
+  <div class="chart-section" style="margin-bottom: 24px;">
     
-    <!-- TARJETA: PROTEÍNA BASE -->
-    <div class="card">
+    <!-- TARJETA: AGREGAR INSUMO (Ahora ocupa todo el ancho) -->
+    <div class="card" style="width: 100%;">
       <div class="card-header">
-        <h2>Proteína Estándar (Integración POS)</h2>
-      </div>
-      <div>
-        <label class="filter-label">GRAMAJE BASE POR PORCIÓN (Gr)</label>
-        <input type="number" step="0.01" class="form-input" style="background:white; color:#334155; border:1px solid var(--border);" name="proteina_cantidad_base" value="{{ platillo.proteina_cantidad_base if platillo.proteina_cantidad_base is not none else '' }}" placeholder="Ej. 120">
-        <p class="page-subtitle" style="margin-top: 12px; font-size: 12px;">El gramaje se descontará automáticamente del stock cuando el cajero seleccione la proteína (Pollo, Arrachera, etc.) en el punto de venta.</p>
-      </div>
-    </div>
-
-    <!-- TARJETA: AGREGAR INSUMO -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Agregar Ingrediente</h2>
+        <h2>Agregar Ingrediente (Materia Prima)</h2>
       </div>
       <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start;">
         <div>
