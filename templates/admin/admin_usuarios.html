@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .admin-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    .header-title { color: #0f172a; font-size: 2rem; margin-bottom: 5px; font-weight: 800;}
+    .header-desc { color: #64748b; margin-bottom: 30px; }
+    
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    .card-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;}
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;}
+    .form-group label { display: block; font-weight: 600; color: #475569; margin-bottom: 6px; font-size: 0.9rem;}
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    .btn-primary { background: #b32417; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-primary:hover { background: #8c1c12; }
+    
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; color: #475569; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: middle;}
+    .status-badge { padding: 4px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: bold; }
+    .status-active { background: #dcfce3; color: #166534; }
+    .status-inactive { background: #fee2e2; color: #991b1b; }
+    
+    .btn-danger { background: white; color: #ef4444; border: 1px solid #fecaca; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-danger:hover { background: #fee2e2; }
+</style>
+
+<div class="admin-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h1 class="header-title">🛡️ Gestión de Usuarios</h1>
+            <p class="header-desc">Crea cuentas para tu staff y asigna sus roles operativos.</p>
+        </div>
+        <a href="{{ url_for('seguridad_bp.gestion_roles') }}" class="btn-primary" style="text-decoration: none; background: #334155;">Ver Matriz de Roles</a>
+    </div>
+
+    <!-- Formulario para Nuevo Usuario -->
+    <div class="card">
+        <h2 class="card-title">Crear Nuevo Usuario</h2>
+        <form method="POST" action="{{ url_for('seguridad_bp.gestion_usuarios') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" name="nombre" placeholder="Ej. Juan Pérez" required>
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Usuario (Login)</label>
+                    <input type="text" name="username" placeholder="Ej. jperez" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="text" name="password" placeholder="Asigna una contraseña" required>
+                </div>
+                <div class="form-group">
+                    <label>Rol en el Sistema</label>
+                    <select name="rol_id" required>
+                        <option value="">Selecciona un rol...</option>
+                        {% for rol in roles %}
+                            <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Registrar Usuario</button>
+        </form>
+    </div>
+
+    <!-- Tabla de Usuarios Actuales -->
+    <div class="card">
+        <h2 class="card-title">Usuarios Activos en el Sistema</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Login</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td><strong>{{ u.nombre }}</strong></td>
+                        <td>{{ u.username }}</td>
+                        <td>{{ u.rol or 'Sin Rol' }}</td>
+                        <td>
+                            {% if u.activo == 1 %}
+                                <span class="status-badge status-active">Activo</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.id != 1 and u.activo == 1 %}
+                            <form method="POST" action="{{ url_for('seguridad_bp.desactivar_usuario', usuario_id=u.id) }}" style="margin:0;" onsubmit="return confirm('¿Seguro que quieres desactivar a este usuario?');">
+                                <button type="submit" class="btn-danger">Desactivar</button>
+                            </form>
+                            {% elif u.id == 1 %}
+                                <span style="font-size: 0.85rem; color: #94a3b8;">Admin Gral</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
