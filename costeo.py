@@ -49,119 +49,6 @@ def execute_many(sql, rows):
 
 
 # =========================================================
-# ================== CATÁLOGO DE PLATILLOS ================
-# =========================================================
-
-@costeo_bp.get("/platillos")
-@requiere_permiso("menu_admin")
-def platillos_index():
-    try:
-        # Se agregaron los campos extra aquí si algún día quieres mostrarlos en la tabla
-        platillos = query_all("SELECT id, nombre, precio_actual, proteina_cantidad_base, imagen_url FROM platillos ORDER BY nombre")
-    except Exception:
-        platillos = query_all("SELECT id, nombre, precio_actual FROM platillos ORDER BY nombre")
-    return render_template("admin/platillos_index.html", platillos=platillos)
-
-@costeo_bp.post("/platillos")
-@requiere_permiso("menu_admin")
-def platillos_create():
-    nombre = (request.form.get("nombre") or "").strip()
-    precio = request.form.get("precio_actual")
-
-    if not nombre:
-        flash("El nombre del platillo es obligatorio.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    precio_val = None
-    try:
-        if precio not in (None, "", " "):
-            precio_val = Decimal(precio)
-    except Exception:
-        flash("Precio inválido.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    try:
-        execute("INSERT INTO platillos (nombre, precio_actual) VALUES (%s,%s)", (nombre, precio_val))
-        flash("Platillo guardado.", "success")
-    except Exception as e:
-        flash(f"No se pudo guardar el platillo: {e}", "error")
-
-    return redirect(url_for("costeo.platillos_index"))
-
-@costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
-@requiere_permiso("menu_admin")
-def platillo_precio_update(platillo_id):
-    precio_txt = (request.form.get("precio_pos") or "").strip()
-
-    try:
-        precio_pos = Decimal(precio_txt)
-    except (InvalidOperation, TypeError):
-        flash("Precio inválido.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    if precio_pos < 0:
-        flash("El precio no puede ser negativo.", "error")
-        return redirect(url_for("costeo.platillos_index"))
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            conn.begin()
-            cursor.execute("UPDATE platillos SET precio_actual = %s WHERE id = %s", (precio_pos, platillo_id))
-
-            cursor.execute("UPDATE productos SET precio = %s WHERE platillo_id = %s", (precio_pos, platillo_id))
-
-            conn.commit()
-            flash("Precio actualizado ✅", "success")
-
-    except Exception as e:
-        conn.rollback()
-        flash(f"Error actualizando precio: {e}", "error")
-    finally:
-        conn.close()
-
-    return redirect(url_for("costeo.platillos_index"))
-
-# =========================================================
-# ================== ELIMINAR PLATILLO ====================
-# =========================================================
-
-@costeo_bp.route('/platillos/<int:platillo_id>/delete', methods=['POST'])
-@requiere_permiso("menu_admin")
-def platillo_delete(platillo_id):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            # 1. Borrar dependencias en recetas
-            cursor.execute("DELETE FROM recetas WHERE platillo_id = %s", (platillo_id,))
-            
-            # 2. Borrar dependencias en recetas_proteina
-            cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
-            
-            # 3. ¡LA SOLUCIÓN AL ERROR 1451!
-            # Desvinculamos el platillo de la tabla de productos (POS). 
-            # Así mantenemos el historial de ventas del producto intacto, pero rompemos la llave foránea.
-            cursor.execute("UPDATE productos SET platillo_id = NULL WHERE platillo_id = %s", (platillo_id,))
-
-            # 4. Ahora sí, con el camino libre, borramos el platillo
-            cursor.execute("DELETE FROM platillos WHERE id = %s", (platillo_id,))
-            
-        conn.commit()
-        flash("Platillo eliminado con éxito.", "success")
-        
-    except Exception as e:
-        try: 
-            conn.rollback()
-        except: 
-            pass
-        flash(f"Error al eliminar: {e}", "error")
-        
-    finally:
-        conn.close()
-
-    return redirect(url_for('costeo.platillos_index'))
-
-# =========================================================
 # ================== CATÁLOGO DE INSUMOS ==================
 # =========================================================
 
@@ -210,9 +97,21 @@ def insumos_create():
 # ================== GESTIÓN DE RECETAS (BOM) =============
 # =========================================================
 
-@costeo_bp.get("/recetas")
+@costeo_bp.route("/recetas", methods=["GET", "POST"])
 @requiere_permiso("menu_admin")
 def recetas_index():
+    if request.method == "POST":
+        nombre = (request.form.get("nombre") or "").strip()
+        if not nombre:
+            flash("El nombre de la receta es obligatorio.", "error")
+        else:
+            try:
+                execute("INSERT INTO platillos (nombre) VALUES (%s)", (nombre,))
+                flash("Receta base creada. Ahora selecciona 'Ficha Técnica' para agregarle ingredientes.", "success")
+            except Exception as e:
+                flash(f"Error al crear: {e}", "error")
+        return redirect(url_for("costeo.recetas_index"))
+
     platillos = query_all("SELECT id, nombre FROM platillos ORDER BY nombre")
     return render_template("admin/recetas_index.html", platillos=platillos)
 
@@ -254,18 +153,7 @@ def recetas_edit(platillo_id):
 @costeo_bp.post("/recetas/<int:platillo_id>")
 @requiere_permiso("menu_admin")
 def recetas_save(platillo_id):
-    # 1. Recuperar los datos de la proteína base
-    prot_txt = (request.form.get("proteina_cantidad_base") or "").strip()
-    prot_val = None
-    if prot_txt:
-        try:
-            prot_val = Decimal(prot_txt)
-            if prot_val < 0:
-                prot_val = None
-        except Exception:
-            prot_val = None
-
-    # 2. Recuperar los nuevos campos visuales para la Ficha Técnica
+    # Ya no guardamos proteina_cantidad_base porque quitamos esa tarjeta
     imagen_url = (request.form.get("imagen_url") or "").strip() or None
     tiempo_prep_txt = (request.form.get("tiempo_prep_min") or "").strip()
     equipo_necesario = (request.form.get("equipo_necesario") or "").strip() or None
@@ -284,8 +172,6 @@ def recetas_save(platillo_id):
 
     rows = []
     keep_insumo_ids = []
-    
-    # NUEVO: Variables para calcular el costo real de la receta en tiempo de guardado
     costo_materia_prima = Decimal("0.0")
 
     conn = get_connection()
@@ -304,7 +190,7 @@ def recetas_save(platillo_id):
                 if c <= 0:
                     continue
                 
-                # ---> CÁLCULO DE COSTO EN TIEMPO REAL CON LA ÚLTIMA COMPRA
+                # CÁLCULO DE COSTO EN TIEMPO REAL CON LA ÚLTIMA COMPRA
                 cursor.execute("""
                     SELECT i.merma_pct, cv.costo_unitario 
                     FROM insumos i 
@@ -317,11 +203,9 @@ def recetas_save(platillo_id):
                     costo_unitario = Decimal(str(insumo_data["costo_unitario"]))
                     merma = Decimal(str(insumo_data["merma_pct"] or 0))
                     
-                    # Fórmula: Cantidad * (1 + Merma) * Costo Unitario
                     cantidad_con_merma = c * (1 + (merma / 100))
                     costo_materia_prima += (cantidad_con_merma * costo_unitario)
 
-                # Inyectamos 0 y None permanentemente para anular la configuración manual vieja en BD
                 rows.append((platillo_id, insumo_id_int, c, 0, None))
                 keep_insumo_ids.append(insumo_id_int)
 
@@ -332,7 +216,6 @@ def recetas_save(platillo_id):
             if rows:
                 cursor.executemany("INSERT INTO recetas (platillo_id, insumo_id, cantidad_base, usa_precio_manual, precio_manual) VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE cantidad_base = VALUES(cantidad_base), usa_precio_manual = VALUES(usa_precio_manual), precio_manual = VALUES(precio_manual)", rows)
 
-            # Borramos los insumos que fueron removidos de la lista
             if keep_insumo_ids:
                 placeholders = ",".join(["%s"] * len(keep_insumo_ids))
                 cursor.execute(
@@ -342,22 +225,20 @@ def recetas_save(platillo_id):
             else:
                 cursor.execute("DELETE FROM recetas WHERE platillo_id=%s", (platillo_id,))
 
-            # Actualizamos el platillo con TODOS los campos visuales nuevos
+            # Actualizamos la ficha visual
             cursor.execute(
                 """
                 UPDATE platillos 
-                SET proteina_cantidad_base=%s,
-                    imagen_url=%s,
+                SET imagen_url=%s,
                     tiempo_prep_min=%s,
                     equipo_necesario=%s,
                     instrucciones=%s
                 WHERE id=%s
                 """,
-                (prot_val, imagen_url, tiempo_prep_val, equipo_necesario, instrucciones, platillo_id)
+                (imagen_url, tiempo_prep_val, equipo_necesario, instrucciones, platillo_id)
             )
             
-            # ---> GUARDADO FINAL EN TABLA PRODUCTOS PARA LA MATRIZ BCG
-            # Tu regla de negocio: Operativos = 75% del costo de materia prima
+            # GUARDADO FINAL EN TABLA PRODUCTOS PARA LA MATRIZ BCG
             costo_operativo = costo_materia_prima * Decimal("0.75") 
             costo_total_real = costo_materia_prima + costo_operativo
             
@@ -381,41 +262,32 @@ def recetas_save(platillo_id):
 
 
 # =========================================================
-# ================== BORRADO DE RECETA ====================
+# ================== BORRADO TOTAL DE RECETA ==============
 # =========================================================
 
-@costeo_bp.route("/receta/<int:platillo_id>/eliminar_completa", methods=["POST"])
+@costeo_bp.route('/receta/<int:platillo_id>/delete', methods=['POST'])
 @requiere_permiso("menu_admin")
-def receta_eliminar_completa(platillo_id):
+def receta_delete(platillo_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # 1. Borramos todos los insumos de esta receta
+            # 1. Borramos dependencias de la receta
             cursor.execute("DELETE FROM recetas WHERE platillo_id = %s", (platillo_id,))
-            
-            # 2. Borramos la vinculación de proteína estándar si es que tiene una
             cursor.execute("DELETE FROM recetas_proteina WHERE platillo_id = %s", (platillo_id,))
             
-            # 3. Limpiamos el gramaje base del platillo y la ficha visual
-            cursor.execute(
-                """
-                UPDATE platillos 
-                SET proteina_cantidad_base = NULL, 
-                    imagen_url = NULL, 
-                    tiempo_prep_min = NULL, 
-                    equipo_necesario = NULL, 
-                    instrucciones = NULL 
-                WHERE id = %s
-                """, 
-                (platillo_id,)
-            )
+            # 2. Desvinculamos del POS (Productos) para no romper el historial de ventas
+            cursor.execute("UPDATE productos SET platillo_id = NULL WHERE platillo_id = %s", (platillo_id,))
+
+            # 3. Borramos el contenedor de la receta (platillo)
+            cursor.execute("DELETE FROM platillos WHERE id = %s", (platillo_id,))
             
-            conn.commit()
-            flash("Receta vaciada correctamente. Todos los insumos y la ficha técnica fueron removidos.", "success")
+        conn.commit()
+        flash("Receta eliminada con éxito.", "success")
+        
     except Exception as e:
         try: conn.rollback()
         except: pass
-        flash(f"Error al borrar la receta: {e}", "error")
+        flash(f"Error al eliminar la receta: {e}", "error")
     finally:
         conn.close()
 
@@ -430,7 +302,6 @@ def receta_eliminar_completa(platillo_id):
 @requiere_permiso("menu_admin")
 def costeo_index():
     try:
-        # Se cambia para mostrar siempre los dinámicos basados en compras
         data = query_all("SELECT * FROM v_costeo_platillos_compras ORDER BY platillo")
     except Exception:
         data = []
