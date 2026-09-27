@@ -2,6 +2,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from decimal import Decimal, InvalidOperation
 from db import get_connection
 
+# IMPORTAMOS EL CANDADO DESDE auth.py
+from auth import requiere_permiso
+
 costeo_bp = Blueprint("costeo", __name__, url_prefix="/admin")
 
 # =========================================================
@@ -50,6 +53,7 @@ def execute_many(sql, rows):
 # =========================================================
 
 @costeo_bp.get("/platillos")
+@requiere_permiso("menu_admin")
 def platillos_index():
     try:
         # Se agregaron los campos extra aquí si algún día quieres mostrarlos en la tabla
@@ -59,6 +63,7 @@ def platillos_index():
     return render_template("admin/platillos_index.html", platillos=platillos)
 
 @costeo_bp.post("/platillos")
+@requiere_permiso("menu_admin")
 def platillos_create():
     nombre = (request.form.get("nombre") or "").strip()
     precio = request.form.get("precio_actual")
@@ -84,6 +89,7 @@ def platillos_create():
     return redirect(url_for("costeo.platillos_index"))
 
 @costeo_bp.route("/platillos/<int:platillo_id>/precio", methods=["POST"])
+@requiere_permiso("menu_admin")
 def platillo_precio_update(platillo_id):
     precio_txt = (request.form.get("precio_pos") or "").strip()
 
@@ -121,6 +127,7 @@ def platillo_precio_update(platillo_id):
 # =========================================================
 
 @costeo_bp.route('/platillos/<int:platillo_id>/delete', methods=['POST'])
+@requiere_permiso("menu_admin")
 def platillo_delete(platillo_id):
     conn = get_connection()
     try:
@@ -159,11 +166,13 @@ def platillo_delete(platillo_id):
 # =========================================================
 
 @costeo_bp.get("/insumos")
+@requiere_permiso("menu_admin")
 def insumos_index():
     insumos = query_all("SELECT id, nombre, unidad_base, merma_pct, activo FROM insumos ORDER BY nombre")
     return render_template("admin/insumos_index.html", insumos=insumos)
 
 @costeo_bp.post("/insumos")
+@requiere_permiso("menu_admin")
 def insumos_create():
     nombre = (request.form.get("nombre") or "").strip()
     unidad_base = (request.form.get("unidad_base") or "").strip()
@@ -202,11 +211,13 @@ def insumos_create():
 # =========================================================
 
 @costeo_bp.get("/recetas")
+@requiere_permiso("menu_admin")
 def recetas_index():
     platillos = query_all("SELECT id, nombre FROM platillos ORDER BY nombre")
     return render_template("admin/recetas_index.html", platillos=platillos)
 
 @costeo_bp.get("/recetas/<int:platillo_id>")
+@requiere_permiso("menu_admin")
 def recetas_edit(platillo_id):
     # Traemos todos los campos visuales para inyectarlos en el HTML
     platillo = query_one("SELECT id, nombre, proteina_cantidad_base, imagen_url, tiempo_prep_min, equipo_necesario, instrucciones FROM platillos WHERE id=%s", (platillo_id,))
@@ -241,6 +252,7 @@ def recetas_edit(platillo_id):
     )
 
 @costeo_bp.post("/recetas/<int:platillo_id>")
+@requiere_permiso("menu_admin")
 def recetas_save(platillo_id):
     # 1. Recuperar los datos de la proteína base
     prot_txt = (request.form.get("proteina_cantidad_base") or "").strip()
@@ -373,6 +385,7 @@ def recetas_save(platillo_id):
 # =========================================================
 
 @costeo_bp.route("/receta/<int:platillo_id>/eliminar_completa", methods=["POST"])
+@requiere_permiso("menu_admin")
 def receta_eliminar_completa(platillo_id):
     conn = get_connection()
     try:
@@ -414,6 +427,7 @@ def receta_eliminar_completa(platillo_id):
 # =========================================================
 
 @costeo_bp.get("/costeo")
+@requiere_permiso("menu_admin")
 def costeo_index():
     try:
         # Se cambia para mostrar siempre los dinámicos basados en compras
