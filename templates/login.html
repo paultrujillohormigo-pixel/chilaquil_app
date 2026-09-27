@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Señor Chilaquil</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { 
+            background-color: #f1f5f9; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-logo {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        h2 { margin: 0 0 5px 0; color: #0f172a; }
+        p { color: #64748b; font-size: 0.95rem; margin-bottom: 30px; }
+        
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-weight: 600; font-size: 0.9rem; color: #334155; margin-bottom: 6px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #b32417; }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #b32417;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #8c1c12; }
+
+        /* Mensajes de error flash */
+        .flash-messages { margin-bottom: 20px; text-align: left; }
+        .flash { padding: 12px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; margin-bottom: 10px;}
+        .flash.error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .flash.warning { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .flash.success { background-color: #dcfce3; color: #15803d; border: 1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="login-logo">🌶️</div>
+    <h2>Señor Chilaquil</h2>
+    <p>Ingresa tus credenciales para operar.</p>
+
+    <!-- Mostrar errores (Ej. Contraseña incorrecta) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" placeholder="Ej. jperez" required autocomplete="off">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit">Iniciar Sesión</button>
+    </form>
+</div>
+
+</body>
+</html>
