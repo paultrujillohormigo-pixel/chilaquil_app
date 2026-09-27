@@ -31,6 +31,13 @@ app.register_blueprint(gastos_bp)
 app.register_blueprint(rh_bp)
 app.register_blueprint(cocina_bp)
 
+
+# HASTA ARRIBA EN app.py (Junto a tus otras importaciones de Blueprints)
+from seguridad import seguridad_bp
+
+# ABAJO EN app.py (Donde registras todos los demás)
+app.register_blueprint(seguridad_bp)
+
 # =========================================================
 # ================== LOGIN Y LOGOUT =======================
 # =========================================================
