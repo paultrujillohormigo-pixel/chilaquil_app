@@ -6,6 +6,9 @@ from db import get_connection
 import calendar
 from zoneinfo import ZoneInfo
 
+# IMPORTAMOS EL CANDADO DESDE auth.py
+from auth import requiere_permiso
+
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
 # =========================================================
@@ -33,6 +36,7 @@ def calc_var(current: float, previous: float) -> float:
 # =========================================================
 
 @dashboard_bp.route("/inversiones", methods=["GET", "POST"])
+@requiere_permiso("finanzas")
 def inversiones():
     conn = get_connection()
     try:
@@ -73,6 +77,7 @@ def inversiones():
 # =========================================================
 
 @dashboard_bp.route("/dashboard")
+@requiere_permiso("finanzas")
 def dashboard():
     meses_seleccionados = request.args.getlist("mes")
     fecha_inicio_seleccionada = request.args.get("fecha_inicio", "")
@@ -305,6 +310,7 @@ def dashboard():
 # =========================================================
 
 @dashboard_bp.route("/estado-resultados")
+@requiere_permiso("finanzas")
 def estado_resultados():
     conn = get_connection()
     anio_seleccionado = request.args.get("anio", str(datetime.now().year))
