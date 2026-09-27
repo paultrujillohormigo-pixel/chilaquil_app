@@ -63,6 +63,7 @@
       cursor: pointer;
       transition: all 0.2s;
       -webkit-tap-highlight-color: transparent;
+      text-decoration: none; /* Asegura que los enlaces se vean bien */
     }
     .nav-dd-btn:hover { background: #f1f5f9; color: #b32417; }
     .nav-dd.is-open .nav-dd-btn { background: #fee2e2; color: #b32417; }
@@ -152,6 +153,9 @@
     </div>
 
     <div class="nav-links">
+
+      <!-- BOTÓN DIRECTO A INICIO -->
+      <a href="{{ url_for('hub') }}" class="nav-dd-btn">🏠 Inicio</a>
 
       <!-- 1. Ventas y Pedidos -->
       {% if 'all' in session.permisos or 'pedidos' in session.permisos or 'finanzas' in session.permisos %}
@@ -291,11 +295,14 @@
     // Comportamiento de click para abrir/cerrar en móviles o al hacer click manual
     buttons.forEach(btn => {
       btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const dd = btn.closest(".nav-dd");
-        if (!dd) return;
-        toggle(dd);
+        // Solo prevenir por defecto si no es un enlace directo
+        if(btn.tagName.toLowerCase() !== 'a') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dd = btn.closest(".nav-dd");
+            if (!dd) return;
+            toggle(dd);
+        }
       }, { passive: false });
     });
 
