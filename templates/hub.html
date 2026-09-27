@@ -3,14 +3,17 @@
 
 <div class="app-hub">
   <header class="hub-header">
-    <h1>👋 Bienvenido, Señor Chilaquil</h1>
+    <h1>👋 Bienvenido, {{ session.get('nombre', 'Señor Chilaquil') }}</h1>
     <p>Selecciona un módulo para comenzar a operar</p>
   </header>
 
   <!-- MÓDULO 1: OPERACIÓN Y POS -->
+  {% if 'all' in session.permisos or 'pedidos' in session.permisos or 'menu_admin' in session.permisos or 'cocina' in session.permisos %}
   <section class="hub-category">
     <h2 class="hub-category-title">👨‍🍳 Operación y Punto de Venta</h2>
     <div class="hub-grid">
+      
+      {% if 'all' in session.permisos or 'pedidos' in session.permisos %}
       <a href="{{ url_for('nuevo_pedido') }}" class="hub-card">
         <div class="hub-icon">🍔</div>
         <div class="hub-info">
@@ -25,14 +28,19 @@
           <p>Controla los tickets activos y manda a cocina.</p>
         </div>
       </a>
-      <a href="{{ url_for('productos') }}" class="hub-card">
+      {% endif %}
+
+      {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
+      <a href="{{ url_for('costeo.platillos_index') }}" class="hub-card">
         <div class="hub-icon">🏷️</div>
         <div class="hub-info">
           <h3>Menú y Precios</h3>
           <p>Actualiza el precio de venta de tus platillos y salsas.</p>
         </div>
       </a>
-      <!-- NUEVO BOTÓN: FICHA TÉCNICA / RECETARIO -->
+      {% endif %}
+
+      {% if 'all' in session.permisos or 'cocina' in session.permisos %}
       <a href="{{ url_for('cocina.index_recetario') }}" class="hub-card">
         <div class="hub-icon">🍳</div>
         <div class="hub-info">
@@ -40,10 +48,14 @@
           <p>Consulta las fichas técnicas, fotos y paso a paso para cocina.</p>
         </div>
       </a>
+      {% endif %}
+
     </div>
   </section>
+  {% endif %}
 
   <!-- MÓDULO 2: FINANZAS Y BI -->
+  {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
   <section class="hub-category">
     <h2 class="hub-category-title">📊 Finanzas y Business Intelligence</h2>
     <div class="hub-grid">
@@ -84,11 +96,15 @@
       </a>
     </div>
   </section>
+  {% endif %}
 
   <!-- MÓDULO 3: ALMACÉN Y COSTEO -->
+  {% if 'all' in session.permisos or 'inventario' in session.permisos or 'menu_admin' in session.permisos %}
   <section class="hub-category">
     <h2 class="hub-category-title">📦 Almacén y Costeo de Recetas</h2>
     <div class="hub-grid">
+      
+      {% if 'all' in session.permisos or 'inventario' in session.permisos %}
       <a href="{{ url_for('compras') }}" class="hub-card">
         <div class="hub-icon">🛒</div>
         <div class="hub-info">
@@ -96,6 +112,16 @@
           <p>Ingresa facturas de insumos y materia prima.</p>
         </div>
       </a>
+      <a href="{{ url_for('ver_stock') }}" class="hub-card">
+        <div class="hub-icon">📦</div>
+        <div class="hub-info">
+          <h3>Inventario Actual</h3>
+          <p>Revisa existencias y haz ajustes manuales de stock.</p>
+        </div>
+      </a>
+      {% endif %}
+
+      {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
       <a href="{{ url_for('costeo.recetas_index') }}" class="hub-card">
         <div class="hub-icon">🧾</div>
         <div class="hub-info">
@@ -110,17 +136,14 @@
           <p>Revisa el % de Food Cost real de cada platillo.</p>
         </div>
       </a>
-      <a href="{{ url_for('ver_stock') }}" class="hub-card">
-        <div class="hub-icon">📦</div>
-        <div class="hub-info">
-          <h3>Inventario Actual</h3>
-          <p>Revisa existencias y haz ajustes manuales de stock.</p>
-        </div>
-      </a>
+      {% endif %}
+      
     </div>
   </section>
+  {% endif %}
 
   <!-- MÓDULO 4: CRM -->
+  {% if 'all' in session.permisos or 'clientes' in session.permisos %}
   <section class="hub-category">
     <h2 class="hub-category-title">🤝 CRM y Clientes</h2>
     <div class="hub-grid">
@@ -140,8 +163,10 @@
       </a>
     </div>
   </section>
+  {% endif %}
 
-   <!-- MÓDULO 4: RECURSOS HUMANOS -->
+   <!-- MÓDULO 5: RECURSOS HUMANOS -->
+  {% if 'all' in session.permisos or 'rh' in session.permisos %}
   <section class="hub-category">
     <h2 class="hub-category-title">🧑‍💼 Recursos Humanos</h2>
     <div class="hub-grid">
@@ -168,11 +193,14 @@
       </a>
     </div>
   </section>
+  {% endif %}
 
-  <!-- MÓDULO 5: ADMIN Y PÚBLICO -->
+  <!-- MÓDULO 6: ADMIN Y PÚBLICO -->
   <section class="hub-category">
     <h2 class="hub-category-title">⚙️ Configuración y Enlaces Públicos</h2>
     <div class="hub-grid">
+      
+      {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
       <a href="{{ url_for('borrar_pedidos') }}" class="hub-card">
         <div class="hub-icon">🕒</div>
         <div class="hub-info">
@@ -180,6 +208,20 @@
           <p>Auditoría, revisión y cancelación de tickets pasados.</p>
         </div>
       </a>
+      {% endif %}
+
+      <!-- NUEVO ACCESO AL CONTROL MAESTRO DE SEGURIDAD -->
+      {% if 'all' in session.permisos or 'seguridad' in session.permisos %}
+      <a href="{{ url_for('seguridad_bp.gestion_usuarios') }}" class="hub-card" style="border-color: #b91c1c;">
+        <div class="hub-icon" style="background: #fee2e2;">🛡️</div>
+        <div class="hub-info">
+          <h3 style="color: #b91c1c;">Seguridad y Usuarios</h3>
+          <p>Crea cajeros, gerentes y asigna qué pueden ver.</p>
+        </div>
+      </a>
+      {% endif %}
+
+      <!-- ESTOS SON PÚBLICOS, CUALQUIERA LOGUEADO PUEDE GENERAR LOS LINKS -->
       <a href="{{ url_for('menu') }}" target="_blank" class="hub-card">
         <div class="hub-icon">📱</div>
         <div class="hub-info">
@@ -200,7 +242,7 @@
 </div>
 
 <style>
-  /* Estilos del App Hub */
+  /* Estilos del App Hub (Sin cambios, se mantienen tus estilos) */
   .app-hub { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
   .hub-header { text-align: center; margin-bottom: 50px; }
   .hub-header h1 { font-size: 2.5rem; color: #0f172a; margin-bottom: 10px; letter-spacing: -1px; font-weight: 800;}
