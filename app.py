@@ -4,85 +4,35 @@ import pymysql
 import json
 import os
 
-from flask import Flask, request, redirect, url_for, flash, render_template, jsonify, send_from_directory
+from flask import Flask, request, redirect, url_for, flash, render_template, jsonify, session, send_from_directory
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
-from db import get_connection
-from costeo import costeo_bp
-from dashboard import dashboard_bp
+from werkzeug.security import check_password_hash
 
 from db import get_connection
+
+# --- Importamos los Blueprints ---
 from costeo import costeo_bp
-from gastos import gastos_bp
 from dashboard import dashboard_bp
-from rh import rh_bp  # <--- Agrega esta línea
-app = Flask(__name__)
-app.secret_key = "super_secret_key"
-# Arriba, en tus importaciones
 from gastos import gastos_bp
-app.register_blueprint(rh_bp) # <--- Agrega esta línea
-# Hasta arriba en tus importaciones
+from rh import rh_bp
 from cocina import cocina_bp
 
-# Donde tienes los app.register_blueprint(...)
+# --- Importamos nuestros Candados desde auth.py ---
+from auth import login_requerido, requiere_permiso
+
+app = Flask(__name__)
+app.secret_key = "super_secret_key"
+
+# --- Registramos todos los Blueprints ---
+app.register_blueprint(costeo_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(gastos_bp)
+app.register_blueprint(rh_bp)
 app.register_blueprint(cocina_bp)
 
-# Más abajo, donde registras tus blueprints
-app.register_blueprint(gastos_bp)
-
-
-from functools import wraps
-from flask import session
-from werkzeug.security import generate_password_hash, check_password_hash
-
 # =========================================================
-# ================== SISTEMA DE SEGURIDAD =================
-# =========================================================
-
-def requiere_permiso(modulo_nombre):
-    """
-    Este es el CANDADO. Se pone encima de las rutas que quieres proteger.
-    Revisa si el rol del usuario actual tiene acceso al módulo solicitado.
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # 1. ¿Está logueado?
-            if 'usuario_id' not in session:
-                flash("Por favor, inicia sesión para acceder.", "warning")
-                return redirect(url_for('login'))
-            
-            rol_id = session.get('rol_id')
-            
-            # 2. El "Modo Dios": Si es el rol 1 (Administrador), entra a todo sin preguntar
-            if rol_id == 1:
-                return f(*args, **kwargs)
-
-            # 3. Revisar si su rol tiene el permiso en la base de datos
-            conn = get_connection()
-            tiene_acceso = False
-            try:
-                with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                    cursor.execute("""
-                        SELECT 1 FROM rol_modulo rm
-                        JOIN modulos m ON rm.modulo_id = m.id
-                        WHERE rm.rol_id = %s AND m.nombre = %s
-                    """, (rol_id, modulo_nombre))
-                    tiene_acceso = cursor.fetchone() is not None
-            finally:
-                conn.close()
-
-            # 4. Si no tiene acceso, lo rebotamos
-            if not tiene_acceso:
-                flash(f"Acceso Denegado: No tienes permiso para ver el módulo '{modulo_nombre}'.", "error")
-                return redirect(url_for('hub')) # Lo mandamos a la pantalla principal
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-# =========================================================
-# ================== Logings ===========
+# ================== LOGIN Y LOGOUT =======================
 # =========================================================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -99,7 +49,7 @@ def login():
 
                 # check_password_hash compara lo que escribió con lo encriptado en BD
                 if usuario and check_password_hash(usuario['password_hash'], password):
-                    # ¡Login Exitoso! Guardamos sus datos en la sesión (Cookie segura)
+                    # ¡Login Exitoso! Guardamos sus datos en la sesión
                     session['usuario_id'] = usuario['id']
                     session['nombre'] = usuario['nombre']
                     session['rol_id'] = usuario['rol_id']
@@ -111,7 +61,7 @@ def login():
         finally:
             conn.close()
 
-    return render_template("login.html") # Tendrás que crear un login.html sencillito
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
@@ -120,7 +70,7 @@ def logout():
     return redirect(url_for('login'))
 
 # =========================================================
-# ================== CONFIGURACIÓN Y RUTAS BASE ===========
+# ================== RUTAS PÚBLICAS (SIN CANDADO) =========
 # =========================================================
 
 @app.route('/privacy', methods=['GET'])
@@ -135,19 +85,6 @@ def privacy_policy():
     </html>
     """, 200
 
-# COSTEO BLUEPRINT
-app.register_blueprint(costeo_bp)
-# COSTEO dashboard
-app.register_blueprint(dashboard_bp) # <--- Y esta línea
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/hub")
-def hub():
-    return render_template("hub.html")
-
 @app.route('/menu')
 def menu():
     conn = get_connection()
@@ -155,12 +92,10 @@ def menu():
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
             productos_db = cursor.fetchall()
-
             cursor.execute("SELECT * FROM salsas ORDER BY nombre")
             salsas_db = cursor.fetchall()
     finally:
         conn.close()
-
     return render_template('menu.html', productos=productos_db, salsas=salsas_db)
 
 @app.route('/carta')
@@ -170,6 +105,20 @@ def mostrar_carta():
 @app.route('/ver-pdf')
 def ver_pdf():
     return send_from_directory(app.static_folder, 'menu_Mayo.pdf')
+
+# =========================================================
+# ================== RUTAS GENERALES PROTEGIDAS ===========
+# =========================================================
+
+@app.route("/")
+@login_requerido
+def index():
+    return render_template("index.html")
+
+@app.route("/hub")
+@login_requerido
+def hub():
+    return render_template("hub.html")
 
 
 # =========================================================
@@ -253,7 +202,7 @@ def money_format(value):
 
 
 # =========================================================
-# ================== CRM & LEALTAD (TOTOPOS) ==============
+# ================== CRM & LEALTAD (CLIENTES) =============
 # =========================================================
 
 def faltan_para(balance: int, goal: int) -> int:
@@ -333,6 +282,7 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
 
 
 @app.route("/api/buscar_cliente")
+@requiere_permiso("pedidos") # Se asume que el que hace pedidos necesita buscar clientes
 def buscar_cliente():
     query = request.args.get("q", "").strip()
     if len(query) < 3:
@@ -354,6 +304,7 @@ def buscar_cliente():
 
 
 @app.route("/clientes", methods=["GET", "POST"])
+@requiere_permiso("clientes")
 def lista_clientes():
     conn = get_connection()
     try:
@@ -394,7 +345,7 @@ def lista_clientes():
         conn.close()
     return render_template("clientes.html", clientes=clientes)
 
-
+# ESTA RUTA ES PÚBLICA PARA TUS CLIENTES, NO LLEVA CANDADO
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
@@ -444,6 +395,7 @@ def mi_perfil(phone=None):
 
 
 @app.route("/cliente/<int:customer_id>", methods=["GET", "POST"])
+@requiere_permiso("clientes")
 def detalle_cliente(customer_id):
     conn = get_connection()
     try:
@@ -497,6 +449,7 @@ def detalle_cliente(customer_id):
 
 
 @app.route("/campanas")
+@requiere_permiso("clientes")
 def campanas():
     dias_str = request.args.get("dias", "30")
     dias = int(dias_str) if dias_str.isdigit() else 30
@@ -633,6 +586,7 @@ def descontar_stock_por_pedido(pedido_id: int) -> None:
 
 
 @app.route("/inventario/stock")
+@requiere_permiso("inventario")
 def ver_stock():
     q = (request.args.get("q") or "").strip()
 
@@ -653,6 +607,7 @@ def ver_stock():
 
 
 @app.post("/inventario/stock/agregar")
+@requiere_permiso("inventario")
 def agregar_stock():
     insumo_id = (request.form.get("insumo_id") or "").strip()
     cantidad_txt = (request.form.get("cantidad") or "").strip()
@@ -708,6 +663,7 @@ def agregar_stock():
 # =========================================================
 
 @app.route("/pedidos_abiertos")
+@requiere_permiso("pedidos")
 def pedidos_abiertos():
     conn = get_connection()
     try:
@@ -756,6 +712,7 @@ def pedidos_abiertos():
 
 
 @app.route("/nuevo_pedido", methods=["GET", "POST"])
+@requiere_permiso("pedidos")
 def nuevo_pedido():
     conn = get_connection()
     try:
@@ -944,6 +901,7 @@ def nuevo_pedido():
 
 
 @app.route("/pedido/<int:pedido_id>", methods=["GET", "POST"])
+@requiere_permiso("pedidos")
 def ver_pedido(pedido_id):
     conn = get_connection()
     try:
@@ -1246,6 +1204,7 @@ def ver_pedido(pedido_id):
 
 
 @app.route("/cerrar_pedido/<int:pedido_id>", methods=["POST"])
+@requiere_permiso("pedidos")
 def cerrar_pedido(pedido_id):
     conn = get_connection()
     try:
@@ -1270,6 +1229,7 @@ def cerrar_pedido(pedido_id):
 
 
 @app.route("/cerrar_pedido_whatsapp/<int:pedido_id>", methods=["POST"])
+@requiere_permiso("pedidos")
 def cerrar_pedido_whatsapp(pedido_id):
     conn = get_connection()
     try:
@@ -1306,6 +1266,7 @@ def cerrar_pedido_whatsapp(pedido_id):
 
 
 @app.route("/pedido/<int:pedido_id>/actualizar_whatsapp", methods=["POST"])
+@requiere_permiso("pedidos")
 def actualizar_whatsapp_pedido(pedido_id):
     telefono_recibido = request.form.get("telefono_whatsapp", "").strip()
     telefono_limpio = normalize_phone_mx(telefono_recibido)
@@ -1340,6 +1301,7 @@ def actualizar_whatsapp_pedido(pedido_id):
 
 
 @app.route("/api/item/<int:item_id>/toggle_cocina", methods=["POST"])
+@requiere_permiso("cocina")
 def toggle_item_cocina(item_id):
     conn = get_connection()
     try:
@@ -1354,6 +1316,7 @@ def toggle_item_cocina(item_id):
 
 
 @app.route("/pedido/<int:pedido_id>/eliminar_item/<int:item_id>", methods=["POST"])
+@requiere_permiso("pedidos")
 def eliminar_item_pedido(pedido_id, item_id):
     conn = get_connection()
     try:
@@ -1394,6 +1357,7 @@ def eliminar_item_pedido(pedido_id, item_id):
 
 
 @app.route("/eliminar_pedido/<int:pedido_id>", methods=["POST"])
+@requiere_permiso("finanzas")
 def eliminar_pedido(pedido_id):
     conn = get_connection()
     try:
@@ -1432,6 +1396,7 @@ def eliminar_pedido(pedido_id):
 
 
 @app.route("/borrar_pedidos", methods=["GET"])
+@requiere_permiso("finanzas")
 def borrar_pedidos():
     estado = (request.args.get("estado") or "").strip().lower()
     origen = (request.args.get("origen") or "").strip().lower()
@@ -1496,6 +1461,7 @@ def borrar_pedidos():
 
 
 @app.route("/borrar_pedidos_bulk", methods=["POST"])
+@requiere_permiso("finanzas")
 def borrar_pedidos_bulk():
     modo = (request.form.get("modo") or "").strip()
 
@@ -1617,6 +1583,7 @@ def generar_ticket_texto(pedido_id, cursor) -> str:
 
 
 @app.route("/pedido/<int:pedido_id>/whatsapp")
+@requiere_permiso("pedidos")
 def enviar_ticket_whatsapp(pedido_id):
     tel_raw = (request.args.get("tel") or "").strip()
     telefono_e164 = normalize_phone_mx(tel_raw)
@@ -1636,6 +1603,7 @@ def enviar_ticket_whatsapp(pedido_id):
 
 
 @app.route("/pedido/<int:pedido_id>/ticket_preview")
+@requiere_permiso("pedidos")
 def ticket_preview(pedido_id):
     conn = get_connection()
     try:
@@ -1656,6 +1624,7 @@ def ticket_preview(pedido_id):
 # =========================================================
 
 @app.route("/productos", methods=["GET", "POST"])
+@requiere_permiso("menu_admin")
 def productos():
     conn = get_connection()
     try:
@@ -1716,6 +1685,7 @@ def productos():
 
 
 @app.post("/productos/<int:producto_id>/actualizar_platillo")
+@requiere_permiso("menu_admin")
 def actualizar_platillo_producto(producto_id):
     platillo_id_txt = (request.form.get("platillo_id") or "").strip()
     platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
@@ -1737,6 +1707,7 @@ def actualizar_platillo_producto(producto_id):
         conn.close()
 
 @app.post("/productos/<int:producto_id>/set_platillo")
+@requiere_permiso("menu_admin")
 def productos_set_platillo(producto_id):
     platillo_id = request.form.get("platillo_id") or None
     conn = get_connection()
@@ -1750,6 +1721,7 @@ def productos_set_platillo(producto_id):
     return redirect(url_for("productos"))
 
 @app.post("/productos/<int:producto_id>/eliminar")
+@requiere_permiso("menu_admin")
 def eliminar_producto_producto(producto_id):  
     conn = get_connection()
     try:
@@ -1788,6 +1760,7 @@ def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
 
 
 @app.get("/api/platillos/<int:platillo_id>/costo")
+@requiere_permiso("menu_admin")
 def api_platillo_costo(platillo_id):
     conn = get_connection()
     try:
@@ -1799,6 +1772,7 @@ def api_platillo_costo(platillo_id):
 
 
 @app.post("/platillos/<int:platillo_id>/proteina_qty")
+@requiere_permiso("menu_admin")
 def platillo_set_proteina_qty(platillo_id):
     proteina_id_txt = (request.form.get("proteina_id") or "").strip()
     cantidad_txt = (request.form.get("cantidad_base") or "").strip()
@@ -1871,6 +1845,7 @@ def platillo_set_proteina_qty(platillo_id):
 # =========================================================
 
 @app.route("/compras", methods=["GET", "POST"])
+@requiere_permiso("inventario")
 def compras():
     conn = get_connection()
     conn.ping(reconnect=True)
@@ -1983,6 +1958,7 @@ def compras():
 
 
 @app.route("/compras/eliminar_concepto", methods=["POST"])
+@requiere_permiso("inventario")
 def eliminar_concepto_compras():
     concepto = request.form.get("concepto")
 
@@ -2016,6 +1992,7 @@ def eliminar_concepto_compras():
 
 
 @app.route("/compras/eliminar_insumo", methods=["POST"])
+@requiere_permiso("inventario")
 def eliminar_insumo_compras():
     insumo_id = request.form.get("insumo_id")
 
@@ -2045,6 +2022,7 @@ def eliminar_insumo_compras():
 # =========================================================
 
 @app.route("/corte_caja", methods=["GET", "POST"])
+@requiere_permiso("finanzas")
 def corte_caja():
     fecha_str = request.args.get("fecha")
     if not fecha_str:
@@ -2173,6 +2151,7 @@ def corte_caja():
 # =========================================================
 
 @app.route("/raw-data")
+@requiere_permiso("finanzas")
 def raw_data():
     mes = request.args.get("mes")
     conn = get_connection()
@@ -2209,9 +2188,6 @@ def raw_data():
                            pedidos_agrupados=pedidos_agrupados, 
                            meses_disponibles=meses_disponibles, 
                            mes=mes)
-
-
-
 
 # =========================================================
 # ================== RUN APP ==============================
