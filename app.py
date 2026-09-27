@@ -54,13 +54,27 @@ def login():
                 cursor.execute("SELECT * FROM usuarios WHERE username = %s AND activo = 1", (username,))
                 usuario = cursor.fetchone()
 
-                # check_password_hash compara lo que escribió con lo encriptado en BD
                 if usuario and check_password_hash(usuario['password_hash'], password):
-                    # ¡Login Exitoso! Guardamos sus datos en la sesión
                     session['usuario_id'] = usuario['id']
                     session['nombre'] = usuario['nombre']
                     session['rol_id'] = usuario['rol_id']
                     
+                    # --- INICIO DE LO NUEVO ---
+                    # Cargamos sus permisos en la sesión para ocultar botones en el HTML
+                    session['permisos'] = []
+                    if usuario['rol_id'] == 1:
+                        # El Modo Dios tiene 'all'
+                        session['permisos'] = ['all']
+                    else:
+                        cursor.execute("""
+                            SELECT m.nombre FROM rol_modulo rm
+                            JOIN modulos m ON rm.modulo_id = m.id
+                            WHERE rm.rol_id = %s
+                        """, (usuario['rol_id'],))
+                        modulos_db = cursor.fetchall()
+                        session['permisos'] = [mod['nombre'] for mod in modulos_db]
+                    # --- FIN DE LO NUEVO ---
+
                     flash(f"Bienvenido {usuario['nombre']}", "success")
                     return redirect(url_for('hub'))
                 else:
@@ -69,12 +83,6 @@ def login():
             conn.close()
 
     return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear() # Borra todo rastro del usuario
-    flash("Sesión cerrada correctamente.", "success")
-    return redirect(url_for('login'))
 
 # =========================================================
 # ================== RUTAS PÚBLICAS (SIN CANDADO) =========
