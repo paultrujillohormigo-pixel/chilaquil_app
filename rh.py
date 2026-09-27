@@ -1,10 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from db import get_connection
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from db import get_connection
+from datetime import datetime
+
+# IMPORTAMOS EL CANDADO DESDE auth.py
+from auth import requiere_permiso
+
 # Creamos el módulo (Blueprint) con el prefijo /rh
 rh_bp = Blueprint("rh_bp", __name__, url_prefix="/rh")
 
 @rh_bp.route("/empleados", methods=["GET", "POST"])
+@requiere_permiso("rh")
 def directorio():
     conn = get_connection()
     try:
@@ -39,6 +44,7 @@ def directorio():
     return render_template("rh_empleados.html", empleados=empleados)
 
 @rh_bp.route("/empleados/<int:empleado_id>/baja", methods=["POST"])
+@requiere_permiso("rh")
 def dar_de_baja(empleado_id):
     conn = get_connection()
     try:
@@ -50,11 +56,10 @@ def dar_de_baja(empleado_id):
     finally:
         conn.close()
     return redirect(url_for("rh_bp.directorio"))
-from datetime import datetime
 
-from datetime import datetime
 
 @rh_bp.route("/checador", methods=["GET", "POST"])
+@requiere_permiso("rh")
 def checador():
     conn = get_connection()
     hoy = datetime.now().date() # Se mantiene para mostrar la tabla de "Actividad de Hoy"
@@ -143,7 +148,7 @@ def checador():
             cursor.execute("SELECT id, nombre, puesto FROM rh_empleados WHERE activo = 1 ORDER BY nombre")
             empleados = cursor.fetchall()
 
-            # 2. Traer los registros de hoy para la tabla (Esto sigue usando 'hoy' para no mostrar días pasados)
+            # 2. Traer los registros de hoy para la tabla
             cursor.execute("""
                 SELECT a.*, e.nombre, e.puesto 
                 FROM rh_asistencias a 
@@ -160,6 +165,7 @@ def checador():
 
 
 @rh_bp.route("/nomina", methods=["GET", "POST"])
+@requiere_permiso("rh")
 def nomina():
     conn = get_connection()
     try:
@@ -216,8 +222,9 @@ def nomina():
 
     return render_template("rh_nomina.html", empleados=empleados, ultimos_pagos=ultimos_pagos)
 
-    return render_template("rh_nomina.html", empleados=empleados, ultimos_pagos=ultimos_pagos)
+
 @rh_bp.route("/api/calcular-pago", methods=["GET"])
+@requiere_permiso("rh")
 def api_calcular_pago():
     empleado_id = request.args.get("empleado_id")
     inicio = request.args.get("inicio")
