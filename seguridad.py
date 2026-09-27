@@ -13,9 +13,8 @@ seguridad_bp = Blueprint("seguridad_bp", __name__, url_prefix="/seguridad")
 # =========================================================
 # ================== GESTIÓN DE USUARIOS ==================
 # =========================================================
-
 @seguridad_bp.route("/usuarios", methods=["GET", "POST"])
-@requiere_permiso("seguridad") # Este permiso solo lo tienes tú (Administrador General)
+@requiere_permiso("seguridad")
 def gestion_usuarios():
     conn = get_connection()
     try:
@@ -26,17 +25,17 @@ def gestion_usuarios():
                 username = request.form.get("username", "").strip().lower()
                 password = request.form.get("password", "")
                 rol_id = request.form.get("rol_id")
+                empleado_id = request.form.get("empleado_id") or None # <--- NUEVO: Capturamos el empleado
 
                 if not nombre or not username or not password or not rol_id:
-                    flash("Todos los campos son obligatorios.", "error")
+                    flash("Todos los campos obligatorios deben llenarse.", "error")
                 else:
-                    # ENCRIPTAMOS LA CONTRASEÑA (Regla de Oro)
                     hashed_pw = generate_password_hash(password)
                     try:
                         cursor.execute("""
-                            INSERT INTO usuarios (nombre, username, password_hash, rol_id)
-                            VALUES (%s, %s, %s, %s)
-                        """, (nombre, username, hashed_pw, rol_id))
+                            INSERT INTO usuarios (nombre, username, password_hash, rol_id, empleado_id)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (nombre, username, hashed_pw, rol_id, empleado_id))
                         conn.commit()
                         flash(f"Usuario '{nombre}' creado exitosamente.", "success")
                     except pymysql.err.IntegrityError:
@@ -44,23 +43,27 @@ def gestion_usuarios():
                 
                 return redirect(url_for("seguridad_bp.gestion_usuarios"))
 
-            # GET: Mostramos la tabla de usuarios actuales y el formulario
+            # GET: Mostrar la tabla
             cursor.execute("""
-                SELECT u.id, u.nombre, u.username, u.activo, r.nombre as rol
+                SELECT u.id, u.nombre, u.username, u.activo, r.nombre as rol, e.nombre as empleado_vinculado
                 FROM usuarios u
                 LEFT JOIN roles r ON u.rol_id = r.id
+                LEFT JOIN rh_empleados e ON u.empleado_id = e.id
                 ORDER BY u.nombre
             """)
             usuarios = cursor.fetchall()
 
-            # Para llenar el select de Roles en el formulario
             cursor.execute("SELECT id, nombre FROM roles ORDER BY nombre")
             roles = cursor.fetchall()
+            
+            # --- NUEVO: Traer empleados activos para el formulario ---
+            cursor.execute("SELECT id, nombre, puesto FROM rh_empleados WHERE activo = 1 ORDER BY nombre")
+            empleados = cursor.fetchall()
             
     finally:
         conn.close()
 
-    return render_template("admin/admin_usuarios.html", usuarios=usuarios, roles=roles)
+    return render_template("admin/admin_usuarios.html", usuarios=usuarios, roles=roles, empleados=empleados)
 
 # Ruta rápida para desactivar (borrar lógicamente) a un usuario
 @seguridad_bp.route("/usuarios/<int:usuario_id>/desactivar", methods=["POST"])
