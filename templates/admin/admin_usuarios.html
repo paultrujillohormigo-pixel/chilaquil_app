@@ -62,6 +62,18 @@
                         {% endfor %}
                     </select>
                 </div>
+                
+                <!-- ====== NUEVO CAMPO: VINCULAR EMPLEADO ====== -->
+                <div class="form-group">
+                    <label>Vincular a Empleado (Opcional)</label>
+                    <select name="empleado_id">
+                        <option value="">-- No vincular a nadie (Admin/Dueño) --</option>
+                        {% for emp in empleados %}
+                            <option value="{{ emp.id }}">{{ emp.nombre }} ({{ emp.puesto }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
             </div>
             <button type="submit" class="btn-primary">Registrar Usuario</button>
         </form>
@@ -78,6 +90,7 @@
                         <th>Nombre</th>
                         <th>Login</th>
                         <th>Rol</th>
+                        <th>Vinculado A (RH)</th> <!-- COLUMNA NUEVA -->
                         <th>Estado</th>
                         <th>Acción</th>
                     </tr>
@@ -89,6 +102,16 @@
                         <td><strong>{{ u.nombre }}</strong></td>
                         <td>{{ u.username }}</td>
                         <td>{{ u.rol or 'Sin Rol' }}</td>
+                        
+                        <!-- DATO NUEVO -->
+                        <td>
+                            {% if u.empleado_vinculado %}
+                                📌 {{ u.empleado_vinculado }}
+                            {% else %}
+                                <span style="color:#cbd5e1;">- No vinculado -</span>
+                            {% endif %}
+                        </td>
+
                         <td>
                             {% if u.activo == 1 %}
                                 <span class="status-badge status-active">Activo</span>
