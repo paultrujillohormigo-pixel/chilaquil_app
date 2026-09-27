@@ -31,6 +31,94 @@ app.register_blueprint(cocina_bp)
 app.register_blueprint(gastos_bp)
 
 
+from functools import wraps
+from flask import session
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# =========================================================
+# ================== SISTEMA DE SEGURIDAD =================
+# =========================================================
+
+def requiere_permiso(modulo_nombre):
+    """
+    Este es el CANDADO. Se pone encima de las rutas que quieres proteger.
+    Revisa si el rol del usuario actual tiene acceso al módulo solicitado.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # 1. ¿Está logueado?
+            if 'usuario_id' not in session:
+                flash("Por favor, inicia sesión para acceder.", "warning")
+                return redirect(url_for('login'))
+            
+            rol_id = session.get('rol_id')
+            
+            # 2. El "Modo Dios": Si es el rol 1 (Administrador), entra a todo sin preguntar
+            if rol_id == 1:
+                return f(*args, **kwargs)
+
+            # 3. Revisar si su rol tiene el permiso en la base de datos
+            conn = get_connection()
+            tiene_acceso = False
+            try:
+                with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                    cursor.execute("""
+                        SELECT 1 FROM rol_modulo rm
+                        JOIN modulos m ON rm.modulo_id = m.id
+                        WHERE rm.rol_id = %s AND m.nombre = %s
+                    """, (rol_id, modulo_nombre))
+                    tiene_acceso = cursor.fetchone() is not None
+            finally:
+                conn.close()
+
+            # 4. Si no tiene acceso, lo rebotamos
+            if not tiene_acceso:
+                flash(f"Acceso Denegado: No tienes permiso para ver el módulo '{modulo_nombre}'.", "error")
+                return redirect(url_for('hub')) # Lo mandamos a la pantalla principal
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# =========================================================
+# ================== Logings ===========
+# =========================================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        conn = get_connection()
+        try:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("SELECT * FROM usuarios WHERE username = %s AND activo = 1", (username,))
+                usuario = cursor.fetchone()
+
+                # check_password_hash compara lo que escribió con lo encriptado en BD
+                if usuario and check_password_hash(usuario['password_hash'], password):
+                    # ¡Login Exitoso! Guardamos sus datos en la sesión (Cookie segura)
+                    session['usuario_id'] = usuario['id']
+                    session['nombre'] = usuario['nombre']
+                    session['rol_id'] = usuario['rol_id']
+                    
+                    flash(f"Bienvenido {usuario['nombre']}", "success")
+                    return redirect(url_for('hub'))
+                else:
+                    flash("Usuario o contraseña incorrectos.", "error")
+        finally:
+            conn.close()
+
+    return render_template("login.html") # Tendrás que crear un login.html sencillito
+
+@app.route("/logout")
+def logout():
+    session.clear() # Borra todo rastro del usuario
+    flash("Sesión cerrada correctamente.", "success")
+    return redirect(url_for('login'))
+
 # =========================================================
 # ================== CONFIGURACIÓN Y RUTAS BASE ===========
 # =========================================================
