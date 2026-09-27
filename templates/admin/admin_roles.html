@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .header-title { color: #0f172a; font-size: 2rem; margin-bottom: 5px; font-weight: 800;}
+    .header-desc { color: #64748b; margin-bottom: 30px; }
+    
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    .card-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;}
+
+    .btn-primary { background: #b32417; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-primary:hover { background: #8c1c12; }
+
+    .matrix-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .matrix-table th { background: #f8fafc; color: #475569; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; text-align: center; }
+    .matrix-table th:first-child { text-align: left; }
+    .matrix-table td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle; }
+    .matrix-table td:first-child { text-align: left; font-weight: 700; color: #1e293b; }
+    
+    .module-desc { display: block; font-size: 0.8rem; font-weight: normal; color: #64748b; margin-top: 4px; }
+
+    /* Estilo para los checkboxes grandotes */
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #b32417;
+    }
+</style>
+
+<div class="admin-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h1 class="header-title">🔑 Matriz de Permisos (Control Maestro)</h1>
+            <p class="header-desc">Define a qué módulos de la aplicación tiene acceso cada Rol.</p>
+        </div>
+        <a href="{{ url_for('seguridad_bp.gestion_usuarios') }}" class="btn-primary" style="text-decoration: none; background: #334155;">Volver a Usuarios</a>
+    </div>
+
+    <!-- Generamos un formulario por cada rol (excepto el admin) -->
+    {% for rol in roles %}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 class="card-title" style="border:none; margin:0;">Rol: <span style="color:#b32417;">{{ rol.nombre }}</span></h2>
+        </div>
+        
+        <form method="POST" action="{{ url_for('seguridad_bp.gestion_roles') }}">
+            <input type="hidden" name="rol_id" value="{{ rol.id }}">
+            
+            <div style="overflow-x: auto;">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 250px;">Módulo del Sistema</th>
+                            <th>Permiso Habilitado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mod in modulos %}
+                        <tr>
+                            <td>
+                                {{ mod.nombre | upper }}
+                                <span class="module-desc">{{ mod.descripcion }}</span>
+                            </td>
+                            <td>
+                                <!-- Preguntamos si el módulo está en la lista de permisos de este rol -->
+                                <input type="checkbox" name="modulos[]" value="{{ mod.id }}" 
+                                    {% if rol.id in permisos and mod.id in permisos[rol.id] %} checked {% endif %}>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="text-align: right; margin-top: 10px;">
+                <button type="submit" class="btn-primary">💾 Guardar Permisos del {{ rol.nombre }}</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}
