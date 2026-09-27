@@ -17,6 +17,7 @@ from dashboard import dashboard_bp
 from gastos import gastos_bp
 from rh import rh_bp
 from cocina import cocina_bp
+from seguridad import seguridad_bp
 
 # --- Importamos nuestros Candados desde auth.py ---
 from auth import login_requerido, requiere_permiso
@@ -30,17 +31,7 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp)
 app.register_blueprint(rh_bp)
 app.register_blueprint(cocina_bp)
-
-
-# HASTA ARRIBA EN app.py (Junto a tus otras importaciones de Blueprints)
-from seguridad import seguridad_bp
-
-# ABAJO EN app.py (Donde registras todos los demás)
 app.register_blueprint(seguridad_bp)
-
-# =========================================================
-# ================== LOGIN Y LOGOUT =======================
-# =========================================================
 
 # =========================================================
 # ================== LOGIN Y LOGOUT =======================
@@ -84,13 +75,11 @@ def login():
 
     return render_template("login.html")
 
-# --------- ESTA ES LA FUNCIÓN QUE FALTA ---------
 @app.route("/logout")
 def logout():
     session.clear()
     flash("Sesión cerrada correctamente.", "success")
     return redirect(url_for('login'))
-# ------------------------------------------------
 
 @app.route('/privacy', methods=['GET'])
 def privacy_policy():
@@ -301,7 +290,7 @@ def loyalty_message(balance: int, earned: int, pedido_id: int, total: Decimal, p
 
 
 @app.route("/api/buscar_cliente")
-@requiere_permiso("pedidos") # Se asume que el que hace pedidos necesita buscar clientes
+@requiere_permiso("pedidos") 
 def buscar_cliente():
     query = request.args.get("q", "").strip()
     if len(query) < 3:
@@ -364,7 +353,6 @@ def lista_clientes():
         conn.close()
     return render_template("clientes.html", clientes=clientes)
 
-# ESTA RUTA ES PÚBLICA PARA TUS CLIENTES, NO LLEVA CANDADO
 @app.route("/mi-perfil", methods=["GET", "POST"])
 @app.route("/mi-perfil/<phone>", methods=["GET"])
 def mi_perfil(phone=None):
@@ -751,7 +739,11 @@ def nuevo_pedido():
                     fecha = cursor.fetchone()["ahora"]
 
                 origen = (request.form.get("origen") or "").strip().lower()
-                mesero = request.form.get("mesero", "")
+                
+                # --- CAMBIO IMPORTANTE AQUÍ ---
+                # Tomamos el nombre del usuario desde la sesión, ignorando lo que venga en el form
+                mesero = session.get('nombre', 'Usuario Desconocido')
+                
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
                 mesa = request.form.get("mesa", "Envío/Recoger")
@@ -988,7 +980,11 @@ def ver_pedido(pedido_id):
 
                 fecha = request.form.get("fecha") or pedido.get("fecha")
                 origen = (request.form.get("origen") or "").strip().lower()
-                mesero = request.form.get("mesero", "")
+                
+                # --- CAMBIO IMPORTANTE AQUÍ TAMBIÉN ---
+                # Tomamos el nombre del usuario desde la sesión, ignorando lo que venga en el form
+                mesero = session.get('nombre', 'Usuario Desconocido')
+                
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
                 mesa = request.form.get("mesa", "Envío/Recoger")
