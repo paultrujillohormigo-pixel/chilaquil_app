@@ -165,11 +165,12 @@
   </section>
   {% endif %}
 
-   <!-- MÓDULO 5: RECURSOS HUMANOS -->
-  {% if 'all' in session.permisos or 'rh' in session.permisos %}
+   <!-- MÓDULO 5: RECURSOS HUMANOS (Visible para todos los que inician sesión) -->
   <section class="hub-category">
     <h2 class="hub-category-title">🧑‍💼 Recursos Humanos</h2>
     <div class="hub-grid">
+      
+      {% if 'all' in session.permisos or 'rh' in session.permisos %}
       <a href="{{ url_for('rh_bp.directorio') }}" class="hub-card">
         <div class="hub-icon">🪪</div>
         <div class="hub-info">
@@ -177,13 +178,18 @@
           <p>Registra a tus empleados, sueldos y perfiles.</p>
         </div>
       </a>
-    <a href="{{ url_for('rh_bp.checador') }}" class="hub-card">
-        <div class="hub-icon">⏱️</div>
+      {% endif %}
+
+      <!-- Reloj Checador: Público para todo el staff -->
+      <a href="{{ url_for('rh_bp.checador') }}" class="hub-card" style="border-color: #3b82f6;">
+        <div class="hub-icon" style="background: #eff6ff;">⏱️</div>
         <div class="hub-info">
-          <h3>Reloj Checador</h3>
-          <p>Kiosco para marcar entradas y salidas del turno.</p>
+          <h3 style="color: #1d4ed8;">Reloj Checador</h3>
+          <p>Kiosco para marcar tu entrada y salida del turno.</p>
         </div>
       </a>
+
+      {% if 'all' in session.permisos or 'rh' in session.permisos %}
       <a href="{{ url_for('rh_bp.nomina') }}" class="hub-card">
         <div class="hub-icon">💸</div>
         <div class="hub-info">
@@ -191,9 +197,10 @@
           <p>Liquida sueldos y mándalos directo a tu OPEX.</p>
         </div>
       </a>
+      {% endif %}
+
     </div>
   </section>
-  {% endif %}
 
   <!-- MÓDULO 6: ADMIN Y PÚBLICO -->
   <section class="hub-category">
@@ -210,7 +217,7 @@
       </a>
       {% endif %}
 
-      <!-- NUEVO ACCESO AL CONTROL MAESTRO DE SEGURIDAD -->
+      <!-- ACCESO AL CONTROL MAESTRO DE SEGURIDAD -->
       {% if 'all' in session.permisos or 'seguridad' in session.permisos %}
       <a href="{{ url_for('seguridad_bp.gestion_usuarios') }}" class="hub-card" style="border-color: #b91c1c;">
         <div class="hub-icon" style="background: #fee2e2;">🛡️</div>
@@ -242,7 +249,7 @@
 </div>
 
 <style>
-  /* Estilos del App Hub (Sin cambios, se mantienen tus estilos) */
+  /* Estilos del App Hub */
   .app-hub { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
   .hub-header { text-align: center; margin-bottom: 50px; }
   .hub-header h1 { font-size: 2.5rem; color: #0f172a; margin-bottom: 10px; letter-spacing: -1px; font-weight: 800;}
