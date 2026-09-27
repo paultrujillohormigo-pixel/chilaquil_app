@@ -1,10 +1,14 @@
 from flask import Blueprint, render_template
 import db
 
+# Importamos el candado desde tu archivo de seguridad
+from auth import requiere_permiso
+
 cocina_bp = Blueprint('cocina', __name__)
 
 # 1. Ruta para ver el índice (La lista de todos los platillos)
 @cocina_bp.route('/recetario')
+@requiere_permiso("cocina")
 def index_recetario():
     conexion = db.get_connection()
     cursor = conexion.cursor() # Tu db.py ya lo hace DictCursor automáticamente
@@ -24,6 +28,7 @@ def index_recetario():
 
 # 2. Ruta para ver la ficha técnica de un platillo en específico
 @cocina_bp.route('/recetario/ficha/<int:platillo_id>')
+@requiere_permiso("cocina")
 def ver_ficha(platillo_id):
     conexion = db.get_connection()
     cursor = conexion.cursor()
