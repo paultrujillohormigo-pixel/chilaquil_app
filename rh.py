@@ -2,8 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from db import get_connection
 from datetime import datetime
 
-# IMPORTAMOS EL CANDADO DESDE auth.py
-from auth import requiere_permiso
+# IMPORTAMOS LOS CANDADOS DESDE auth.py
+from auth import requiere_permiso, login_requerido
 
 # Creamos el módulo (Blueprint) con el prefijo /rh
 rh_bp = Blueprint("rh_bp", __name__, url_prefix="/rh")
@@ -59,7 +59,7 @@ def dar_de_baja(empleado_id):
 
 
 @rh_bp.route("/checador", methods=["GET", "POST"])
-@requiere_permiso("rh")
+@login_requerido  # <--- CAMBIO AQUÍ: Ahora solo exige haber iniciado sesión, sin restricción estricta de "rh"
 def checador():
     conn = get_connection()
     hoy = datetime.now().date() # Se mantiene para mostrar la tabla de "Actividad de Hoy"
