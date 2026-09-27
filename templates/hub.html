@@ -30,15 +30,7 @@
       </a>
       {% endif %}
 
-      {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
-      <a href="{{ url_for('costeo.platillos_index') }}" class="hub-card">
-        <div class="hub-icon">🏷️</div>
-        <div class="hub-info">
-          <h3>Menú y Precios</h3>
-          <p>Actualiza el precio de venta de tus platillos y salsas.</p>
-        </div>
-      </a>
-      {% endif %}
+
 
       {% if 'all' in session.permisos or 'cocina' in session.permisos %}
       <a href="{{ url_for('cocina.index_recetario') }}" class="hub-card">
