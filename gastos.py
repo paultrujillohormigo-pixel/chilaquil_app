@@ -2,6 +2,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from decimal import Decimal
 from db import get_connection
 
+# IMPORTAMOS EL CANDADO DESDE auth.py
+from auth import requiere_permiso
+
 gastos_bp = Blueprint("gastos", __name__, url_prefix="/admin")
 
 # Helpers (puedes importarlos de db.py si los tienes ahí, o copiarlos temporalmente)
@@ -28,6 +31,7 @@ def execute(sql, params=None):
 # =========================================================
 
 @gastos_bp.route("/gastos", methods=["GET"])
+@requiere_permiso("finanzas")
 def gastos_index():
     # Obtener categorías para el formulario
     categorias = query_all("SELECT id, nombre FROM categorias_gastos ORDER BY nombre")
@@ -44,6 +48,7 @@ def gastos_index():
     return render_template("admin/gastos.html", categorias=categorias, gastos=gastos)
 
 @gastos_bp.route("/gastos", methods=["POST"])
+@requiere_permiso("finanzas")
 def gastos_create():
     fecha = request.form.get("fecha")
     categoria_id = request.form.get("categoria_id")
