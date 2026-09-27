@@ -983,7 +983,7 @@ def ver_pedido(pedido_id):
                 
                 # --- CAMBIO IMPORTANTE AQUÍ TAMBIÉN ---
                 # Tomamos el nombre del usuario desde la sesión, ignorando lo que venga en el form
-                mesero = session.get('nombre', 'Usuario Desconocido')
+                mesero = request.form.get("mesero") or pedido.get("mesero")
                 
                 metodo_pago = request.form.get("metodo_pago", "")
                 monto_uber = Decimal(request.form.get("monto_uber", "0") or "0")
