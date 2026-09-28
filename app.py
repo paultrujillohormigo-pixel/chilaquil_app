@@ -479,6 +479,53 @@ def detalle_cliente(customer_id):
 
     return render_template("cliente_detalle.html", cliente=cliente, historial=historial)
 
+@app.route("/promociones", methods=["GET", "POST"])
+@requiere_permiso("clientes")
+def promociones():
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Magia: Creamos la tabla de promociones automáticamente si no existe
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS promociones (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(100) NOT NULL,
+                    mensaje TEXT NOT NULL,
+                    activo INT DEFAULT 1
+                )
+            """)
+            conn.commit()
+            
+            if request.method == "POST":
+                nombre = request.form.get("nombre", "").strip()
+                mensaje = request.form.get("mensaje", "").strip()
+                if nombre and mensaje:
+                    cursor.execute("INSERT INTO promociones (nombre, mensaje) VALUES (%s, %s)", (nombre, mensaje))
+                    conn.commit()
+                    flash("Promoción creada con éxito.", "success")
+                else:
+                    flash("El nombre y el mensaje son obligatorios.", "error")
+                return redirect(url_for("promociones"))
+                
+            cursor.execute("SELECT * FROM promociones WHERE activo = 1 ORDER BY id DESC")
+            promos = cursor.fetchall()
+    finally:
+        conn.close()
+        
+    return render_template("promociones.html", promociones=promos)
+
+@app.route("/promociones/<int:promo_id>/eliminar", methods=["POST"])
+@requiere_permiso("clientes")
+def eliminar_promocion(promo_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE promociones SET activo = 0 WHERE id = %s", (promo_id,))
+            conn.commit()
+            flash("Promoción eliminada.", "success")
+    finally:
+        conn.close()
+    return redirect(url_for("promociones"))
 
 @app.route("/campanas")
 @requiere_permiso("clientes")
