@@ -123,13 +123,31 @@ def menu():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre")
+            # 1. Traemos los productos de venta regular unidos con sus imágenes de receta
+            cursor.execute("""
+                SELECT p.*, pl.imagen_url, pl.instrucciones 
+                FROM productos p 
+                LEFT JOIN platillos pl ON p.platillo_id = pl.id 
+                WHERE p.activo = 1 
+                ORDER BY p.categoria, p.nombre
+            """)
             productos_db = cursor.fetchall()
-            cursor.execute("SELECT * FROM salsas ORDER BY nombre")
-            salsas_db = cursor.fetchall()
+            
+            # 2. Traemos TODOS los platillos para extraer las Salsas y Proteínas con sus fotos
+            cursor.execute("SELECT id, nombre, imagen_url, instrucciones FROM platillos ORDER BY nombre")
+            platillos_db = cursor.fetchall()
+
+            # 3. Traemos el catálogo de proteínas para saber cuáles platillos son proteínas
+            cursor.execute("SELECT nombre FROM proteinas")
+            nombres_proteinas = [row['nombre'].lower().strip() for row in cursor.fetchall()]
+            
     finally:
         conn.close()
-    return render_template('menu.html', productos=productos_db, salsas=salsas_db)
+        
+    return render_template('menu.html', 
+                           productos=productos_db, 
+                           platillos=platillos_db, 
+                           nombres_proteinas=nombres_proteinas)
 
 @app.route('/carta')
 def mostrar_carta():
