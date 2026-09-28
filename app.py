@@ -137,6 +137,70 @@ def productos():
 
     return render_template("productos.html", productos=productos_rows, platillos=platillos)
 
+# =========================================================
+# ================== ACCIONES DE PRODUCTOS ================
+# =========================================================
+
+@app.post("/productos/<int:producto_id>/eliminar")
+@requiere_permiso("menu_admin")
+def eliminar_producto_producto(producto_id):  
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("UPDATE productos SET activo = 0 WHERE id = %s", (producto_id,))
+            conn.commit()
+            flash("Producto eliminado correctamente.", "success")
+    except Exception as e:
+        flash(f"Error al eliminar: {e}", "error")
+    finally:
+        conn.close()
+    return redirect("/productos")
+
+@app.post("/productos/<int:producto_id>/editar_precio")
+@requiere_permiso("menu_admin")
+def editar_precio_producto(producto_id):
+    nuevo_precio = request.form.get("nuevo_precio")
+    if not nuevo_precio:
+        flash("El precio no puede estar vacío.", "error")
+        return redirect("/productos")
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE productos SET precio = %s WHERE id = %s", (nuevo_precio, producto_id))
+            conn.commit()
+            flash("Precio actualizado correctamente 💰", "success")
+    except Exception as e:
+        flash(f"Error al actualizar el precio: {e}", "error")
+    finally:
+        conn.close()
+    return redirect("/productos")
+
+@app.post("/productos/<int:producto_id>/actualizar_platillo")
+@requiere_permiso("menu_admin")
+def actualizar_platillo_producto(producto_id):
+    platillo_id_txt = (request.form.get("platillo_id") or "").strip()
+    platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT id FROM productos WHERE id=%s AND activo=1", (producto_id,))
+            if not cursor.fetchone():
+                flash("Producto no encontrado.", "error")
+                return redirect("/productos")
+
+            costo = calcular_costo_platillo(cursor, platillo_id) if platillo_id else Decimal("0")
+            cursor.execute("UPDATE productos SET platillo_id=%s, costo=%s WHERE id=%s", (platillo_id, str(costo), producto_id))
+            conn.commit()
+            flash("Producto vinculado a la receta correctamente.", "success")
+    except Exception as e:
+        flash(f"Error al vincular: {e}", "error")
+    finally:
+        conn.close()
+    return redirect("/productos")
+
+
 @app.route('/menu')
 def menu():
     conn = get_connection()
