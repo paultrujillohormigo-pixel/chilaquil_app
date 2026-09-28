@@ -1,121 +1,113 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="pos-header">
-  <div>
-    <h2 class="m-0" style="color: #64748b; font-size: 1.1rem; font-weight: 600;">📢 Marketing y Retención</h2>
-    <div class="total-display mt-1" style="font-size: 2rem;">Campaña "Te Extrañamos"</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-top: 4px;">Recupera a tus clientes inactivos con 1 clic</div>
-  </div>
-
-  <div class="pos-card" style="padding: 16px; min-width: 200px;">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <span style="font-size: 0.85rem; font-weight: 600; color: var(--pos-text-muted);">Filtrar por inactividad</span>
-    </div>
-    <form method="get" action="{{ url_for('campanas') }}" style="margin: 0;">
-      <select name="dias" class="wa-input" style="width: 100%; padding: 8px 12px; margin-top: 0; background: #fff;" onchange="this.form.submit()">
-        <option value="15" {% if dias == 15 %}selected{% endif %}>+ 15 días sin venir</option>
-        <option value="30" {% if dias == 30 %}selected{% endif %}>+ 30 días sin venir</option>
-        <option value="60" {% if dias == 60 %}selected{% endif %}>+ 60 días sin venir</option>
-      </select>
-    </form>
-  </div>
-</div>
-
-<div class="pos-card" style="padding: 0; overflow: hidden;">
-  <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--pos-border);">
-    <h3 class="m-0" style="font-size: 1.1rem; display: flex; justify-content: space-between;">
-      <span>Clientes a recuperar</span>
-      <span class="pos-tag" style="background:#e0e7ff; color:#4338ca; border:none;">{{ clientes|length }} Encontrados</span>
-    </h3>
-  </div>
-
-  {% if clientes %}
-  <div style="overflow-x: auto;">
-    <table class="pos-table">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th class="text-center">Última Visita</th>
-          <th class="text-center">Días Ausente</th>
-          <th class="text-center">Totopos</th>
-          <th class="text-right">Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in clientes %}
-        <tr class="item-row">
-          <td>
-            <div class="fw-bold" style="color: #0f172a;">{{ c.nombre or 'Sin nombre' }}</div>
-            <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">📞 {{ c.phone_e164 or 'Sin teléfono' }}</div>
-          </td>
-          <td class="text-center" style="vertical-align: middle;">
-            <span style="color: #475569; font-weight: 500;">{{ c.ultima_compra }}</span>
-          </td>
-          <td class="text-center" style="vertical-align: middle;">
-            <span class="pos-tag pos-tag-warn" style="font-size: 0.9rem;">⏳ {{ c.dias_ausente }} días</span>
-          </td>
-          <td class="text-center" style="vertical-align: middle;">
-            <span class="pos-tag" style="background:#eef2ff; color:#4f46e5; border-color:#c7d2fe; font-size: 0.9rem;">🌮 {{ c.totopos_balance or 0 }}</span>
-          </td>
-          <td class="text-right" id="action-cell-{{ c.id }}" style="vertical-align: middle;">
-            
-            {# VERIFICAMOS SI YA SE ENVIÓ DESDE EL BACKEND #}
-            {% if c.mensaje_enviado %}
-              <span class="pos-tag" style="background:#dcfce7; color:#166534; border:none; padding: 8px 16px;">
-                ✅ Enviado
-              </span>
-            {% elif c.wa_link %}
-              {# AÑADIMOS UNA CLASE Y EL ID DEL CLIENTE PARA EL JAVASCRIPT #}
-              <a href="{{ c.wa_link }}" target="_blank" class="btn-pos btn-wa btn-enviar-promo" data-id="{{ c.id }}" style="text-decoration: none; padding: 8px 16px; font-size: 0.85rem;">
-                💬 Enviar Promo
-              </a>
-            {% else %}
-              <span style="font-size: 0.8rem; color: #94a3b8;">Sin WhatsApp</span>
-            {% endif %}
-
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="p-4 text-center" style="color: var(--pos-text-muted); padding: 40px 20px;">
-    <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
-    <h3 style="color: #0f172a; margin-bottom: 4px;">¡Felicidades!</h3>
-    <p>No tienes clientes inactivos en este rango de tiempo. Todos están regresando.</p>
-  </div>
-  {% endif %}
-</div>
-
-<!-- SCRIPT PARA CAMBIAR EL BOTÓN A "ENVIADO" AL HACER CLIC -->
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const botones = document.querySelectorAll('.btn-enviar-promo');
+<style>
+    .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .header-title { color: #0f172a; font-size: 2rem; margin-bottom: 5px; font-weight: 800;}
+    .header-desc { color: #64748b; margin-bottom: 30px; }
     
-    botones.forEach(boton => {
-      boton.addEventListener('click', function() {
-        const clienteId = this.getAttribute('data-id');
-        const celdaAccion = document.getElementById(`action-cell-${clienteId}`);
-        
-        // Cambiar el botón por una etiqueta de "Enviado" visualmente
-        celdaAccion.innerHTML = `
-          <span class="pos-tag" style="background:#dcfce7; color:#166534; border:none; padding: 8px 16px; font-size: 0.85rem; display: inline-block;">
-            ✅ Enviado
-          </span>
-        `;
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    .card-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;}
 
-        // OPCIONAL: Aquí podrías hacer una petición Fetch/AJAX a tu backend 
-        // para guardar en tu base de datos que ya se le envió el mensaje.
-        /*
-        fetch('/marcar_enviado/' + clienteId, { method: 'POST' })
-          .then(response => console.log('Guardado en BD'))
-          .catch(error => console.error('Error:', error));
-        */
-      });
-    });
-  });
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; color: #475569; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: middle;}
+    
+    .status-badge { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: inline-block;}
+    .status-active { background: #dcfce3; color: #166534; }
+    
+    .btn-wa { background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; box-shadow: 0 2px 4px rgba(37,211,102,0.2);}
+    .btn-wa:hover { background: #1ebc59; transform: translateY(-1px);}
+
+    .filter-box { display: flex; gap: 15px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .filter-box select, .filter-box input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .btn-secondary { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;}
+</style>
+
+<div class="admin-container">
+    <div>
+        <h1 class="header-title">📢 Campañas de Recuperación</h1>
+        <p class="header-desc">Envía mensajes de WhatsApp con promociones a los clientes que llevan tiempo sin visitarnos.</p>
+    </div>
+
+    <div class="card">
+        <form method="GET" action="{{ url_for('campanas') }}" class="filter-box">
+            <strong style="color: #334155;">Filtrar clientes inactivos por:</strong>
+            <select name="dias">
+                <option value="15" {% if dias == 15 %}selected{% endif %}>Más de 15 días</option>
+                <option value="30" {% if dias == 30 %}selected{% endif %}>Más de 1 mes (30 días)</option>
+                <option value="60" {% if dias == 60 %}selected{% endif %}>Más de 2 meses (60 días)</option>
+                <option value="90" {% if dias == 90 %}selected{% endif %}>Más de 3 meses (90 días)</option>
+            </select>
+            <button type="submit" class="btn-secondary">🔍 Buscar Inactivos</button>
+        </form>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Teléfono</th>
+                        <th>Días Ausente</th>
+                        <th>Totopos (Puntos)</th>
+                        <th style="text-align: right;">Acción de Marketing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clientes %}
+                    <tr>
+                        <td><strong style="font-size: 1.05rem; color: #0f172a;">{{ c.nombre }}</strong></td>
+                        <td style="color: #64748b;">📞 {{ c.phone_e164 or 'Sin registro' }}</td>
+                        <td>
+                            <span style="color: #b91c1c; font-weight: bold;">{{ c.dias_ausente }} días</span>
+                            <div style="font-size: 0.8rem; color: #94a3b8;">Última visita: {{ c.ultima_compra.strftime('%d/%m/%Y') }}</div>
+                        </td>
+                        <td><span style="background: #fef9c3; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-weight: bold;">🌮 {{ c.totopos_balance }} pts</span></td>
+                        
+                        <td style="text-align: right;" id="celda-accion-{{ c.id }}">
+                            {% if c.contactado_hoy %}
+                                <span class="status-badge status-active">✅ Contactado Hoy</span>
+                            {% else %}
+                                {% if c.wa_link %}
+                                    <a href="{{ c.wa_link }}" target="_blank" onclick="registrarContacto(this, {{ c.id }})" class="btn-wa">💬 Enviar Promo</a>
+                                {% else %}
+                                    <span style="color: #94a3b8; font-size: 0.85rem;">Sin WhatsApp</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not clientes %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">
+                            <strong>¡Excelente trabajo!</strong> No hay clientes ausentes en este rango de tiempo.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function registrarContacto(btnElement, customerId) {
+    // Cambiar la interfaz de inmediato para que el usuario sepa que ya le dio clic
+    const celda = document.getElementById('celda-accion-' + customerId);
+    
+    // Hacemos una petición invisible (AJAX) al backend para guardar la fecha de hoy
+    fetch(`/api/campanas/marcar/${customerId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            celda.innerHTML = '<span class="status-badge status-active">✅ Contactado Hoy</span>';
+        }
+    })
+    .catch(error => console.error("Error al registrar la campaña:", error));
+}
 </script>
 
 {% endblock %}
