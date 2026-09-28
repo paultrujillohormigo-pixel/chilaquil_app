@@ -1,123 +1,135 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+<style>
+    .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .header-title { color: #0f172a; font-size: 2rem; margin-bottom: 5px; font-weight: 800;}
+    .header-desc { color: #64748b; margin-bottom: 30px; }
     
-    <h2 style="color: #b32417; margin-bottom: 20px;">🛒 Gestión de Productos y Menú</h2>
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    .card-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category if category != 'error' else 'danger' }}" style="padding: 12px; margin-bottom: 20px; border-radius: 8px; background-color: {{ '#d4edda' if category == 'success' else '#f8d7da' }}; color: {{ '#155724' if category == 'success' else '#721c24' }}; border: 1px solid {{ '#c3e6cb' if category == 'success' else '#f5c6cb' }};">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;}
+    .form-group label { display: block; font-weight: 600; color: #475569; margin-bottom: 6px; font-size: 0.9rem;}
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    .btn-primary { background: #b32417; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-primary:hover { background: #8c1c12; }
+    
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; color: #475569; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: middle;}
+    
+    .btn-danger { background: white; color: #ef4444; border: 1px solid #fecaca; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-danger:hover { background: #fee2e2; }
 
-    <div style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 30px;">
-        
-        <div class="card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); height: fit-content;">
-            <h3 style="margin-top: 0; color: #333;">✨ Agregar Nuevo Producto</h3>
-            <form method="post" action="{{ url_for('productos') }}" style="display: flex; flex-direction: column; gap: 15px;">
-                
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Nombre del Producto</label>
-                    <input type="text" name="nombre" placeholder="Ej. Chilaquiles Sencillos" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+    .btn-save-inline { background: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+    .btn-save-inline:hover { background: #059669; }
+</style>
+
+<div class="admin-container">
+    <div>
+        <h1 class="header-title">⚙️ Menú y Precios</h1>
+        <p class="header-desc">Configura los botones del punto de venta, ajusta los precios al público y vincúlalos a su receta.</p>
+    </div>
+
+    <!-- Formulario para Nuevo Producto -->
+    <div class="card">
+        <h2 class="card-title">Agregar Nuevo Botón al Menú</h2>
+        <form method="POST" action="{{ url_for('productos') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre del Botón</label>
+                    <input type="text" name="nombre" placeholder="Ej. Coca Cola 600ml" required>
                 </div>
-
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Categoría</label>
-                    <input type="text" name="categoria" placeholder="Ej. chilaquiles, bebidas, postres" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select name="categoria" required>
+                        <option value="">Selecciona...</option>
+                        <option value="Chilaquiles">Chilaquiles</option>
+                        <option value="Bebidas">Bebidas</option>
+                        <option value="Extras">Extras</option>
+                        <option value="Postres">Postres</option>
+                    </select>
                 </div>
-
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Precio de Venta ($)</label>
-                    <input type="number" name="precio" step="0.01" min="0" placeholder="0.00" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                <div class="form-group">
+                    <label>Precio al Público ($)</label>
+                    <input type="number" step="0.01" name="precio" placeholder="Ej. 25.00" required>
                 </div>
-
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vincular a Platillo (Receta base)</label>
-                    <select name="platillo_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                        <option value="">-- Sin platillo (Ingresar costo manual) --</option>
-                        {% for platillo in platillos %}
-                            <option value="{{ platillo.id }}">{{ platillo.nombre }}</option>
+                <div class="form-group">
+                    <label>Vincular a Receta (Opcional)</label>
+                    <select name="platillo_id">
+                        <option value="">-- Solo venta directa (Sin receta) --</option>
+                        {% for pl in platillos %}
+                            <option value="{{ pl.id }}">{{ pl.nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
+            </div>
+            <button type="submit" class="btn-primary">Guardar Producto</button>
+        </form>
+    </div>
 
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Costo Manual ($) <small style="color:#777;">(Solo si no seleccionaste Platillo)</small></label>
-                    <input type="number" name="costo" step="0.01" min="0" value="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                </div>
-
-                <button type="submit" style="background: #25D366; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">
-                    ➕ Guardar Producto
-                </button>
-            </form>
-        </div>
-
-        <div class="card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow-x: auto;">
-            <h3 style="margin-top: 0; color: #333;">📋 Productos Activos en el Menú</h3>
-            
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+    <!-- Tabla de Productos Actuales -->
+    <div class="card">
+        <h2 class="card-title">Catálogo Activo en Punto de Venta</h2>
+        <div class="table-container">
+            <table>
                 <thead>
-                    <tr style="border-bottom: 2px solid #eee; background: #f9f9f9;">
-                        <th style="padding: 12px;">Nombre</th>
-                        <th style="padding: 12px;">Categoría</th>
-                        <th style="padding: 12px;">Costo</th>
-                        <th style="padding: 12px;">Precio</th>
-                        <th style="padding: 12px;">Platillo Vinculado</th>
-                        <th style="padding: 12px; text-align: center;">Receta</th>
-                        <th style="padding: 12px; text-align: center;">Quitar</th>
+                    <tr>
+                        <th>Nombre (Botón POS)</th>
+                        <th>Categoría</th>
+                        <th>Receta Vinculada (Costeo)</th>
+                        <th>Costo Calculado</th>
+                        <th>Precio Público</th>
+                        <th style="text-align: right;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in productos %}
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px; font-weight: bold;">{{ p.nombre }}</td>
-                        <td style="padding: 12px;"><span style="background: #f3f3f3; padding: 4px 8px; border-radius: 6px; font-size: 12px;">{{ p.categoria }}</span></td>
-                        <td style="padding: 12px; color: #666;">{{ p.costo | money }}</td>
-                        <td style="padding: 12px; font-weight: bold; color: #b32417;">{{ p.precio | money }}</td>
-
-                        <td style="padding: 12px;">
-                            <form method="post" action="{{ url_for('productos_set_platillo', producto_id=p.id) }}" style="margin: 0;">
-                                <select name="platillo_id" onchange="this.form.submit()" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; max-width: 160px;">
-                                    <option value="">-- Ninguno --</option>
-                                    {% for platillo in platillos %}
-                                        <option value="{{ platillo.id }}" {% if p.platillo_id == platillo.id %}selected{% endif %}>{{ platillo.nombre }}</option>
+                    <tr>
+                        <td><strong style="font-size: 1.05rem;">{{ p.nombre }}</strong></td>
+                        <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">{{ p.categoria }}</span></td>
+                        
+                        <!-- SELECTOR DE RECETA INLINE -->
+                        <td>
+                            <form method="POST" action="{{ url_for('actualizar_platillo_producto', producto_id=p.id) }}" style="margin: 0; display: flex; gap: 8px;">
+                                <select name="platillo_id" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
+                                    <option value="">-- Ninguna --</option>
+                                    {% for pl in platillos %}
+                                        <option value="{{ pl.id }}" {% if p.platillo_id == pl.id %}selected{% endif %}>{{ pl.nombre }}</option>
                                     {% endfor %}
                                 </select>
+                                <button type="submit" class="btn-primary" style="padding: 6px 10px; font-size: 0.85rem; background: #334155;">Vincular</button>
                             </form>
                         </td>
-
-                        <td style="padding: 12px; text-align: center;">
-                            {% if p.platillo_id %}
-                              <a href="{{ url_for('costeo.recetas_edit', platillo_id=p.platillo_id) }}" style="display: inline-flex; align-items: center; gap: 5px; background: #0056b3; color: white; text-decoration: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s;">
-                                🍳 Editar Receta
-                              </a>
-                            {% else %}
-                              <span style="color: #999; font-size: 12px; font-style: italic;">Sin platillo</span>
-                            {% endif %}
-                        </td>
-
-                        <td style="padding: 12px; text-align: center;">
-                            <form method="post" action="{{ url_for('eliminar_producto_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Estás seguro de que deseas quitar este producto del menú?');" style="margin: 0;">
-                                <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="Quitar del menú">
-                                    🗑️
-                                </button>
+                        
+                        <td style="color: #64748b; font-weight: 600;">${{ "%.2f"|format(p.costo or 0) }}</td>
+                        
+                        <!-- AQUI ESTA EL CAMBIO: PRECIO EDITABLE INLINE -->
+                        <td>
+                            <form method="POST" action="{{ url_for('editar_precio_producto', producto_id=p.id) }}" style="margin: 0; display: flex; align-items: center; gap: 5px;">
+                                <span style="font-weight: bold; color: #334155;">$</span>
+                                <input type="number" step="0.01" name="nuevo_precio" value="{{ p.precio }}" style="width: 80px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; color: #b32417;">
+                                <button type="submit" class="btn-save-inline" title="Guardar Precio">💾</button>
                             </form>
                         </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" style="padding: 20px; text-align: center; color: #999;">No hay productos registrados o activos.</td>
+                        
+                        <td style="text-align: right;">
+                            <form method="POST" action="{{ url_for('eliminar_producto_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Seguro que quieres eliminar este producto del menú?');" style="margin: 0;">
+                                <button type="submit" class="btn-danger">🗑️ Borrar</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
+                    {% if not productos %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 20px; color: #94a3b8;">Aún no tienes productos registrados.</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-
     </div>
 </div>
 
