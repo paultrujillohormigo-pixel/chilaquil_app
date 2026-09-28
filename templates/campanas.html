@@ -20,7 +20,10 @@
     .btn-wa { background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; box-shadow: 0 2px 4px rgba(37,211,102,0.2);}
     .btn-wa:hover { background: #1ebc59; transform: translateY(-1px);}
 
-    .filter-box { display: flex; gap: 15px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .btn-wa-warn { background: #fbbf24; color: #854d0e; box-shadow: none; }
+    .btn-wa-warn:hover { background: #f59e0b; }
+
+    .filter-box { display: flex; gap: 15px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;}
     .filter-box select, .filter-box input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
     .btn-secondary { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;}
 </style>
@@ -48,8 +51,8 @@
                 <thead>
                     <tr>
                         <th>Cliente</th>
-                        <th>Teléfono</th>
-                        <th>Días Ausente</th>
+                        <th>Días Ausente (Visita)</th>
+                        <th>Último Mensaje Enviado</th>
                         <th>Totopos (Puntos)</th>
                         <th style="text-align: right;">Acción de Marketing</th>
                     </tr>
@@ -57,23 +60,45 @@
                 <tbody>
                     {% for c in clientes %}
                     <tr>
-                        <td><strong style="font-size: 1.05rem; color: #0f172a;">{{ c.nombre }}</strong></td>
-                        <td style="color: #64748b;">📞 {{ c.phone_e164 or 'Sin registro' }}</td>
+                        <td>
+                            <strong style="font-size: 1.05rem; color: #0f172a;">{{ c.nombre }}</strong>
+                            <div style="color: #64748b; font-size: 0.85rem; margin-top: 2px;">📞 {{ c.phone_e164 or 'Sin registro' }}</div>
+                        </td>
                         <td>
                             <span style="color: #b91c1c; font-weight: bold;">{{ c.dias_ausente }} días</span>
-                            <div style="font-size: 0.8rem; color: #94a3b8;">Última visita: {{ c.ultima_compra.strftime('%d/%m/%Y') }}</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8;">{{ c.ultima_compra.strftime('%d/%m/%Y') }}</div>
                         </td>
+                        
+                        <!-- NUEVA COLUMNA DE HISTORIAL DE MENSAJES -->
+                        <td>
+                            {% if c.ultimo_mensaje_campana %}
+                                <span style="color: #0f172a; font-weight: 600;">{{ c.ultimo_mensaje_campana.strftime('%d/%m/%Y') }}</span>
+                                {% if c.dias_desde_mensaje == 0 %}
+                                    <div style="font-size: 0.85rem; color: #166534; font-weight: bold;">Enviado Hoy</div>
+                                {% else %}
+                                    <div style="font-size: 0.8rem; color: #64748b;">Hace {{ c.dias_desde_mensaje }} día(s)</div>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #94a3b8; font-style: italic;">Nunca contactado</span>
+                            {% endif %}
+                        </td>
+
                         <td><span style="background: #fef9c3; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-weight: bold;">🌮 {{ c.totopos_balance }} pts</span></td>
                         
                         <td style="text-align: right;" id="celda-accion-{{ c.id }}">
-                            {% if c.contactado_hoy %}
-                                <span class="status-badge status-active">✅ Contactado Hoy</span>
-                            {% else %}
-                                {% if c.wa_link %}
-                                    <a href="{{ c.wa_link }}" target="_blank" onclick="registrarContacto(this, {{ c.id }})" class="btn-wa">💬 Enviar Promo</a>
+                            {% if c.wa_link %}
+                                {% if c.dias_desde_mensaje is not none and c.dias_desde_mensaje == 0 %}
+                                    <!-- Ya se le mandó hoy -->
+                                    <span class="status-badge status-active">✅ Contactado Hoy</span>
+                                {% elif c.dias_desde_mensaje is not none and c.dias_desde_mensaje < 7 %}
+                                    <!-- Advertencia si se mandó hace menos de 7 días -->
+                                    <a href="{{ c.wa_link }}" target="_blank" onclick="registrarContacto({{ c.id }})" class="btn-wa btn-wa-warn">⚠️ Reenviar (Reciente)</a>
                                 {% else %}
-                                    <span style="color: #94a3b8; font-size: 0.85rem;">Sin WhatsApp</span>
+                                    <!-- Botón verde normal -->
+                                    <a href="{{ c.wa_link }}" target="_blank" onclick="registrarContacto({{ c.id }})" class="btn-wa">💬 Enviar Promo</a>
                                 {% endif %}
+                            {% else %}
+                                <span style="color: #94a3b8; font-size: 0.85rem;">Sin WhatsApp</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -92,17 +117,17 @@
 </div>
 
 <script>
-function registrarContacto(btnElement, customerId) {
-    // Cambiar la interfaz de inmediato para que el usuario sepa que ya le dio clic
+function registrarContacto(customerId) {
     const celda = document.getElementById('celda-accion-' + customerId);
     
-    // Hacemos una petición invisible (AJAX) al backend para guardar la fecha de hoy
+    // Hacemos una petición invisible al backend para guardar la fecha de hoy
     fetch(`/api/campanas/marcar/${customerId}`, {
         method: 'POST'
     })
     .then(response => response.json())
     .then(data => {
         if(data.status === 'success') {
+            // Cambiamos el botón a "Contactado Hoy" para retroalimentación visual
             celda.innerHTML = '<span class="status-badge status-active">✅ Contactado Hoy</span>';
         }
     })
