@@ -536,12 +536,20 @@ def campanas():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Asegurar columna
             if not table_has_column(cursor, "loyalty_customers", "ultimo_mensaje_campana"):
                 cursor.execute("ALTER TABLE loyalty_customers ADD COLUMN ultimo_mensaje_campana DATE NULL")
                 conn.commit()
+                
+            # Por si entran primero a campañas antes que a promociones
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS promociones (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(100) NOT NULL,
+                    mensaje TEXT NOT NULL,
+                    activo INT DEFAULT 1
+                )
+            """)
 
-            # Buscamos a los clientes inactivos y calculamos hace cuántos días le hablamos
             cursor.execute("""
                 SELECT 
                     c.id, c.nombre, c.phone_e164, c.ultimo_mensaje_campana,
@@ -559,36 +567,23 @@ def campanas():
                 ORDER BY dias_ausente DESC
             """, (dias,))
             clientes_inactivos = cursor.fetchall()
+            
+            # Traer las promos activas
+            cursor.execute("SELECT * FROM promociones WHERE activo = 1 ORDER BY nombre")
+            promociones_db = cursor.fetchall()
     finally:
         conn.close()
 
+    hoy = datetime.now().date()
     for c in clientes_inactivos:
-        telefono = (c["phone_e164"] or "").replace("+", "")
-        nombre_completo = c["nombre"] or "amigo"
-        nombre = nombre_completo.split()[0]
+        fecha_ultimo = c.get("ultimo_mensaje_campana")
+        c["contactado_hoy"] = (fecha_ultimo == hoy)
+        
+        # Limpiamos los datos para JS
+        c["telefono_limpio"] = (c["phone_e164"] or "").replace("+", "")
+        c["primer_nombre"] = (c["nombre"] or "amigo").split()[0]
 
-        mensaje = f"Hola {nombre}. Te extrañamos en Senor Chilaquil.\n\nHace un rato que no nos visitas y queremos consentirte. En tu proximo pedido, muestranos este mensaje y te regalamos un Totopo extra a tu cuenta.\n\n¡Te esperamos pronto!"
-        msg_q = urllib.parse.quote(mensaje)
-
-        c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if telefono else None
-
-    return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
-
-# --- RUTA PARA REGISTRAR EL CLIC (Asegúrate de tener esta también debajo de la anterior) ---
-@app.route("/api/campanas/marcar/<int:customer_id>", methods=["POST"])
-@requiere_permiso("clientes")
-def marcar_campana(customer_id):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE loyalty_customers SET ultimo_mensaje_campana = CURRENT_DATE WHERE id = %s", (customer_id,))
-            conn.commit()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-    finally:
-        conn.close()
-
+    return render_template("campanas.html", clientes=clientes_inactivos, dias=dias, promociones=promociones_db)
 # =========================================================
 # ================== INVENTARIO Y STOCK ===================
 # =========================================================
