@@ -93,7 +93,7 @@
                         
                         <!-- SELECTOR DE RECETA INLINE -->
                         <td>
-                            <form method="POST" action="{{ url_for('actualizar_platillo_producto', producto_id=p.id) }}" style="margin: 0; display: flex; gap: 8px;">
+                            <form method="POST" action="/productos/{{ p.id }}/actualizar_platillo" style="margin: 0; display: flex; gap: 8px;">
                                 <select name="platillo_id" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
                                     <option value="">-- Ninguna --</option>
                                     {% for pl in platillos %}
