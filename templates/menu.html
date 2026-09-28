@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Menú | Señor Chilaquil</title>
-    <!-- Importamos fuentes modernas y limpias -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #F8F4EB; /* Color crema tipo tu PDF */
-            --rojo-chilaquil: #c1272d;
-            --texto-oscuro: #2a2118;
-            --texto-claro: #6b5a48;
+            --bg-crema: #f5eedf; /* Color crema exacto del PDF */
+            --rojo-oscuro: #a81c1c;
+            --texto-negro: #1a1a1a;
+            --texto-gris: #5c554b;
             --blanco: #ffffff;
         }
 
@@ -21,43 +20,35 @@
             margin: 0;
             padding: 0;
             font-family: 'Montserrat', sans-serif;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--texto-oscuro);
-            line-height: 1.6;
-            padding-bottom: 50px;
+            background-color: var(--bg-crema);
+            color: var(--texto-negro);
+            padding-bottom: 60px;
         }
 
-        /* --- HEADER / HERO --- */
+        /* --- HEADER Y LOGO --- */
         .header {
-            background-color: var(--rojo-chilaquil);
-            color: var(--blanco);
             text-align: center;
-            padding: 40px 20px 30px;
-            border-bottom-left-radius: 30px;
-            border-bottom-right-radius: 30px;
-            box-shadow: 0 4px 15px rgba(193, 39, 45, 0.3);
-            margin-bottom: 30px;
+            padding: 40px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        .logo-text {
+        .logo-img {
+            max-width: 220px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .logo-fallback {
             font-size: 2.5rem;
             font-weight: 900;
+            color: var(--rojo-oscuro);
             text-transform: uppercase;
-            letter-spacing: -1px;
             line-height: 1;
-        }
-
-        .logo-subtitle {
-            font-size: 0.9rem;
-            font-weight: 600;
-            opacity: 0.9;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
 
         .container {
@@ -66,174 +57,194 @@
             padding: 0 20px;
         }
 
-        /* --- SECCIÓN DE SALSAS (COMO EN EL PDF) --- */
-        .salsas-box {
-            background: var(--blanco);
-            border-radius: 20px;
-            padding: 25px 20px;
-            margin-bottom: 40px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            border-top: 5px solid var(--rojo-chilaquil);
-            text-align: center;
-        }
-
-        .salsas-title {
-            color: var(--rojo-chilaquil);
+        /* --- TÍTULOS DE SECCIÓN --- */
+        .section-title {
+            font-size: 2.2rem;
             font-weight: 900;
-            font-size: 1.5rem;
+            color: var(--rojo-oscuro);
             text-transform: uppercase;
-            margin-bottom: 15px;
+            text-align: center;
+            margin: 40px 0 25px;
             letter-spacing: 1px;
         }
 
-        .salsas-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .salsa-tag {
-            background: var(--bg-color);
-            color: var(--texto-oscuro);
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 800;
-            border: 1px solid #e5dfd3;
-        }
-
-        /* --- CATEGORÍAS Y PRODUCTOS --- */
-        .categoria-section {
+        /* --- GRID VISUAL (SALSAS Y PROTEÍNAS) --- */
+        .grid-visual {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
             margin-bottom: 40px;
         }
 
-        .categoria-titulo {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: var(--rojo-chilaquil);
-            text-transform: uppercase;
-            margin-bottom: 15px;
+        .card-visual {
+            background: var(--blanco);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            border: 2px solid #eae3d3;
         }
 
-        .categoria-titulo::after {
-            content: '';
+        .card-img {
+            width: 100%;
+            height: 140px;
+            background-color: #e5dfd3;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        /* Placeholder en caso de que no haya foto */
+        .card-img::after {
+            content: '🌶️';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            opacity: 0.2;
+            z-index: 0;
+        }
+
+        .card-body {
+            padding: 15px;
+            text-align: center;
             flex: 1;
-            height: 2px;
-            background: rgba(193, 39, 45, 0.2);
-            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--blanco);
+            z-index: 1;
         }
 
+        .card-body h3 {
+            font-size: 1rem;
+            font-weight: 900;
+            color: var(--rojo-oscuro);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            line-height: 1.1;
+        }
+
+        .card-body p {
+            font-size: 0.75rem;
+            color: var(--texto-gris);
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        /* --- PRODUCTOS NORMALES (LISTA) --- */
         .producto-card {
+            background: var(--blanco);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--blanco);
-            padding: 18px 20px;
-            border-radius: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-            border: 1px solid rgba(0,0,0,0.02);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            border: 1px solid #eae3d3;
         }
 
-        .producto-card:active {
-            transform: scale(0.98);
-        }
-
-        .producto-info {
-            flex: 1;
-            padding-right: 15px;
-        }
-
-        .producto-nombre {
+        .producto-info h4 {
             font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--texto-oscuro);
-            line-height: 1.2;
+            font-weight: 900;
             text-transform: uppercase;
+            color: var(--texto-negro);
+            margin-bottom: 4px;
+        }
+
+        .producto-info p {
+            font-size: 0.85rem;
+            color: var(--texto-gris);
+            font-weight: 500;
+            max-width: 90%;
         }
 
         .producto-precio {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             font-weight: 900;
-            color: var(--rojo-chilaquil);
-            background: #fdf2f2;
-            padding: 8px 14px;
-            border-radius: 12px;
+            color: var(--rojo-oscuro);
             white-space: nowrap;
         }
 
-        /* --- FOOTER --- */
-        .footer {
-            text-align: center;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 2px dashed #e5dfd3;
-            color: var(--texto-claro);
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
     </style>
 </head>
 <body>
 
+    <!-- LOGO DEL RESTAURANTE -->
     <header class="header">
-        <div class="logo-text">Señor Chilaquil</div>
-        <div class="logo-subtitle">Menú Digital</div>
+        <!-- Reemplaza "logo.png" con el nombre real de tu imagen de logo si la tienes en la carpeta static/img/ -->
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Señor Chilaquil" class="logo-img" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+        <div id="logo-fallback" class="logo-fallback" style="display:none;">Señor Chilaquil</div>
     </header>
 
     <div class="container">
         
-        <!-- SECCIÓN DE SALSAS -->
-        {% if salsas %}
-        <div class="salsas-box">
-            <h2 class="salsas-title">Nuestras Salsas</h2>
-            <p style="font-size: 0.9rem; color: var(--texto-claro); margin-bottom: 15px; font-weight: 600;">Elige tu favorita para bañar tus platillos</p>
-            <div class="salsas-grid">
-                {% for salsa in salsas %}
-                    <div class="salsa-tag">🌶️ {{ salsa.nombre }}</div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- AGRUPAMOS LOS PRODUCTOS AUTOMÁTICAMENTE POR SU CATEGORÍA -->
-        {% for categoria, items in productos|groupby('categoria') %}
-            <!-- Ignoramos productos que no tienen categoría definida o están ocultos -->
-            {% if categoria %}
-            <div class="categoria-section">
-                <h2 class="categoria-titulo">{{ categoria }}</h2>
-                
-                {% for p in items %}
-                <div class="producto-card">
-                    <div class="producto-info">
-                        <div class="producto-nombre">{{ p.nombre }}</div>
-                    </div>
-                    <div class="producto-precio">
-                        ${{ "%.2f"|format(p.precio) }}
+        <!-- SECCIÓN DE SALSAS VISUALES -->
+        <h2 class="section-title">Salsas</h2>
+        <div class="grid-visual">
+            {% for p in platillos %}
+                {% if 'salsa' in p.nombre|lower %}
+                <div class="card-visual">
+                    <!-- Jala la imagen de la receta -->
+                    <div class="card-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}'); z-index:1;{% endif %}"></div>
+                    <div class="card-body">
+                        <!-- Limpiamos la palabra 'salsa' para que se vea como en el PDF (ej. CACAHUATE) -->
+                        <h3>{{ p.nombre|lower|replace('salsa de ', '')|replace('salsa ', '') }}</h3>
+                        
+                        <!-- Mostramos las instrucciones como descripción -->
+                        {% if p.instrucciones %}
+                            <p>{{ p.instrucciones }}</p>
+                        {% endif %}
                     </div>
                 </div>
-                {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
 
+        <!-- SECCIÓN DE PROTEÍNAS VISUALES -->
+        <h2 class="section-title">Proteínas</h2>
+        <div class="grid-visual">
+            {% for p in platillos %}
+                <!-- Si el nombre del platillo coincide con alguna proteína registrada en tu BD -->
+                {% if p.nombre|lower|strip in nombres_proteinas %}
+                <div class="card-visual">
+                    <div class="card-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}'); z-index:1;{% endif %}"></div>
+                    <div class="card-body">
+                        <h3>{{ p.nombre }}</h3>
+                        {% if p.instrucciones %}
+                            <p>{{ p.instrucciones }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- EL RESTO DEL MENÚ (CHILAQUILES, BEBIDAS, ETC) -->
+        {% for categoria, items in productos|groupby('categoria') %}
+            {% if categoria and categoria|lower != 'salsas' and categoria|lower != 'proteinas' %}
+            <h2 class="section-title">{{ categoria }}</h2>
+            
+            {% for item in items %}
+            <div class="producto-card">
+                <div class="producto-info">
+                    <h4>{{ item.nombre }}</h4>
+                    {% if item.instrucciones %}
+                        <p>{{ item.instrucciones }}</p>
+                    {% endif %}
+                </div>
+                <div class="producto-precio">${{ "%.0f"|format(item.precio) }}</div>
             </div>
+            {% endfor %}
+
             {% endif %}
         {% endfor %}
 
-        <!-- SI NO HAY NADA EN EL MENÚ -->
-        {% if not productos %}
-            <div style="text-align: center; padding: 40px 20px; color: var(--texto-claro);">
-                <h3>Menú en actualización</h3>
-                <p>Regresa en un momento.</p>
-            </div>
-        {% endif %}
-
-        <div class="footer">
+        <div style="text-align: center; margin-top: 50px; color: var(--texto-gris); font-size: 0.85rem; font-weight: 700;">
             <p>¡Gracias por tu preferencia!</p>
-            <p style="font-size: 0.8rem; margin-top: 5px; opacity: 0.7;">Los precios incluyen IVA.</p>
+            <p style="opacity: 0.6; margin-top: 5px;">Los precios incluyen IVA.</p>
         </div>
 
     </div>
