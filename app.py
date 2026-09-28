@@ -489,12 +489,18 @@ def campanas():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 1. Truco de magia: Si la columna no existe en la BD, la creamos automáticamente
+            if not table_has_column(cursor, "loyalty_customers", "ultimo_mensaje_campana"):
+                cursor.execute("ALTER TABLE loyalty_customers ADD COLUMN ultimo_mensaje_campana DATE NULL")
+                conn.commit()
+
+            # 2. Buscamos a los clientes inactivos
             cursor.execute("""
                 SELECT 
-                    c.id, c.nombre, c.phone_e164, 
+                    c.id, c.nombre, c.phone_e164, c.ultimo_mensaje_campana,
                     a.totopos_balance,
                     MAX(p.fecha) as ultima_compra,
-                    DATEDIFF(NOW(), MAX(p.fecha)) as dias_ausente
+                    DATEDIFF(CURRENT_DATE, MAX(p.fecha)) as dias_ausente
                 FROM loyalty_customers c
                 JOIN loyalty_tx tx ON c.id = tx.customer_id
                 JOIN pedidos p ON tx.pedido_id = p.id
@@ -508,6 +514,8 @@ def campanas():
     finally:
         conn.close()
 
+    hoy = datetime.now().date()
+
     for c in clientes_inactivos:
         telefono = (c["phone_e164"] or "").replace("+", "")
         nombre_completo = c["nombre"] or "amigo"
@@ -517,9 +525,27 @@ def campanas():
         msg_q = urllib.parse.quote(mensaje)
 
         c["wa_link"] = f"https://wa.me/{telefono}?text={msg_q}" if telefono else None
+        
+        # 3. Verificamos si ya le mandamos mensaje HOY
+        fecha_ultimo = c.get("ultimo_mensaje_campana")
+        c["contactado_hoy"] = (fecha_ultimo == hoy)
 
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias)
 
+# --- NUEVA RUTA PARA REGISTRAR EL CLIC SILENCIOSAMENTE ---
+@app.route("/api/campanas/marcar/<int:customer_id>", methods=["POST"])
+@requiere_permiso("clientes")
+def marcar_campana(customer_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE loyalty_customers SET ultimo_mensaje_campana = CURRENT_DATE WHERE id = %s", (customer_id,))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        conn.close()
 
 # =========================================================
 # ================== INVENTARIO Y STOCK ===================
