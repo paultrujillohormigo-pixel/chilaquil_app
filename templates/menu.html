@@ -8,163 +8,44 @@
     
     <style>
         :root {
-            --bg-crema: #EBE5D8; /* Ajustado al tono exacto de tu imagen */
-            --rojo-oscuro: #5C151A; /* Rojo vino de la imagen */
-            --rojo-etiqueta: #B22822; /* Rojo vivo de la etiqueta */
+            --bg-crema: #EBE5D8; 
+            --rojo-oscuro: #5C151A; 
+            --rojo-etiqueta: #B22822; 
             --texto-negro: #1a1a1a;
             --texto-gris: #5c554b;
             --blanco: #ffffff;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Montserrat', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-crema);
-            color: var(--texto-negro);
-            padding-bottom: 60px;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg-crema); color: var(--texto-negro); padding-bottom: 60px; }
 
         /* --- HEADER Y LOGO --- */
-        .header {
-            text-align: center;
-            padding: 40px 20px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        .header { text-align: center; padding: 40px 20px 20px; display: flex; flex-direction: column; align-items: center; }
+        .logo-img { max-width: 220px; height: auto; margin-bottom: 10px; }
+        .logo-fallback { font-size: 2.5rem; font-weight: 900; color: var(--rojo-oscuro); text-transform: uppercase; line-height: 1; }
+        .container { max-width: 600px; margin: 0 auto; padding: 0 20px; }
+        .section-title { font-size: 2.2rem; font-weight: 900; color: var(--rojo-oscuro); text-transform: uppercase; text-align: center; margin: 50px 0 25px; letter-spacing: 1px; }
 
-        .logo-img {
-            max-width: 220px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-
-        .logo-fallback {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--rojo-oscuro);
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* --- TÍTULOS DE SECCIÓN NORMALES --- */
-        .section-title {
-            font-size: 2.2rem;
-            font-weight: 900;
-            color: var(--rojo-oscuro);
-            text-transform: uppercase;
-            text-align: center;
-            margin: 50px 0 25px;
-            letter-spacing: 1px;
-        }
-
-        /* ========================================== */
-        /* DISEÑO ESPECIAL SALSAS Y PROTEÍNAS         */
-        /* ========================================== */
-        .sp-container {
-            display: flex;
-            justify-content: space-between;
-            max-width: 1100px; /* Más ancho para que quepa bien el diseño landscape */
-            margin: 20px auto 50px;
-            padding: 0 20px;
-            gap: 20px;
-        }
-
-        /* Títulos verticales gigantes */
-        .sp-vertical-title {
-            writing-mode: vertical-rl;
-            font-size: 65px;
-            font-weight: 500;
-            color: var(--rojo-oscuro);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            user-select: none;
-            display: flex;
-            align-items: center;
-        }
-
+        /* --- DISEÑO ESPECIAL SALSAS Y PROTEÍNAS --- */
+        .sp-container { display: flex; justify-content: space-between; max-width: 1100px; margin: 20px auto 50px; padding: 0 20px; gap: 20px; }
+        .sp-vertical-title { writing-mode: vertical-rl; font-size: 65px; font-weight: 500; color: var(--rojo-oscuro); text-transform: uppercase; letter-spacing: 2px; user-select: none; display: flex; align-items: center; }
         .sp-title-left { transform: rotate(180deg); }
-        .sp-title-right { /* Por defecto lee de arriba a abajo */ }
-
-        /* Columnas centrales */
-        .sp-column {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-            flex: 1;
-            justify-content: center;
-        }
-
+        .sp-column { display: flex; flex-direction: column; gap: 30px; flex: 1; justify-content: center; }
         .sp-item { display: flex; align-items: center; }
-
-        /* Alineaciones: Salsas (Izquierda) y Proteínas (Derecha) */
         .sp-left-align { justify-content: flex-start; }
         .sp-right-align { justify-content: flex-end; }
 
-        /* Imágenes circulares con fallback del chilito */
-        .sp-img {
-            width: 85px;
-            height: 85px;
-            border-radius: 50%;
-            background-color: #dfd7c5;
-            background-size: cover;
-            background-position: center;
-            position: relative;
-            flex-shrink: 0;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            z-index: 2;
-        }
-        .sp-img::after {
-            content: '🌶️';
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2rem;
-            opacity: 0.15;
-            z-index: -1;
-        }
+        .sp-img { width: 85px; height: 85px; border-radius: 50%; background-color: #dfd7c5; background-size: cover; background-position: center; position: relative; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.15); z-index: 2; }
+        .sp-img::after { content: '🌶️'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; opacity: 0.15; z-index: -1; }
 
-        /* Textos */
         .sp-left-align .sp-text { margin-left: 15px; }
         .sp-right-align .sp-text { margin-right: 15px; text-align: right; }
 
-        .sp-name {
-            font-size: 24px;
-            color: var(--rojo-oscuro);
-            text-transform: uppercase;
-            line-height: 1;
-            margin-bottom: 5px;
-            font-weight: 500;
-            letter-spacing: -0.5px;
-        }
+        .sp-name { font-size: 24px; color: var(--rojo-oscuro); text-transform: uppercase; line-height: 1; margin-bottom: 5px; font-weight: 500; letter-spacing: -0.5px; }
+        .sp-desc-badge { background-color: var(--rojo-etiqueta); color: var(--blanco); font-size: 10px; padding: 4px 14px; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+        .sp-left-align .sp-desc-badge { border-radius: 0 15px 15px 0; }
+        .sp-right-align .sp-desc-badge { border-radius: 15px 0 0 15px; }
 
-        /* Etiquetas Rojas (Badges) */
-        .sp-desc-badge {
-            background-color: var(--rojo-etiqueta);
-            color: var(--blanco);
-            font-size: 10px;
-            padding: 4px 14px;
-            display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 700;
-        }
-
-        .sp-left-align .sp-desc-badge { border-radius: 0 15px 15px 0; } /* Curvo a la derecha */
-        .sp-right-align .sp-desc-badge { border-radius: 15px 0 0 15px; } /* Curvo a la izquierda */
-
-        /* Responsivo para móviles */
         @media (max-width: 850px) {
             .sp-container { flex-direction: column; padding: 0 15px; gap: 40px; }
             .sp-vertical-title { writing-mode: horizontal-tb; transform: none; font-size: 45px; justify-content: center; }
@@ -174,67 +55,31 @@
         }
 
         /* --- PRODUCTOS NORMALES (LISTA) --- */
-        .producto-card {
-            background: var(--blanco);
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-            border: 1px solid #dfd7c5;
-        }
-
-        .producto-info h4 {
-            font-size: 1.1rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            color: var(--texto-negro);
-            margin-bottom: 4px;
-        }
-
-        .producto-info p {
-            font-size: 0.85rem;
-            color: var(--texto-gris);
-            font-weight: 500;
-            max-width: 90%;
-        }
-
-        .producto-precio {
-            font-size: 1.3rem;
-            font-weight: 900;
-            color: var(--rojo-oscuro);
-            white-space: nowrap;
-        }
-
+        .producto-card { background: var(--blanco); padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #dfd7c5; }
+        .producto-info h4 { font-size: 1.1rem; font-weight: 900; text-transform: uppercase; color: var(--texto-negro); margin-bottom: 4px; }
+        .producto-info p { font-size: 0.85rem; color: var(--texto-gris); font-weight: 500; max-width: 90%; }
+        .producto-precio { font-size: 1.3rem; font-weight: 900; color: var(--rojo-oscuro); white-space: nowrap; }
     </style>
 </head>
 <body>
 
-    <!-- LOGO DEL RESTAURANTE -->
     <header class="header">
         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Señor Chilaquil" class="logo-img" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
         <div id="logo-fallback" class="logo-fallback" style="display:none;">Señor Chilaquil</div>
     </header>
 
-    <!-- SECCIÓN ESPECIAL: SALSAS Y PROTEÍNAS -->
+    <!-- SECCIÓN ESPECIAL: SALSAS Y PROTEÍNAS (AHORA POR CATEGORÍA) -->
     <section class="sp-container">
         
-        <!-- TEXTO VERTICAL IZQUIERDO -->
+        <!-- COLUMNA SALSAS (Busca en categoría 'Salsas') -->
         <div class="sp-vertical-title sp-title-left">SALSAS</div>
-
-        <!-- COLUMNA SALSAS -->
         <div class="sp-column">
-            {% for p in platillos %}
-                {% if 'salsa' in p.nombre|lower %}
+            {% for p in productos %}
+                {% if p.categoria|lower == 'salsas' %}
                 <div class="sp-item sp-left-align">
-                    <!-- Círculo de imagen -->
                     <div class="sp-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}');{% endif %}"></div>
                     <div class="sp-text">
-                        <!-- Nombre limpio (sin la palabra salsa) -->
-                        <div class="sp-name">{{ p.nombre|lower|replace('salsa de ', '')|replace('salsa ', '') }}</div>
-                        <!-- Etiqueta roja -->
+                        <div class="sp-name">{{ p.nombre }}</div>
                         <div class="sp-desc-badge">{{ p.instrucciones if p.instrucciones else 'RECETA ESPECIAL DE LA CASA' }}</div>
                     </div>
                 </div>
@@ -242,32 +87,29 @@
             {% endfor %}
         </div>
 
-        <!-- COLUMNA PROTEÍNAS -->
+        <!-- COLUMNA PROTEÍNAS (Busca en categoría 'Proteínas' o 'Proteinas') -->
         <div class="sp-column">
-            {% for p in platillos %}
-                {% if p.nombre|lower|trim in nombres_proteinas %}
+            {% for p in productos %}
+                {% if p.categoria|lower in ['proteinas', 'proteínas'] %}
                 <div class="sp-item sp-right-align">
                     <div class="sp-text">
                         <div class="sp-name">{{ p.nombre }}</div>
                         <div class="sp-desc-badge">{{ p.instrucciones if p.instrucciones else 'FRESCO Y PREPARADO AL MOMENTO' }}</div>
                     </div>
-                    <!-- Círculo de imagen -->
                     <div class="sp-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}');{% endif %}"></div>
                 </div>
                 {% endif %}
             {% endfor %}
         </div>
-
-        <!-- TEXTO VERTICAL DERECHO -->
         <div class="sp-vertical-title sp-title-right">PROTEINAS</div>
 
     </section>
 
-
-    <!-- EL RESTO DEL MENÚ (CHILAQUILES, BEBIDAS, ETC) -->
+    <!-- EL RESTO DEL MENÚ (CHILAQUILES, BEBIDAS, POSTRES, ETC) -->
     <div class="container">
         {% for categoria, items in productos|groupby('categoria') %}
-            {% if categoria and categoria|lower != 'salsas' and categoria|lower != 'proteinas' %}
+            <!-- Excluimos las Salsas y Proteínas para que no salgan doble -->
+            {% if categoria and categoria|lower not in ['salsas', 'proteinas', 'proteínas'] %}
             <h2 class="section-title">{{ categoria }}</h2>
             
             {% for item in items %}
