@@ -208,7 +208,7 @@
         <div class="grid-visual">
             {% for p in platillos %}
                 <!-- Si el nombre del platillo coincide con alguna proteína registrada en tu BD -->
-                {% if p.nombre|lower|strip in nombres_proteinas %}
+                {% if p.nombre|lower|trim in nombres_proteinas %}
                 <div class="card-visual">
                     <div class="card-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}'); z-index:1;{% endif %}"></div>
                     <div class="card-body">
