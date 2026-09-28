@@ -8,8 +8,9 @@
     
     <style>
         :root {
-            --bg-crema: #f5eedf; /* Color crema exacto del PDF */
-            --rojo-oscuro: #a81c1c;
+            --bg-crema: #EBE5D8; /* Ajustado al tono exacto de tu imagen */
+            --rojo-oscuro: #5C151A; /* Rojo vino de la imagen */
+            --rojo-etiqueta: #B22822; /* Rojo vivo de la etiqueta */
             --texto-negro: #1a1a1a;
             --texto-gris: #5c554b;
             --blanco: #ffffff;
@@ -57,80 +58,119 @@
             padding: 0 20px;
         }
 
-        /* --- TÍTULOS DE SECCIÓN --- */
+        /* --- TÍTULOS DE SECCIÓN NORMALES --- */
         .section-title {
             font-size: 2.2rem;
             font-weight: 900;
             color: var(--rojo-oscuro);
             text-transform: uppercase;
             text-align: center;
-            margin: 40px 0 25px;
+            margin: 50px 0 25px;
             letter-spacing: 1px;
         }
 
-        /* --- GRID VISUAL (SALSAS Y PROTEÍNAS) --- */
-        .grid-visual {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 40px;
+        /* ========================================== */
+        /* DISEÑO ESPECIAL SALSAS Y PROTEÍNAS         */
+        /* ========================================== */
+        .sp-container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1100px; /* Más ancho para que quepa bien el diseño landscape */
+            margin: 20px auto 50px;
+            padding: 0 20px;
+            gap: 20px;
         }
 
-        .card-visual {
-            background: var(--blanco);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        /* Títulos verticales gigantes */
+        .sp-vertical-title {
+            writing-mode: vertical-rl;
+            font-size: 65px;
+            font-weight: 500;
+            color: var(--rojo-oscuro);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            user-select: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .sp-title-left { transform: rotate(180deg); }
+        .sp-title-right { /* Por defecto lee de arriba a abajo */ }
+
+        /* Columnas centrales */
+        .sp-column {
             display: flex;
             flex-direction: column;
-            border: 2px solid #eae3d3;
+            gap: 30px;
+            flex: 1;
+            justify-content: center;
         }
 
-        .card-img {
-            width: 100%;
-            height: 140px;
-            background-color: #e5dfd3;
+        .sp-item { display: flex; align-items: center; }
+
+        /* Alineaciones: Salsas (Izquierda) y Proteínas (Derecha) */
+        .sp-left-align { justify-content: flex-start; }
+        .sp-right-align { justify-content: flex-end; }
+
+        /* Imágenes circulares con fallback del chilito */
+        .sp-img {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            background-color: #dfd7c5;
             background-size: cover;
             background-position: center;
             position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            z-index: 2;
         }
-
-        /* Placeholder en caso de que no haya foto */
-        .card-img::after {
+        .sp-img::after {
             content: '🌶️';
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             font-size: 2rem;
-            opacity: 0.2;
-            z-index: 0;
+            opacity: 0.15;
+            z-index: -1;
         }
 
-        .card-body {
-            padding: 15px;
-            text-align: center;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            background: var(--blanco);
-            z-index: 1;
-        }
+        /* Textos */
+        .sp-left-align .sp-text { margin-left: 15px; }
+        .sp-right-align .sp-text { margin-right: 15px; text-align: right; }
 
-        .card-body h3 {
-            font-size: 1rem;
-            font-weight: 900;
+        .sp-name {
+            font-size: 24px;
             color: var(--rojo-oscuro);
             text-transform: uppercase;
+            line-height: 1;
             margin-bottom: 5px;
-            line-height: 1.1;
+            font-weight: 500;
+            letter-spacing: -0.5px;
         }
 
-        .card-body p {
-            font-size: 0.75rem;
-            color: var(--texto-gris);
+        /* Etiquetas Rojas (Badges) */
+        .sp-desc-badge {
+            background-color: var(--rojo-etiqueta);
+            color: var(--blanco);
+            font-size: 10px;
+            padding: 4px 14px;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             font-weight: 700;
-            line-height: 1.3;
+        }
+
+        .sp-left-align .sp-desc-badge { border-radius: 0 15px 15px 0; } /* Curvo a la derecha */
+        .sp-right-align .sp-desc-badge { border-radius: 15px 0 0 15px; } /* Curvo a la izquierda */
+
+        /* Responsivo para móviles */
+        @media (max-width: 850px) {
+            .sp-container { flex-direction: column; padding: 0 15px; gap: 40px; }
+            .sp-vertical-title { writing-mode: horizontal-tb; transform: none; font-size: 45px; justify-content: center; }
+            .sp-right-align { justify-content: flex-start; flex-direction: row-reverse; }
+            .sp-right-align .sp-text { text-align: left; margin-right: 0; margin-left: 15px; }
+            .sp-right-align .sp-desc-badge { border-radius: 0 15px 15px 0; }
         }
 
         /* --- PRODUCTOS NORMALES (LISTA) --- */
@@ -143,7 +183,7 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-            border: 1px solid #eae3d3;
+            border: 1px solid #dfd7c5;
         }
 
         .producto-info h4 {
@@ -174,55 +214,58 @@
 
     <!-- LOGO DEL RESTAURANTE -->
     <header class="header">
-        <!-- Reemplaza "logo.png" con el nombre real de tu imagen de logo si la tienes en la carpeta static/img/ -->
         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Señor Chilaquil" class="logo-img" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
         <div id="logo-fallback" class="logo-fallback" style="display:none;">Señor Chilaquil</div>
     </header>
 
-    <div class="container">
+    <!-- SECCIÓN ESPECIAL: SALSAS Y PROTEÍNAS -->
+    <section class="sp-container">
         
-        <!-- SECCIÓN DE SALSAS VISUALES -->
-        <h2 class="section-title">Salsas</h2>
-        <div class="grid-visual">
+        <!-- TEXTO VERTICAL IZQUIERDO -->
+        <div class="sp-vertical-title sp-title-left">SALSAS</div>
+
+        <!-- COLUMNA SALSAS -->
+        <div class="sp-column">
             {% for p in platillos %}
                 {% if 'salsa' in p.nombre|lower %}
-                <div class="card-visual">
-                    <!-- Jala la imagen de la receta -->
-                    <div class="card-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}'); z-index:1;{% endif %}"></div>
-                    <div class="card-body">
-                        <!-- Limpiamos la palabra 'salsa' para que se vea como en el PDF (ej. CACAHUATE) -->
-                        <h3>{{ p.nombre|lower|replace('salsa de ', '')|replace('salsa ', '') }}</h3>
-                        
-                        <!-- Mostramos las instrucciones como descripción -->
-                        {% if p.instrucciones %}
-                            <p>{{ p.instrucciones }}</p>
-                        {% endif %}
+                <div class="sp-item sp-left-align">
+                    <!-- Círculo de imagen -->
+                    <div class="sp-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}');{% endif %}"></div>
+                    <div class="sp-text">
+                        <!-- Nombre limpio (sin la palabra salsa) -->
+                        <div class="sp-name">{{ p.nombre|lower|replace('salsa de ', '')|replace('salsa ', '') }}</div>
+                        <!-- Etiqueta roja -->
+                        <div class="sp-desc-badge">{{ p.instrucciones if p.instrucciones else 'RECETA ESPECIAL DE LA CASA' }}</div>
                     </div>
                 </div>
                 {% endif %}
             {% endfor %}
         </div>
 
-        <!-- SECCIÓN DE PROTEÍNAS VISUALES -->
-        <h2 class="section-title">Proteínas</h2>
-        <div class="grid-visual">
+        <!-- COLUMNA PROTEÍNAS -->
+        <div class="sp-column">
             {% for p in platillos %}
-                <!-- Si el nombre del platillo coincide con alguna proteína registrada en tu BD -->
                 {% if p.nombre|lower|trim in nombres_proteinas %}
-                <div class="card-visual">
-                    <div class="card-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}'); z-index:1;{% endif %}"></div>
-                    <div class="card-body">
-                        <h3>{{ p.nombre }}</h3>
-                        {% if p.instrucciones %}
-                            <p>{{ p.instrucciones }}</p>
-                        {% endif %}
+                <div class="sp-item sp-right-align">
+                    <div class="sp-text">
+                        <div class="sp-name">{{ p.nombre }}</div>
+                        <div class="sp-desc-badge">{{ p.instrucciones if p.instrucciones else 'FRESCO Y PREPARADO AL MOMENTO' }}</div>
                     </div>
+                    <!-- Círculo de imagen -->
+                    <div class="sp-img" style="{% if p.imagen_url %}background-image: url('{{ p.imagen_url }}');{% endif %}"></div>
                 </div>
                 {% endif %}
             {% endfor %}
         </div>
 
-        <!-- EL RESTO DEL MENÚ (CHILAQUILES, BEBIDAS, ETC) -->
+        <!-- TEXTO VERTICAL DERECHO -->
+        <div class="sp-vertical-title sp-title-right">PROTEINAS</div>
+
+    </section>
+
+
+    <!-- EL RESTO DEL MENÚ (CHILAQUILES, BEBIDAS, ETC) -->
+    <div class="container">
         {% for categoria, items in productos|groupby('categoria') %}
             {% if categoria and categoria|lower != 'salsas' and categoria|lower != 'proteinas' %}
             <h2 class="section-title">{{ categoria }}</h2>
@@ -246,7 +289,6 @@
             <p>¡Gracias por tu preferencia!</p>
             <p style="opacity: 0.6; margin-top: 5px;">Los precios incluyen IVA.</p>
         </div>
-
     </div>
 
 </body>
