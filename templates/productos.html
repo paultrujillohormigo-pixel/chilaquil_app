@@ -58,7 +58,8 @@
                 </div>
                 <div class="form-group">
                     <label>Precio al Público ($)</label>
-                    <input type="number" step="0.01" name="precio" placeholder="Ej. 25.00" required>
+                    <!-- Cambié step="0.01" a step="any" para mayor compatibilidad, y agregué value="0" por default -->
+                    <input type="number" step="any" name="precio" placeholder="Ej. 25.00 o 0" value="0" required>
                 </div>
                 <div class="form-group">
                     <label>Vincular a Receta (Opcional)</label>
@@ -110,11 +111,11 @@
                         
                         <td style="color: #64748b; font-weight: 600;">${{ "%.2f"|format(p.costo or 0) }}</td>
                         
-                        <!-- AQUI ESTA EL CAMBIO: PRECIO EDITABLE INLINE -->
+                        <!-- AQUI ESTA EL CAMBIO: PRECIO EDITABLE INLINE SIN URL_FOR -->
                         <td>
-                            <form method="POST" action="{{ url_for('editar_precio_producto', producto_id=p.id) }}" style="margin: 0; display: flex; align-items: center; gap: 5px;">
+                            <form method="POST" action="/productos/{{ p.id }}/editar_precio" style="margin: 0; display: flex; align-items: center; gap: 5px;">
                                 <span style="font-weight: bold; color: #334155;">$</span>
-                                <input type="number" step="0.01" name="nuevo_precio" value="{{ p.precio }}" style="width: 80px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; color: #b32417;">
+                                <input type="number" step="any" name="nuevo_precio" value="{{ p.precio }}" style="width: 80px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; color: #b32417;">
                                 <button type="submit" class="btn-save-inline" title="Guardar Precio">💾</button>
                             </form>
                         </td>
