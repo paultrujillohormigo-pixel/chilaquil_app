@@ -61,6 +61,45 @@ def productos():
         
     return render_template("productos.html", productos=productos_db, platillos=platillos_db)
 
+@app.route('/menu')
+def menu():
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 1. Traemos los productos de venta regular unidos con sus imágenes e instrucciones (del platillo)
+            cursor.execute("""
+                SELECT p.*, pl.imagen_url, pl.instrucciones 
+                FROM productos p 
+                LEFT JOIN platillos pl ON p.platillo_id = pl.id 
+                WHERE p.activo = 1 
+                ORDER BY p.categoria, p.nombre
+            """)
+            productos_db = cursor.fetchall()
+            
+            # 2. Salsas
+            cursor.execute("SELECT * FROM salsas ORDER BY nombre")
+            salsas_db = cursor.fetchall()
+            
+            # 3. Traemos TODOS los platillos para extraer las Salsas y Proteínas con sus fotos
+            cursor.execute("SELECT id, nombre, imagen_url, instrucciones FROM platillos ORDER BY nombre")
+            platillos_db = cursor.fetchall()
+
+            # 4. Traemos el catálogo de proteínas para saber cuáles platillos son proteínas
+            if table_has_column(cursor, "proteinas", "nombre"):
+                cursor.execute("SELECT nombre FROM proteinas")
+                nombres_proteinas = [row['nombre'].lower().strip() for row in cursor.fetchall()]
+            else:
+                nombres_proteinas = []
+                
+    finally:
+        conn.close()
+        
+    return render_template('menu.html', 
+                           productos=productos_db, 
+                           salsas=salsas_db,
+                           platillos=platillos_db, 
+                           nombres_proteinas=nombres_proteinas)
+
 
 @app.post("/productos/<int:producto_id>/editar_precio")
 @requiere_permiso("menu_admin")
