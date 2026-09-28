@@ -117,8 +117,6 @@ def recetas_index():
 
 @costeo_bp.get("/recetas/<int:platillo_id>")
 @requiere_permiso("menu_admin")
-@costeo_bp.get("/recetas/<int:platillo_id>")
-@requiere_permiso("menu_admin")
 def recetas_edit(platillo_id):
     # Traemos todos los campos visuales para inyectarlos en el HTML
     platillo = query_one("SELECT id, nombre, proteina_cantidad_base, imagen_url, tiempo_prep_min, equipo_necesario, instrucciones FROM platillos WHERE id=%s", (platillo_id,))
@@ -143,16 +141,13 @@ def recetas_edit(platillo_id):
     except Exception:
         costeo_compras = None
 
-    # ================== EL CAMBIO ESTÁ AQUÍ ==================
     # Vamos a buscar el precio REAL a la tabla de productos
     precio_real = query_one("SELECT precio FROM productos WHERE platillo_id = %s LIMIT 1", (platillo_id,))
     
     # Si encontramos el producto vinculado, inyectamos su precio en el objeto costeo_compras
     if costeo_compras and precio_real:
-        # Convertimos el diccionario a uno mutable si es necesario, o simplemente reasignamos el valor
         costeo_compras = dict(costeo_compras)
         costeo_compras['precio_actual'] = precio_real['precio']
-    # =========================================================
 
     return render_template(
         "admin/recetas_edit.html",
@@ -166,7 +161,6 @@ def recetas_edit(platillo_id):
 @costeo_bp.post("/recetas/<int:platillo_id>")
 @requiere_permiso("menu_admin")
 def recetas_save(platillo_id):
-    # Ya no guardamos proteina_cantidad_base porque quitamos esa tarjeta
     imagen_url = (request.form.get("imagen_url") or "").strip() or None
     tiempo_prep_txt = (request.form.get("tiempo_prep_min") or "").strip()
     equipo_necesario = (request.form.get("equipo_necesario") or "").strip() or None
