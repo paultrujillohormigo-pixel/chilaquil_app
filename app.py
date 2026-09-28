@@ -33,6 +33,31 @@ app.register_blueprint(rh_bp)
 app.register_blueprint(cocina_bp)
 app.register_blueprint(seguridad_bp)
 
+
+
+
+@app.post("/productos/<int:producto_id>/editar_precio")
+@requiere_permiso("menu_admin")
+def editar_precio_producto(producto_id):
+    nuevo_precio = request.form.get("nuevo_precio")
+    if not nuevo_precio:
+        flash("El precio no puede estar vacío.", "error")
+        return redirect(url_for("productos"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE productos SET precio = %s WHERE id = %s", (nuevo_precio, producto_id))
+            conn.commit()
+            flash("Precio actualizado correctamente en el Punto de Venta 💰", "success")
+    except Exception as e:
+        flash(f"Error al actualizar el precio: {e}", "error")
+    finally:
+        conn.close()
+        
+    return redirect(url_for("productos"))
+
+
 # =========================================================
 # ================== LOGIN Y LOGOUT =======================
 # =========================================================
