@@ -116,7 +116,7 @@
                         </td>
                         
                         <td style="text-align: right;">
-                            <form method="POST" action="{{ url_for('eliminar_producto_producto', producto_id=p.id) }}" onsubmit="return confirm('¿Seguro que quieres eliminar este producto del menú?');" style="margin: 0;">
+                            <form method="POST" action="/productos/{{ p.id }}/eliminar" onsubmit="return confirm('¿Seguro que quieres eliminar este producto del menú?');" style="margin: 0;">
                                 <button type="submit" class="btn-danger">🗑️ Borrar</button>
                             </form>
                         </td>
