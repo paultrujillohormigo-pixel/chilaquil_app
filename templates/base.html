@@ -63,7 +63,7 @@
       cursor: pointer;
       transition: all 0.2s;
       -webkit-tap-highlight-color: transparent;
-      text-decoration: none; /* Asegura que los enlaces se vean bien */
+      text-decoration: none;
     }
     .nav-dd-btn:hover { background: #f1f5f9; color: #b32417; }
     .nav-dd.is-open .nav-dd-btn { background: #fee2e2; color: #b32417; }
@@ -84,7 +84,6 @@
       z-index: 9999;
     }
 
-    /* Evitar que los últimos menús se salgan de la pantalla a la derecha */
     .nav-dd:nth-last-child(1) .nav-dd-menu,
     .nav-dd:nth-last-child(2) .nav-dd-menu,
     .nav-dd:nth-last-child(3) .nav-dd-menu {
@@ -118,7 +117,6 @@
       .nav-dd:hover .nav-dd-btn { background: #fee2e2; color: #b32417; }
     }
     
-    /* Estilos para el logout superior derecho */
     .user-actions {
       display: flex;
       align-items: center;
@@ -149,13 +147,13 @@
 
   <nav class="navbar">
     <div class="nav-left">
-      <a class="brand" href="{{ url_for('hub') }}">🌶️ Señor Chilaquil</a>
+      <a class="brand" href="/hub">🌶️ Señor Chilaquil</a>
     </div>
 
     <div class="nav-links">
 
       <!-- BOTÓN DIRECTO A INICIO -->
-      <a href="{{ url_for('hub') }}" class="nav-dd-btn">🏠 Inicio</a>
+      <a href="/hub" class="nav-dd-btn">🏠 Inicio</a>
 
       <!-- 1. Ventas y Pedidos -->
       {% if 'all' in session.permisos or 'pedidos' in session.permisos or 'finanzas' in session.permisos %}
@@ -165,12 +163,12 @@
         </button>
         <div class="nav-dd-menu" role="menu">
           {% if 'all' in session.permisos or 'pedidos' in session.permisos %}
-          <a role="menuitem" href="{{ url_for('nuevo_pedido') }}">🍔 Nuevo pedido</a>
-          <a role="menuitem" href="{{ url_for('pedidos_abiertos') }}">📋 Pedidos abiertos</a>
+          <a role="menuitem" href="/nuevo_pedido">🍔 Nuevo pedido</a>
+          <a role="menuitem" href="/pedidos_abiertos">📋 Pedidos abiertos</a>
           {% endif %}
           
           {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
-          <a role="menuitem" href="{{ url_for('borrar_pedidos') }}">🕒 Historial pedidos</a>
+          <a role="menuitem" href="/borrar_pedidos">🕒 Historial pedidos</a>
           {% endif %}
         </div>
       </div>
@@ -184,12 +182,12 @@
         </button>
         <div class="nav-dd-menu" role="menu">
           {% if 'all' in session.permisos or 'menu_admin' in session.permisos %}
-          <a role="menuitem" href="{{ url_for('productos') }}">⚙️ Menú y Precios</a>
+          <a role="menuitem" href="/productos">⚙️ Menú y Precios</a>
           {% endif %}
           
           {% if 'all' in session.permisos or 'clientes' in session.permisos %}
-          <a role="menuitem" href="{{ url_for('lista_clientes') }}">👥 Clientes y Totopos</a>
-          <a role="menuitem" href="{{ url_for('campanas') }}">📢 Campañas (Retención)</a>
+          <a role="menuitem" href="/clientes">👥 Clientes y Totopos</a>
+          <a role="menuitem" href="/campanas">📢 Campañas (Retención)</a>
           {% endif %}
         </div>
       </div>
@@ -202,8 +200,8 @@
           Inventario <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
-          {# <a role="menuitem" href="/compras">🛒 Gastos y Compras</a> #}
-          <a role="menuitem" href="{{ url_for('ver_stock') }}">📦 Stock actual</a>
+          <a role="menuitem" href="/compras">🛒 Gastos y Compras</a>
+          <a role="menuitem" href="/inventario/stock">📦 Stock actual</a>
         </div>
       </div>
       {% endif %}
@@ -215,9 +213,9 @@
           Costeos <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
-          <a role="menuitem" href="{{ url_for('costeo.insumos_index') }}">🥑 Base Insumos</a>
-          <a role="menuitem" href="{{ url_for('costeo.recetas_index') }}">🧾 Recetario Técnico</a>
-          <a role="menuitem" href="{{ url_for('costeo.costeo_index') }}">📈 Rentabilidad</a>
+          <a role="menuitem" href="/costeo/insumos">🥑 Base Insumos</a>
+          <a role="menuitem" href="/costeo/recetas">🧾 Recetario Técnico</a>
+          <a role="menuitem" href="/costeo/rentabilidad">📈 Rentabilidad</a>
         </div>
       </div>
       {% endif %}
@@ -229,14 +227,14 @@
           Admin <span class="nav-caret" aria-hidden="true">▾</span>
         </button>
         <div class="nav-dd-menu" role="menu">
-          <a role="menuitem" href="{{ url_for('dashboard_bp.dashboard') }}">📊 Dashboard Finanzas</a>
+          <a role="menuitem" href="/dashboard">📊 Dashboard Finanzas</a>
           <a role="menuitem" href="/corte_caja">💵 Corte de Caja</a>
-          <a role="menuitem" href="{{ url_for('raw_data') }}">🗄️ Base de datos</a>
+          <a role="menuitem" href="/raw-data">🗄️ Base de datos</a>
         </div>
       </div>
       {% endif %}
 
-      <!-- 6. Enlaces Públicos (Siempre visibles para todos los logueados) -->
+      <!-- 6. Enlaces Públicos (Siempre visibles) -->
       <div class="nav-dd">
         <button class="nav-dd-btn" type="button" aria-expanded="false" style="color: #b32417; background: #fff1f2;">
           Público <span class="nav-caret" aria-hidden="true">▾</span>
@@ -252,7 +250,7 @@
     <!-- Nombre de usuario y Cerrar Sesión -->
     <div class="user-actions">
       <span class="user-name">👤 {{ session.get('nombre', 'Usuario') }}</span>
-      <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar Sesión</a>
+      <a href="/logout" class="logout-btn">Cerrar Sesión</a>
     </div>
 
   </nav>
@@ -291,10 +289,8 @@
       if (b) b.setAttribute("aria-expanded", String(!isOpen));
     }
 
-    // Comportamiento de click para abrir/cerrar en móviles o al hacer click manual
     buttons.forEach(btn => {
       btn.addEventListener("click", (e) => {
-        // Solo prevenir por defecto si no es un enlace directo
         if(btn.tagName.toLowerCase() !== 'a') {
             e.preventDefault();
             e.stopPropagation();
@@ -305,13 +301,11 @@
       }, { passive: false });
     });
 
-    // Cerrar si se da click en cualquier otro lado
     document.addEventListener("click", (e) => {
       if (e.target.closest && e.target.closest(".nav-dd")) return;
       closeAll();
     });
 
-    // Cerrar al presionar la tecla Escape
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeAll();
     });
