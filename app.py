@@ -44,22 +44,77 @@ def productos():
     conn = get_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Traemos los productos y su relación con platillos
+
+            # 1. Traer platillos para el selector
+            cursor.execute("SELECT id, nombre FROM platillos ORDER BY nombre")
+            platillos = cursor.fetchall()
+
+            # 2. LÓGICA PARA GUARDAR (POST)
+            if request.method == "POST":
+                nombre = (request.form.get("nombre") or "").strip()
+                categoria = (request.form.get("categoria") or "").strip()
+                precio_txt = (request.form.get("precio") or "").strip()
+                platillo_id_txt = (request.form.get("platillo_id") or "").strip()
+
+                if not nombre or not categoria or not precio_txt:
+                    flash("Faltan campos requeridos (Nombre, Categoría o Precio).", "error")
+                    return redirect("/productos")
+
+                try: 
+                    precio = Decimal(precio_txt)
+                except Exception:
+                    flash("Precio inválido.", "error")
+                    return redirect("/productos")
+
+                platillo_id = int(platillo_id_txt) if platillo_id_txt.isdigit() else None
+
+                if platillo_id:
+                    costo = calcular_costo_platillo(cursor, platillo_id)
+                else:
+                    costo_txt = (request.form.get("costo") or "0").strip()
+                    try: 
+                        costo = Decimal(costo_txt)
+                    except Exception:
+                        flash("Costo inválido.", "error")
+                        return redirect("/productos")
+
+                # Insertamos en la BD blindando la columna costo_total_real
+                try:
+                    if table_has_column(cursor, "productos", "costo_total_real"):
+                        cursor.execute("""
+                            INSERT INTO productos (nombre, categoria, costo, precio, platillo_id, activo, costo_total_real)
+                            VALUES (%s,%s,%s,%s,%s,1,0)
+                        """, (nombre, categoria, str(costo), str(precio), platillo_id))
+                    else:
+                        cursor.execute("""
+                            INSERT INTO productos (nombre, categoria, costo, precio, platillo_id, activo)
+                            VALUES (%s,%s,%s,%s,%s,1)
+                        """, (nombre, categoria, str(costo), str(precio), platillo_id))
+                        
+                    conn.commit()
+                    flash(f"¡{nombre} agregado correctamente al catálogo!", "success")
+                
+                except Exception as e:
+                    conn.rollback()
+                    flash(f"Error interno en la BD: {e}", "error")
+                
+                return redirect("/productos")
+
+            # 3. LÓGICA PARA LEER LA TABLA (GET)
             cursor.execute("""
-                SELECT p.*, pl.nombre as platillo_nombre 
-                FROM productos p
-                LEFT JOIN platillos pl ON p.platillo_id = pl.id
-                ORDER BY p.categoria, p.nombre
+                SELECT
+                    pr.id, pr.nombre, pr.categoria, pr.costo, pr.precio, pr.platillo_id,
+                    pl.nombre AS platillo_nombre
+                FROM productos pr
+                LEFT JOIN platillos pl ON pl.id = pr.platillo_id
+                WHERE pr.activo = 1
+                ORDER BY pr.categoria, pr.nombre
             """)
-            productos_db = cursor.fetchall()
-            
-            # Traemos los platillos base para el catálogo
-            cursor.execute("SELECT * FROM platillos ORDER BY nombre")
-            platillos_db = cursor.fetchall()
+            productos_rows = cursor.fetchall()
     finally:
         conn.close()
-        
-    return render_template("productos.html", productos=productos_db, platillos=platillos_db)
+
+    return render_template("productos.html", productos=productos_rows, platillos=platillos)
 
 @app.route('/menu')
 def menu():
