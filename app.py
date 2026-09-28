@@ -584,6 +584,26 @@ def campanas():
         c["primer_nombre"] = (c["nombre"] or "amigo").split()[0]
 
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias, promociones=promociones_db)
+
+
+# =========================================================
+# === ESTA ES LA RUTA QUE FALTABA PARA EL CLIC SILENCIOSO ===
+# =========================================================
+@app.route("/api/campanas/marcar/<int:customer_id>", methods=["POST"])
+@requiere_permiso("clientes")
+def marcar_campana(customer_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE loyalty_customers SET ultimo_mensaje_campana = CURRENT_DATE WHERE id = %s", (customer_id,))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        conn.close()
+
+
 # =========================================================
 # ================== INVENTARIO Y STOCK ===================
 # =========================================================
