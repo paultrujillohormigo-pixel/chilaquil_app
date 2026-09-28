@@ -37,6 +37,27 @@ app.register_blueprint(seguridad_bp)
 # =========================================================
 # ================== ADMIN: MENÚ Y PRECIOS ================
 # =========================================================
+def calcular_costo_platillo(cursor, platillo_id: int) -> Decimal:
+    cursor.execute("""
+        SELECT
+            COALESCE(SUM(
+                (r.cantidad_base * (1 + (i.merma_pct / 100))) *
+                COALESCE((
+                    SELECT ic.costo_unitario
+                    FROM insumos_compras ic
+                    WHERE ic.insumo_id = r.insumo_id
+                      AND ic.costo_unitario IS NOT NULL
+                    ORDER BY ic.fecha DESC, ic.id DESC
+                    LIMIT 1
+                ), 0)
+            ), 0) AS costo_platillo
+        FROM recetas r
+        JOIN insumos i ON i.id = r.insumo_id
+        WHERE r.platillo_id = %s
+    """, (platillo_id,))
+    row = cursor.fetchone()
+    return Decimal(str(row["costo_platillo"] or 0))
+
 
 @app.route("/productos", methods=["GET", "POST"])
 @requiere_permiso("menu_admin")
