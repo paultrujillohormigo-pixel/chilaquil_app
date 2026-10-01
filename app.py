@@ -51,6 +51,7 @@ def login():
                 usuario = cursor.fetchone()
 
                 if usuario and check_password_hash(usuario['password_hash'], password):
+                    session.permanent = True
                     session['usuario_id'] = usuario['id']
                     session['nombre'] = usuario['nombre']
                     session['rol_id'] = usuario['rol_id']
