@@ -24,6 +24,7 @@ from auth import login_requerido, requiere_permiso
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30) # La sesión durará 30 días
 
 # --- Registramos todos los Blueprints ---
 app.register_blueprint(costeo_bp)
