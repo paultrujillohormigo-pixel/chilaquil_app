@@ -95,6 +95,188 @@ def privacy_policy():
     </html>
     """, 200
 
+
+
+# =========================================================
+# ================== MANTENIMIENTO COMPRAS ================
+# =========================================================
+
+@app.route("/compras", methods=["GET", "POST"])
+@requiere_permiso("inventario")
+def compras():
+    conn = get_connection()
+    conn.ping(reconnect=True)
+
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT id, nombre, unidad_base FROM insumos WHERE activo = 1 ORDER BY nombre")
+            insumos = cursor.fetchall()
+
+            if not table_has_column(cursor, "insumos_compras", "oculto"):
+                cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
+                conn.commit()
+
+            cursor.execute("""
+                SELECT DISTINCT concepto 
+                FROM insumos_compras 
+                WHERE (insumo_id IS NULL OR es_insumo = 0)
+                  AND concepto IS NOT NULL 
+                  AND concepto != '' 
+                  AND oculto = 0
+                ORDER BY concepto
+            """)
+            conceptos_otros = [row["concepto"] for row in cursor.fetchall()]
+
+            def render_with_data():
+                cursor.execute("SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo FROM insumos_compras ORDER BY fecha DESC LIMIT 200")
+                return render_template(
+                    "compras.html", 
+                    compras=cursor.fetchall(), 
+                    insumos=insumos, 
+                    conceptos_otros=conceptos_otros,
+                    form_data=request.form
+                )
+
+            if request.method == "POST":
+                amount_txt = (request.form.get("cantidad") or "").strip()
+                unit_txt = (request.form.get("unidad") or "").strip()
+                sumar_stock = (request.form.get("es_insumo") == "1")
+
+                if sumar_stock:
+                    if not amount_txt: amount_txt = (request.form.get("cantidad_base") or "").strip()
+                    if not unit_txt: unit_txt = (request.form.get("unidad_base") or "").strip()
+
+                if not request.form.get("fecha"): flash("Fecha requerida.", "error"); return render_with_data()
+                if not (request.form.get("lugar") or "").strip(): flash("Lugar requerido.", "error"); return render_with_data()
+                if not (request.form.get("concepto") or "").strip(): flash("Concepto requerido.", "error"); return render_with_data()
+
+                costo_dec = parse_decimal_mx(request.form.get("costo"))
+                if costo_dec is None or costo_dec < 0: flash("Costo total inválido.", "error"); return render_with_data()
+
+                cantidad_dec = parse_decimal_mx(amount_txt)
+                if cantidad_dec is None or cantidad_dec <= 0: flash("Cantidad inválida.", "error"); return render_with_data()
+
+                if not unit_txt: flash("Unidad requerida.", "error"); return render_with_data()
+
+                insumo_id_val = request.form.get("insumo_id") or None
+                cantidad_base_val = request.form.get("cantidad_base") or None
+                unidad_base_val = request.form.get("unidad_base") or None
+                costo_unitario_val = request.form.get("costo_unitario") or None
+                cant_base_dec = None
+
+                if sumar_stock:
+                    if not (insumo_id_val or "").strip().isdigit():
+                        flash("Para sumar stock debes seleccionar un insumo válido.", "error")
+                        return render_with_data()
+                    cant_base_dec = parse_decimal_mx(cantidad_base_val)
+                    if cant_base_dec is None or cant_base_dec <= 0:
+                        flash("Cantidad base inválida (> 0).", "error")
+                        return render_with_data()
+                    cu_dec = parse_decimal_mx(costo_unitario_val)
+                    costo_unitario_val = str(cu_dec) if cu_dec is not None else None
+                    amount_txt = str(cant_base_dec)
+                    cantidad_base_val = str(cant_base_dec)
+                else:
+                    amount_txt = str(cantidad_dec)
+
+                cursor.execute("""
+                    INSERT INTO insumos_compras
+                    (fecha, lugar, cantidad, unidad, concepto, costo, tipo_costo, nota, insumo_id, cantidad_base, unidad_base, costo_unitario, es_insumo)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    request.form["fecha"], request.form["lugar"], amount_txt, unit_txt, request.form["concepto"], str(costo_dec), request.form["tipo_costo"],
+                    request.form.get("nota", ""), int(insumo_id_val) if (insumo_id_val and str(insumo_id_val).isdigit()) else None,
+                    cantidad_base_val, unidad_base_val, costo_unitario_val, 1 if sumar_stock else 0,
+                ))
+
+                compra_id = cursor.lastrowid
+                if sumar_stock and insumo_id_val and cant_base_dec is not None:
+                    cursor.execute("""
+                        INSERT IGNORE INTO inventario_movimientos (insumo_id, cantidad_base, tipo, ref_tabla, ref_id, nota)
+                        VALUES (%s, %s, 'entrada_compra', 'insumos_compras', %s, %s)
+                    """, (int(insumo_id_val), str(cant_base_dec), compra_id, f"Entrada por compra #{compra_id}"))
+
+                conn.commit()
+                flash("Compra registrada correctamente", "success")
+                return redirect(url_for("compras"))
+
+            cursor.execute("SELECT id, fecha, lugar, concepto, costo, tipo_costo, es_insumo FROM insumos_compras ORDER BY fecha DESC LIMIT 200")
+            compras_rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    return render_template(
+        "compras.html", 
+        compras=compras_rows, 
+        insumos=insumos, 
+        conceptos_otros=conceptos_otros,
+        form_data={}
+    )
+
+
+@app.route("/compras/eliminar_concepto", methods=["POST"])
+@requiere_permiso("inventario")
+def eliminar_concepto_compras():
+    concepto = request.form.get("concepto")
+
+    if not concepto:
+        flash("Concepto no válido.", "error")
+        return redirect(url_for("compras"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            if not table_has_column(cursor, "insumos_compras", "oculto"):
+                cursor.execute("ALTER TABLE insumos_compras ADD COLUMN oculto INT DEFAULT 0")
+
+            cursor.execute("""
+                UPDATE insumos_compras 
+                SET oculto = 1
+                WHERE concepto = %s 
+                  AND (insumo_id IS NULL OR es_insumo = 0)
+            """, (concepto,))
+            conn.commit()
+
+            flash(f"El concepto '{concepto}' se ocultó de tu panel (tu historial financiero sigue intacto).", "success")
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
+        flash(f"Hubo un error al ocultar el concepto: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("compras"))
+
+
+@app.route("/compras/eliminar_insumo", methods=["POST"])
+@requiere_permiso("inventario")
+def eliminar_insumo_compras():
+    insumo_id = request.form.get("insumo_id")
+
+    if not insumo_id or not str(insumo_id).isdigit():
+        flash("ID de insumo no válido.", "error")
+        return redirect(url_for("compras"))
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE insumos SET activo = 0 WHERE id = %s", (int(insumo_id),))
+            conn.commit()
+
+            flash("Insumo eliminado de la lista exitosamente.", "success")
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
+        flash(f"Hubo un error al eliminar el insumo: {e}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for("compras"))
+
+
+
+
+
 # =========================================================
 # ================== CARTA / MENÚ PÚBLICO =================
 # =========================================================
