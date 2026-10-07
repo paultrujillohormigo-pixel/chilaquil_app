@@ -408,26 +408,43 @@ function initCharts() {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { x: { display: false }, y: { display: false, beginAtZero: false } },
-        elements: { point: { radius: 0, hitRadius: 10, hoverRadius: 4 } },
-        layout: { padding: 0 }
+        // Aumentamos el radius a 3 y les damos un fondo blanco a los puntitos para que resalten
+        elements: { point: { radius: 3, backgroundColor: '#ffffff', borderWidth: 2, hitRadius: 10, hoverRadius: 5 } },
+        layout: { padding: 5 } // Un poquito de padding para que los puntos más altos no se corten
     };
 
     new Chart(document.getElementById('miniChartTickets').getContext('2d'), {
         type: 'line',
         data: {
             labels: fechasDiario,
-            datasets: [{ data: ticketsDiario, borderColor: '#475569', backgroundColor: 'rgba(71, 85, 105, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }]
+            datasets: [{ 
+                label: 'Tickets Diarios', // Esto quita el "undefined"
+                data: ticketsDiario, 
+                borderColor: '#475569', 
+                backgroundColor: 'rgba(71, 85, 105, 0.1)', 
+                borderWidth: 2, 
+                fill: true, 
+                tension: 0.4 
+            }]
         },
-        options: { ...miniChartOptions, plugins: { tooltip: { callbacks: { label: c => `${c.raw} tickets` } } } }
+        options: { ...miniChartOptions, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw} tickets` } } } }
     });
 
     new Chart(document.getElementById('miniChartTicketPromedio').getContext('2d'), {
         type: 'line',
         data: {
             labels: fechasDiario,
-            datasets: [{ data: ticketPromedioDiario, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }]
+            datasets: [{ 
+                label: 'Promedio', // Esto quita el "undefined"
+                data: ticketPromedioDiario, 
+                borderColor: '#3b82f6', 
+                backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                borderWidth: 2, 
+                fill: true, 
+                tension: 0.4 
+            }]
         },
-        options: { ...miniChartOptions, plugins: { tooltip: { callbacks: { label: c => fmt.format(c.raw) } } } }
+        options: { ...miniChartOptions, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt.format(c.raw) } } } }
     });
 
     // Actualiza la gráfica al inicio para aplicar la vista predeterminada de los dropdowns
