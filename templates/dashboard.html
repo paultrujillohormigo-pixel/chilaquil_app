@@ -131,6 +131,36 @@
 
         </section>
 
+        <!-- SECCIÓN 1.5: DESEMPEÑO COMERCIAL DIARIO -->
+        <h2 style="margin-top: 10px; margin-bottom: 15px; color: #0f172a; font-size: 1.1rem;">Comportamiento y Metas Comerciales</h2>
+        <section class="kpi-section" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 35px;">
+            
+            <div class="kpi-card" style="padding-bottom: 15px;">
+                <div class="kpi-title text-slate">📦 Volumen de Pedidos</div>
+                <div class="kpi-value text-slate view-total">{{ total_pedidos }} <span style="font-size:12px; font-weight:500;">tickets totales</span></div>
+                <div class="kpi-value text-slate view-promedio">{{ promedio_ventas_diarias }} <span style="font-size:12px; font-weight:500;">tickets / día</span></div>
+                <div style="height: 60px; width: 100%; margin-top: 10px;">
+                    <canvas id="miniChartTickets"></canvas>
+                </div>
+            </div>
+
+            <div class="kpi-card" style="padding-bottom: 15px;">
+                <div class="kpi-title text-blue">🏷️ Ticket Promedio</div>
+                <div class="kpi-value text-blue">{{ ticket_promedio | money }} <span style="font-size:12px; font-weight:500;">promedio general</span></div>
+                <div style="height: 60px; width: 100%; margin-top: 10px;">
+                    <canvas id="miniChartTicketPromedio"></canvas>
+                </div>
+            </div>
+
+            <div class="kpi-card" style="background-color: #fffbeb; border-color: #fde68a;">
+                <div class="kpi-title text-orange">🎯 Punto de Equilibrio (Meta)</div>
+                <div class="kpi-value text-orange view-total">{{ meta_minima_periodo | money }}</div>
+                <div class="kpi-value text-orange view-promedio">{{ meta_minima_diaria | money }}</div>
+                <div class="kpi-footer text-orange" style="font-weight: 600;">Venta neta mínima para no perder dinero</div>
+            </div>
+
+        </section>
+
         <!-- SECCIÓN 2: SALUD FINANCIERA (GRÁFICA PRINCIPAL) -->
         <section class="chart-section wide">
             <div class="card">
@@ -159,35 +189,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- SECCIÓN 1.5: DESEMPEÑO COMERCIAL -->
-        <h2 style="margin-top: 10px; margin-bottom: 15px; color: #0f172a; font-size: 1.1rem;">Desempeño Comercial</h2>
-        <section class="kpi-section" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 35px;">
-            
-            <div class="kpi-card">
-                <div class="kpi-title text-slate">📦 Volumen de Pedidos</div>
-                <div class="kpi-value text-slate view-total">{{ total_pedidos }} <span style="font-size:14px; font-weight:500;">tickets</span></div>
-                <div class="kpi-value text-slate view-promedio">{{ promedio_ventas_diarias }} <span style="font-size:14px; font-weight:500;">tickets / día</span></div>
-                <div class="kpi-footer">Número de ventas concretadas</div>
-            </div>
-
-            <div class="kpi-card">
-                <div class="kpi-title text-blue">🏷️ Ticket Promedio</div>
-                <div class="kpi-value text-blue view-total">{{ ticket_promedio | money }}</div>
-                <div class="kpi-value text-blue view-promedio">{{ ticket_promedio | money }}</div>
-                <div class="kpi-footer">Ingreso promedio por pedido</div>
-            </div>
-
-            <div class="kpi-card" style="background-color: #fffbeb; border-color: #fde68a;">
-                <div class="kpi-title text-orange">🎯 Punto de Equilibrio (Meta)</div>
-                <div class="kpi-value text-orange view-total">{{ meta_minima_periodo | money }}</div>
-                <div class="kpi-value text-orange view-promedio">{{ meta_minima_diaria | money }}</div>
-                <div class="kpi-footer text-orange" style="font-weight: 600;">Venta neta mínima para no perder dinero</div>
-            </div>
-
-        </section>
-
-        
 
         <!-- SECCIÓN 3: OPERACIONES Y ANÁLISIS DE MENÚ -->
         <section class="chart-section half">
@@ -284,14 +285,21 @@ let currentMode = 'total';
 const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const diasTotales = {{ dias_totales | default(1) }};
 
-const histIngresos = {{ historico_ingresos | default([]) | tojson | safe }};
+const historicoDiario = {{ historico_diario | default([]) | tojson | safe }};
+const histIngresos = historicoDiario; // Compatibilidad con el código anterior
 const histGastos = {{ historico_gastos | default([]) | tojson | safe }};
+
 const dataMenuEng = {{ menu_engineering_data | default('[]') | safe }};
 const dataDiaSemana = {{ ventas_por_dia_semana | default([]) | tojson | safe }};
 
 const allDates = [...new Set([...histIngresos.map(d=>d.fecha), ...histGastos.map(d=>d.fecha)])].sort();
 const alignedIngresos = allDates.map(date => { const f = histIngresos.find(d => d.fecha === date); return f ? f.total : 0; });
 const alignedGastos = allDates.map(date => { const f = histGastos.find(d => d.fecha === date); return f ? f.total : 0; });
+
+// Datos para las minigráficas de volumen
+const fechasDiario = historicoDiario.map(d => d.fecha);
+const ticketsDiario = historicoDiario.map(d => d.tickets);
+const ticketPromedioDiario = historicoDiario.map(d => d.ticket_promedio);
 
 // --- FUNCIONES AUXILIARES PARA TRANSFORMAR DATOS ---
 function getMonthlyData(dates, ingresos, gastos) {
@@ -349,6 +357,7 @@ function updateFinancialChart() {
 }
 
 function initCharts() {
+    // 1. Gráfica Principal de Finanzas
     financialChartObj = new Chart(document.getElementById('financialChart').getContext('2d'), {
         type: 'line',
         data: {
@@ -371,6 +380,7 @@ function initCharts() {
         }
     });
 
+    // 2. Gráfica BCG (Matriz)
     bcgChartObj = new Chart(document.getElementById('bcgChart').getContext('2d'), {
         type: 'scatter',
         data: {
@@ -383,6 +393,7 @@ function initCharts() {
         }
     });
 
+    // 3. Gráfica de Días de la Semana
     weeklyChartObj = new Chart(document.getElementById('weeklyChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -390,6 +401,33 @@ function initCharts() {
             datasets: [{ label: 'Ventas ($)', data: dataDiaSemana.map(d => d.total), backgroundColor: '#64748b', borderRadius: 4 }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => fmt.format(c.raw) } } }, scales: { y: { ticks: { callback: (v) => fmt.format(v) } }, x: { grid: { display: false } } } }
+    });
+
+    // 4. Configuración para Mini Gráficas Sparkline
+    const miniChartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { display: false }, y: { display: false, beginAtZero: false } },
+        elements: { point: { radius: 0, hitRadius: 10, hoverRadius: 4 } },
+        layout: { padding: 0 }
+    };
+
+    new Chart(document.getElementById('miniChartTickets').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: fechasDiario,
+            datasets: [{ data: ticketsDiario, borderColor: '#475569', backgroundColor: 'rgba(71, 85, 105, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }]
+        },
+        options: { ...miniChartOptions, plugins: { tooltip: { callbacks: { label: c => `${c.raw} tickets` } } } }
+    });
+
+    new Chart(document.getElementById('miniChartTicketPromedio').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: fechasDiario,
+            datasets: [{ data: ticketPromedioDiario, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }]
+        },
+        options: { ...miniChartOptions, plugins: { tooltip: { callbacks: { label: c => fmt.format(c.raw) } } } }
     });
 
     // Actualiza la gráfica al inicio para aplicar la vista predeterminada de los dropdowns
