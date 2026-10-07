@@ -165,7 +165,7 @@ def dashboard():
             cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             
-            # --- MODIFICACIÓN 1 Y 2: VENTAS POR DÍA Y TICKET PROMEDIO ---
+            # TOTALES Y PROMEDIOS DE TICKETS
             cursor.execute(f"SELECT SUM(total) AS total, COUNT(id) AS cantidad_pedidos FROM pedidos {filtro_pedidos}", params_pedidos)
             row_ingresos = cursor.fetchone()
             total_ingresos = Decimal(str(row_ingresos["total"] or 0))
@@ -173,7 +173,6 @@ def dashboard():
 
             promedio_ventas_diarias = total_pedidos / dias_totales if dias_totales > 0 else 0
             ticket_promedio = float(total_ingresos) / total_pedidos if total_pedidos > 0 else 0
-            # ------------------------------------------------------------
 
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_food_cost = Decimal(str(cursor.fetchone()["total"] or 0))
@@ -187,10 +186,9 @@ def dashboard():
             renta_virtual = (renta_mensual / Decimal(str(dias_del_mes))) * Decimal(str(dias_totales))
             total_opex += renta_virtual
             
-            # 🚨 NÓMINA REAL DESDE RH_NOMINAS
+            # NÓMINA REAL DESDE RH_NOMINAS
             cursor.execute(f"""
-                SELECT e.nombre,
-                       SUM(n.monto_pagado) AS total_devengado
+                SELECT e.nombre, SUM(n.monto_pagado) AS total_devengado
                 FROM rh_nominas n
                 JOIN rh_empleados e ON n.empleado_id = e.id
                 {filtro_nominas}
@@ -203,7 +201,6 @@ def dashboard():
 
             for row in nominas_data:
                 devengado = Decimal(str(row["total_devengado"] or 0))
-                
                 if devengado > 0:
                     total_nomina += devengado
                     gastos_por_concepto_nomina.append({
@@ -218,16 +215,10 @@ def dashboard():
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
             gross_margin_pct = (utilidad / Decimal(str(inv_venta_neta)) * 100) if inv_venta_neta > 0 else 0
 
-            # --- MODIFICACIÓN 3: META MÍNIMA (PUNTO DE EQUILIBRIO) ---
-            # Margen de contribución = (Ventas Netas - Food Cost) / Ventas Netas
+            # META MÍNIMA (PUNTO DE EQUILIBRIO)
             margen_contribucion = (float(inv_venta_neta) - float(total_food_cost)) / float(inv_venta_neta) if float(inv_venta_neta) > 0 else 0
-            
-            # Meta mínima total del periodo = OPEX / Margen de contribución
             meta_minima_periodo = float(total_opex) / margen_contribucion if margen_contribucion > 0 else 0
-            
-            # Meta mínima diaria 
             meta_minima_diaria = meta_minima_periodo / dias_totales if dias_totales > 0 else 0
-            # ------------------------------------------------------------
 
             query_hist_gastos = f"""
                 SELECT f, SUM(total) as total FROM (
@@ -240,8 +231,24 @@ def dashboard():
             cursor.execute(query_hist_gastos, params_hist_gastos)
             historico_gastos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
 
-            cursor.execute(f"SELECT DATE(fecha) as f, SUM(total) as total FROM pedidos {filtro_pedidos} GROUP BY DATE(fecha) ORDER BY f", params_pedidos)
-            historico_ingresos = [{"fecha": str(r["f"]), "total": float(r["total"] or 0)} for r in cursor.fetchall()]
+            # HISTÓRICO DIARIO (Ingresos + Tickets + Ticket Promedio)
+            cursor.execute(f"""
+                SELECT DATE(fecha) as f, SUM(total) as total, COUNT(id) as tickets 
+                FROM pedidos {filtro_pedidos} 
+                GROUP BY DATE(fecha) ORDER BY f
+            """, params_pedidos)
+
+            historico_diario = []
+            for r in cursor.fetchall():
+                total_dia = float(r["total"] or 0)
+                tickets_dia = int(r["tickets"] or 0)
+                ticket_prom_dia = total_dia / tickets_dia if tickets_dia > 0 else 0
+                historico_diario.append({
+                    "fecha": str(r["f"]),
+                    "total": total_dia,
+                    "tickets": tickets_dia,
+                    "ticket_promedio": round(ticket_prom_dia, 2)
+                })
 
             cursor.execute(f"""
                 SELECT c.nombre AS concepto, SUM(g.monto) AS total
@@ -314,20 +321,18 @@ def dashboard():
         top_productos=bcg_raw[:10], 
         top_gastos=top_gastos, 
         ventas_por_dia_semana=ventas_semana, 
-        historico_ingresos=historico_ingresos,
+        historico_diario=historico_diario,
         historico_gastos=historico_gastos,
         gastos_por_concepto=gastos_por_concepto,     
         fecha_inicio_seleccionada=fecha_inicio_seleccionada,
         fecha_fin_seleccionada=fecha_fin_seleccionada,
         dias_seleccionados=dias_seleccionados,
         origen_seleccionado=origen_seleccionado,
-        # --- NUEVAS VARIABLES AGREGADAS ---
         total_pedidos=total_pedidos,
         promedio_ventas_diarias=round(promedio_ventas_diarias, 1),
         ticket_promedio=ticket_promedio,
         meta_minima_periodo=meta_minima_periodo,
         meta_minima_diaria=meta_minima_diaria
-        # ----------------------------------
     )
 
 # =========================================================
@@ -402,7 +407,6 @@ def estado_resultados():
                 m["categorias_opex"] = {cat: Decimal("0") for cat in categorias_opex}
                 m["categorias_capex"] = {cat: Decimal("0") for cat in categorias_capex}
 
-            # Consultamos todos los gastos operativos, PERO BLOQUEAMOS LOS PAGOS MANUALES DE NÓMINA (y la renta física)
             cursor.execute("""
                 SELECT DATE_FORMAT(g.fecha, '%%m') AS mes, 
                        c.nombre AS categoria,
@@ -437,7 +441,6 @@ def estado_resultados():
             hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
             anio_int = int(anio_seleccionado)
 
-            # Renta Virtual Devengada
             for i in range(1, 13):
                 mes_str = str(i).zfill(2)
                 dias_del_mes = calendar.monthrange(anio_int, i)[1]
@@ -462,7 +465,6 @@ def estado_resultados():
                     data_meses[mes_str]["opex_total"] += renta_virtual
                     detalles_opex[mes_str][nombre_cat_renta].append({"concepto": "Provisión Virtual", "monto": renta_virtual})
 
-            # 🚨 INYECCIÓN DE NÓMINA REAL DESDE RH_NOMINAS
             cursor.execute("""
                 SELECT DATE_FORMAT(n.fecha_pago, '%%m') AS mes,
                        e.nombre,
