@@ -165,8 +165,15 @@ def dashboard():
             cursor.execute(f"SELECT COUNT(DISTINCT DATE(fecha)) AS dias FROM pedidos {filtro_pedidos}", params_pedidos)
             dias_totales = int(cursor.fetchone()["dias"] or 1)
             
-            cursor.execute(f"SELECT SUM(total) AS total FROM pedidos {filtro_pedidos}", params_pedidos)
-            total_ingresos = Decimal(str(cursor.fetchone()["total"] or 0)) 
+            # --- MODIFICACIÓN 1 Y 2: VENTAS POR DÍA Y TICKET PROMEDIO ---
+            cursor.execute(f"SELECT SUM(total) AS total, COUNT(id) AS cantidad_pedidos FROM pedidos {filtro_pedidos}", params_pedidos)
+            row_ingresos = cursor.fetchone()
+            total_ingresos = Decimal(str(row_ingresos["total"] or 0))
+            total_pedidos = int(row_ingresos["cantidad_pedidos"] or 0)
+
+            promedio_ventas_diarias = total_pedidos / dias_totales if dias_totales > 0 else 0
+            ticket_promedio = float(total_ingresos) / total_pedidos if total_pedidos > 0 else 0
+            # ------------------------------------------------------------
 
             cursor.execute(f"SELECT SUM(costo) AS total FROM insumos_compras {filtro_compras}", params_compras)
             total_food_cost = Decimal(str(cursor.fetchone()["total"] or 0))
@@ -210,6 +217,17 @@ def dashboard():
             prime_cost_pct = ((total_food_cost + total_nomina) / Decimal(str(inv_venta_neta))) * 100 if inv_venta_neta > 0 else Decimal(0)
             utilidad = Decimal(str(inv_venta_neta)) - total_food_cost - total_opex
             gross_margin_pct = (utilidad / Decimal(str(inv_venta_neta)) * 100) if inv_venta_neta > 0 else 0
+
+            # --- MODIFICACIÓN 3: META MÍNIMA (PUNTO DE EQUILIBRIO) ---
+            # Margen de contribución = (Ventas Netas - Food Cost) / Ventas Netas
+            margen_contribucion = (float(inv_venta_neta) - float(total_food_cost)) / float(inv_venta_neta) if float(inv_venta_neta) > 0 else 0
+            
+            # Meta mínima total del periodo = OPEX / Margen de contribución
+            meta_minima_periodo = float(total_opex) / margen_contribucion if margen_contribucion > 0 else 0
+            
+            # Meta mínima diaria 
+            meta_minima_diaria = meta_minima_periodo / dias_totales if dias_totales > 0 else 0
+            # ------------------------------------------------------------
 
             query_hist_gastos = f"""
                 SELECT f, SUM(total) as total FROM (
@@ -302,7 +320,14 @@ def dashboard():
         fecha_inicio_seleccionada=fecha_inicio_seleccionada,
         fecha_fin_seleccionada=fecha_fin_seleccionada,
         dias_seleccionados=dias_seleccionados,
-        origen_seleccionado=origen_seleccionado
+        origen_seleccionado=origen_seleccionado,
+        # --- NUEVAS VARIABLES AGREGADAS ---
+        total_pedidos=total_pedidos,
+        promedio_ventas_diarias=round(promedio_ventas_diarias, 1),
+        ticket_promedio=ticket_promedio,
+        meta_minima_periodo=meta_minima_periodo,
+        meta_minima_diaria=meta_minima_diaria
+        # ----------------------------------
     )
 
 # =========================================================
