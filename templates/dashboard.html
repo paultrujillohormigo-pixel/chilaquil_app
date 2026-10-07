@@ -160,6 +160,35 @@
             </div>
         </section>
 
+        <!-- SECCIÓN 1.5: DESEMPEÑO COMERCIAL -->
+        <h2 style="margin-top: 10px; margin-bottom: 15px; color: #0f172a; font-size: 1.1rem;">Desempeño Comercial</h2>
+        <section class="kpi-section" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 35px;">
+            
+            <div class="kpi-card">
+                <div class="kpi-title text-slate">📦 Volumen de Pedidos</div>
+                <div class="kpi-value text-slate view-total">{{ total_pedidos }} <span style="font-size:14px; font-weight:500;">tickets</span></div>
+                <div class="kpi-value text-slate view-promedio">{{ promedio_ventas_diarias }} <span style="font-size:14px; font-weight:500;">tickets / día</span></div>
+                <div class="kpi-footer">Número de ventas concretadas</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title text-blue">🏷️ Ticket Promedio</div>
+                <div class="kpi-value text-blue view-total">{{ ticket_promedio | money }}</div>
+                <div class="kpi-value text-blue view-promedio">{{ ticket_promedio | money }}</div>
+                <div class="kpi-footer">Ingreso promedio por pedido</div>
+            </div>
+
+            <div class="kpi-card" style="background-color: #fffbeb; border-color: #fde68a;">
+                <div class="kpi-title text-orange">🎯 Punto de Equilibrio (Meta)</div>
+                <div class="kpi-value text-orange view-total">{{ meta_minima_periodo | money }}</div>
+                <div class="kpi-value text-orange view-promedio">{{ meta_minima_diaria | money }}</div>
+                <div class="kpi-footer text-orange" style="font-weight: 600;">Venta neta mínima para no perder dinero</div>
+            </div>
+
+        </section>
+
+        
+
         <!-- SECCIÓN 3: OPERACIONES Y ANÁLISIS DE MENÚ -->
         <section class="chart-section half">
             <div class="card">
