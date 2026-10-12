@@ -1166,7 +1166,62 @@ def agregar_stock():
         raise
     finally:
         conn.close()
+  @app.route("/inventario/fisico", methods=["GET", "POST"])
+@requiere_permiso("inventario")
+def inventario_fisico():
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Magia: Agregamos la columna de stock_minimo si no existe
+            if not table_has_column(cursor, "insumos", "stock_minimo"):
+                cursor.execute("ALTER TABLE insumos ADD COLUMN stock_minimo DECIMAL(12,3) DEFAULT 0")
+                conn.commit()
 
+            if request.method == "POST":
+                # Recorremos los datos del formulario (pesaje y mínimos)
+                for key, val in request.form.items():
+                    # 1. Procesar ajustes de la báscula
+                    if key.startswith("real_") and val.strip() != "":
+                        insumo_id = int(key.split("_")[1])
+                        real_val = Decimal(val)
+                        teorico_val = Decimal(request.form.get(f"teorico_{insumo_id}", "0"))
+                        
+                        diferencia = real_val - teorico_val
+                        
+                        # Solo hace el movimiento si la báscula no coincide con el sistema
+                        if diferencia != 0:
+                            cursor.execute("""
+                                INSERT INTO inventario_movimientos 
+                                (insumo_id, cantidad_base, tipo, ref_tabla, nota) 
+                                VALUES (%s, %s, 'ajuste', 'conteo_diario', 'Ajuste por báscula')
+                            """, (insumo_id, str(diferencia)))
+
+                    # 2. Procesar actualización de stock mínimo
+                    if key.startswith("min_") and val.strip() != "":
+                        insumo_id = int(key.split("_")[1])
+                        min_val = Decimal(val)
+                        cursor.execute("UPDATE insumos SET stock_minimo = %s WHERE id = %s", (str(min_val), insumo_id))
+
+                conn.commit()
+                flash("Inventario auditado y mínimos actualizados con éxito ⚖️", "success")
+                return redirect(url_for("inventario_fisico"))
+
+            # Traemos todos los insumos activos cruzados con la vista de tu stock actual
+            cursor.execute("""
+                SELECT 
+                    i.id, i.nombre, i.unidad_base, i.stock_minimo,
+                    COALESCE(v.stock_actual, 0) as stock_teorico
+                FROM insumos i
+                LEFT JOIN vw_stock_actual v ON i.id = v.insumo_id
+                WHERE i.activo = 1
+                ORDER BY i.nombre
+            """)
+            insumos_data = cursor.fetchall()
+            
+    finally:
+        conn.close()
+
+    return render_template("inventario_fisico.html", insumos=insumos_data)
 
 # =========================================================
 # ================== OPERACIÓN DE PEDIDOS =================
