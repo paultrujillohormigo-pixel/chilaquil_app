@@ -274,9 +274,6 @@ def eliminar_insumo_compras():
     return redirect(url_for("compras"))
 
 
-
-
-
 # =========================================================
 # ================== CARTA / MENÚ PÚBLICO =================
 # =========================================================
@@ -1000,6 +997,23 @@ def campanas():
     return render_template("campanas.html", clientes=clientes_inactivos, dias=dias, promociones=promociones_db)
 
 # =========================================================
+# === ESTA ES LA RUTA QUE FALTABA PARA EL CLIC SILENCIOSO ===
+# =========================================================
+@app.route("/api/campanas/marcar/<int:customer_id>", methods=["POST"])
+@requiere_permiso("clientes")
+def marcar_campana(customer_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE loyalty_customers SET ultimo_mensaje_campana = CURRENT_DATE WHERE id = %s", (customer_id,))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        conn.close()
+
+# =========================================================
 # ================== INVENTARIO Y STOCK ===================
 # =========================================================
 
@@ -1166,7 +1180,8 @@ def agregar_stock():
         raise
     finally:
         conn.close()
-  @app.route("/inventario/fisico", methods=["GET", "POST"])
+
+@app.route("/inventario/fisico", methods=["GET", "POST"])
 @requiere_permiso("inventario")
 def inventario_fisico():
     conn = get_connection()
@@ -1440,7 +1455,7 @@ def nuevo_pedido():
                 if enviar_wa and telefono_e164:
                     conn.commit()
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
-
+                    
                     cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
                     row_totopos = cursor.fetchone()
                     balance = row_totopos["totopos_balance"] if row_totopos else 0
@@ -1656,13 +1671,13 @@ def ver_pedido(pedido_id):
                     WHERE id=%s
                 """
                 update_vals = [fecha, origen, mesero, telefono_e164, metodo_pago, total_final, monto_uber, neto, mesa]
-
+                
                 if has_desc:
                     update_query = update_query.replace("{comma_desc}", ", descuento=%s")
                     update_vals.append(descuento)
                 else:
                     update_query = update_query.replace("{comma_desc}", "")
-
+                
                 update_vals.append(pedido_id)
                 cursor.execute(update_query, tuple(update_vals))
 
@@ -1677,9 +1692,11 @@ def ver_pedido(pedido_id):
 
                 if enviar_wa and telefono_e164:
                     ticket_text = generar_ticket_texto(pedido_id, cursor)
+                    
                     cursor.execute("SELECT totopos_balance FROM loyalty_accounts WHERE customer_id=%s", (customer_id,))
                     row_totopos = cursor.fetchone()
                     balance = row_totopos["totopos_balance"] if row_totopos else 0
+
                     msg_loyalty = loyalty_message(balance, 1, pedido_id, total_final, telefono_e164)
                     full_message = ticket_text + "\n\n" + msg_loyalty
                     wa_link = wa_me_link(telefono_e164, full_message)
@@ -1716,19 +1733,19 @@ def ver_pedido(pedido_id):
 
             items = []
             id_to_index_map = {}
-
+            
             for idx, row in enumerate(items_raw):
                 id_to_index_map[row["id"]] = idx
 
             for row in items_raw:
                 p_id = row.get("item_padre_id")
                 row["padre_index"] = id_to_index_map.get(p_id) if p_id else None
-
+                
                 if row.get("precio_unitario") is not None:
                     row["precio_unitario"] = float(row["precio_unitario"])
                 if row.get("subtotal") is not None:
                     row["subtotal"] = float(row["subtotal"])
-
+                
                 if row.get("nota"):
                     row["nota"] = str(row["nota"]).replace("\n", " ").replace("\r", "").replace('"', '\\"').replace("'", "\\'")
 
@@ -2077,238 +2094,6 @@ def borrar_pedidos_bulk():
     finally:
         conn.close()
 
-
-# =========================================================
-# ================== TICKETS Y RECIBOS ====================
-# =========================================================
-
-def generar_ticket_texto(pedido_id, cursor) -> str:
-    has_salsa = table_has_column(cursor, "pedido_items", "salsa_id")
-
-    if has_salsa:
-        cursor.execute("""
-            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, s.nombre AS salsa
-            FROM pedido_items pi
-            JOIN productos p ON p.id = pi.producto_id
-            LEFT JOIN salsas s ON pi.salsa_id = s.id
-            WHERE pi.pedido_id = %s
-            ORDER BY pi.id ASC
-        """, (pedido_id,))
-    else:
-        cursor.execute("""
-            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, NULL AS salsa
-            FROM pedido_items pi
-            JOIN productos p ON p.id = pi.producto_id
-            WHERE pi.pedido_id = %s
-            ORDER BY pi.id ASC
-        """, (pedido_id,))
-
-    items = cursor.fetchall()
-
-    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
-    pedido = cursor.fetchone()
-
-    lines = []
-    lines.append("Hola. Aqui tienes el resumen de tu pedido:\n")
-
-    subtotal_items = Decimal("0")
-
-    for it in items:
-        subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
-        subtotal_items += subtotal
-
-        lines.append(f'- {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
-
-        if it.get("proteina") and it.get("proteina") != "Sin proteina":
-            lines.append(f'   Huevo: {it["proteina"]}')
-        if it.get("salsa"):
-            lines.append(f'   Salsa: {it["salsa"]}')
-        if it.get("sin"):
-            lines.append(f'   Sin: {it["sin"]}')
-
-        nota = it.get("nota")
-        if nota:
-            if "👉 Para:" in nota or "Para:" in nota:
-                nota = nota.replace("👉 Para:", "Extra para:").replace("Para:", "Extra para:")
-            lines.append(f'   Nota: {nota}')
-
-    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
-
-    lines.append(f"\nSubtotal: ${float(subtotal_items):.2f}")
-    if subtotal_items != total:
-        descuento = subtotal_items - total
-        lines.append(f"Descuento: -${float(descuento):.2f}")
-
-    lines.append(f"Total a pagar: ${float(total):.2f}")
-
-    return "\n".join(lines)
-
-
-@app.route("/pedido/<int:pedido_id>/whatsapp")
-@requiere_permiso("pedidos")
-def enviar_ticket_whatsapp(pedido_id):
-    tel_raw = (request.args.get("tel") or "").strip()
-    telefono_e164 = normalize_phone_mx(tel_raw)
-
-    if not telefono_e164:
-        flash("Número no válido", "error")
-        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
-
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            texto = generar_ticket_texto(pedido_id, cursor)
-    finally:
-        conn.close()
-
-    return redirect(wa_me_link(telefono_e164, texto))
-
-
-@app.route("/pedido/<int:pedido_id>/ticket_preview")
-@requiere_permiso("pedidos")
-def ticket_preview(pedido_id):
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            texto = generar_ticket_texto(pedido_id, cursor)
-    finally:
-        conn.close()
-
-    msg_q = urllib.parse.quote_from_bytes(texto.encode("utf-8", "strict"))
-    return jsonify({
-        "texto": texto,
-        "whatsapp_url": f"https://wa.me/?text={msg_q}"
-    })
-
-
-# =========================================================
-# ================== CORTE DE CAJA ========================
-# =========================================================
-
-@app.route("/corte_caja", methods=["GET", "POST"])
-@requiere_permiso("finanzas")
-def corte_caja():
-    fecha_str = request.args.get("fecha")
-    if not fecha_str:
-        fecha_str = datetime.now().strftime("%Y-%m-%d")
-
-    conn = get_connection()
-    try:
-        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("""
-                SELECT COUNT(*) as abiertos FROM pedidos 
-                WHERE DATE(fecha) = %s AND estado = 'abierto'
-            """, (fecha_str,))
-            pedidos_abiertos = cursor.fetchone()["abiertos"]
-
-            cursor.execute("""
-                SELECT COALESCE(metodo_pago, 'Otro') as metodo_pago, SUM(total) as total_ventas 
-                FROM pedidos 
-                WHERE DATE(fecha) = %s AND estado = 'cerrado'
-                GROUP BY metodo_pago
-            """, (fecha_str,))
-            ventas_dia = cursor.fetchall()
-
-            cursor.execute("""
-                SELECT SUM(costo) as total_gastos 
-                FROM insumos_compras 
-                WHERE DATE(fecha) = %s
-            """, (fecha_str,))
-            gastos_row = cursor.fetchone()
-            total_gastos = Decimal(str(gastos_row["total_gastos"] or 0))
-
-            ventas_totales = Decimal("0")
-            efectivo_sistema = Decimal("0")
-            tarjeta_sistema = Decimal("0")
-            transferencia_sistema = Decimal("0")
-            otros_sistema = Decimal("0")
-
-            for v in ventas_dia:
-                monto = Decimal(str(v["total_ventas"] or 0))
-                ventas_totales += monto
-                metodo = v["metodo_pago"].lower()
-
-                if "efectivo" in metodo:
-                    efectivo_sistema += monto
-                elif "tarjeta" in metodo:
-                    tarjeta_sistema += monto
-                elif "transferencia" in metodo:
-                    transferencia_sistema += monto
-                else:
-                    otros_sistema += monto
-
-            banco_esperado_sistema = tarjeta_sistema + transferencia_sistema
-
-            cursor.execute("SELECT * FROM cortes_caja WHERE fecha_corte = %s", (fecha_str,))
-            corte_guardado = cursor.fetchone()
-
-            if request.method == "POST":
-                if pedidos_abiertos > 0:
-                    flash(f"¡Cuidado! Hay {pedidos_abiertos} pedido(s) abierto(s). Ciérralos primero.", "error")
-                    return redirect(url_for("corte_caja", fecha=fecha_str))
-
-                fondo_caja = parse_decimal_mx(request.form.get("fondo_caja", "0")) or Decimal("0")
-                efectivo_fisico = parse_decimal_mx(request.form.get("efectivo_fisico", "0")) or Decimal("0")
-                tarjeta_fisico = parse_decimal_mx(request.form.get("tarjeta_fisico", "0")) or Decimal("0")
-                notas = request.form.get("notas", "")
-
-                efectivo_esperado = fondo_caja + efectivo_sistema - total_gastos
-                diferencia_efectivo = efectivo_fisico - efectivo_esperado
-                diferencia_tarjeta = tarjeta_fisico - banco_esperado_sistema
-
-                if corte_guardado:
-                    cursor.execute("""
-                        UPDATE cortes_caja 
-                        SET fondo_caja=%s, ventas_totales=%s, efectivo_sistema=%s, tarjeta_sistema=%s, 
-                            transferencia_sistema=%s, otros_sistema=%s, gastos_dia=%s, efectivo_fisico=%s, 
-                            tarjeta_fisico=%s, diferencia=%s, diferencia_tarjeta=%s, notas=%s
-                        WHERE fecha_corte=%s
-                    """, (str(fondo_caja), str(ventas_totales), str(efectivo_sistema), str(tarjeta_sistema), 
-                          str(transferencia_sistema), str(otros_sistema), str(total_gastos), str(efectivo_fisico), 
-                          str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas, fecha_str))
-                    flash("Corte de caja actualizado correctamente.", "success")
-                else:
-                    cursor.execute("""
-                        INSERT INTO cortes_caja (fecha_corte, fondo_caja, ventas_totales, efectivo_sistema, 
-                                                 tarjeta_sistema, transferencia_sistema, otros_sistema, 
-                                                 gastos_dia, efectivo_fisico, tarjeta_fisico, diferencia, diferencia_tarjeta, notas)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (fecha_str, str(fondo_caja), str(ventas_totales), str(efectivo_sistema), 
-                          str(tarjeta_sistema), str(transferencia_sistema), str(otros_sistema), 
-                          str(total_gastos), str(efectivo_fisico), str(tarjeta_fisico), str(diferencia_efectivo), str(diferencia_tarjeta), notas))
-                    flash("Corte de caja guardado exitosamente.", "success")
-
-                conn.commit()
-                return redirect(url_for("corte_caja", fecha=fecha_str))
-
-            cursor.execute("""
-                SELECT fecha_corte AS fecha, fondo_caja, efectivo_fisico, tarjeta_fisico, 
-                       diferencia, diferencia_tarjeta, notas 
-                FROM cortes_caja 
-                ORDER BY fecha_corte DESC LIMIT 15
-            """)
-            historial_cortes = cursor.fetchall()
-    finally:
-        conn.close()
-
-    fondo_mostrar = Decimal(str(corte_guardado["fondo_caja"])) if corte_guardado else Decimal("0")
-    efectivo_esperado = fondo_mostrar + efectivo_sistema - total_gastos
-
-    return render_template(
-        "corte_caja.html",
-        fecha=fecha_str,
-        pedidos_abiertos=pedidos_abiertos,
-        ventas_totales=ventas_totales,
-        efectivo_sistema=efectivo_sistema,
-        tarjeta_sistema=tarjeta_sistema,
-        transferencia_sistema=transferencia_sistema,
-        banco_esperado_sistema=banco_esperado_sistema,
-        otros_sistema=otros_sistema,
-        total_gastos=total_gastos,
-        efectivo_esperado=efectivo_esperado,
-        corte_guardado=corte_guardado,
-        cortes=historial_cortes
-    )
 
 # =========================================================
 # ================== RAW DATA (TABLAS SIN PROCESAR) =======
