@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .header-title { color: #0f172a; font-size: 2rem; margin-bottom: 5px; font-weight: 800;}
+    .header-desc { color: #64748b; margin-bottom: 30px; }
+    
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; color: #475569; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: middle;}
+    
+    .badge { padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: inline-block;}
+    .bg-green { background: #dcfce3; color: #166534; }
+    .bg-yellow { background: #fef08a; color: #854d0e; }
+    .bg-red { background: #fee2e2; color: #b91c1c; }
+    .bg-gray { background: #f1f5f9; color: #475569; }
+
+    .input-box { width: 90px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; text-align: center; }
+    .input-box:focus { border-color: #3b82f6; outline: none; }
+    
+    .btn-primary { background: #b32417; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; transition: 0.2s;}
+    .btn-primary:hover { background: #8c1c12; }
+</style>
+
+<div class="admin-container">
+    <div>
+        <h1 class="header-title">⚖️ Conteo Diario y Semáforo</h1>
+        <p class="header-desc">Pesa tus insumos. Si el sistema difiere de la realidad, se ajustará automáticamente.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('inventario_fisico') }}" class="card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Insumo</th>
+                        <th style="text-align: center;">Estado (Semáforo)</th>
+                        <th style="text-align: center;">Mínimo Ideal (Alerta)</th>
+                        <th style="text-align: center;">Stock Teórico (Sistema)</th>
+                        <th style="text-align: right; color: #b32417;">Peso Real (Báscula)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in insumos %}
+                    
+                    <!-- Lógica del Semáforo -->
+                    {% set teorico = item.stock_teorico|float %}
+                    {% set minimo = item.stock_minimo|float %}
+                    
+                    {% set badge_class = 'bg-gray' %}
+                    {% set badge_text = '⚪ Sin Mínimo' %}
+                    
+                    {% if minimo > 0 %}
+                        {% if teorico <= minimo %}
+                            {% set badge_class = 'bg-red' %}
+                            {% set badge_text = '🔴 ¡Comprar Ya!' %}
+                        {% elif teorico <= (minimo * 1.5) %}
+                            {% set badge_class = 'bg-yellow' %}
+                            {% set badge_text = '🟡 Por Agotarse' %}
+                        {% else %}
+                            {% set badge_class = 'bg-green' %}
+                            {% set badge_text = '🟢 OK' %}
+                        {% endif %}
+                    {% endif %}
+
+                    <tr>
+                        <td>
+                            <strong style="font-size: 1.05rem;">{{ item.nombre }}</strong>
+                            <div style="font-size: 0.85rem; color: #64748b;">Medida: {{ item.unidad_base }}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="badge {{ badge_class }}">{{ badge_text }}</span>
+                        </td>
+                        <td style="text-align: center;">
+                            <input type="number" step="0.01" name="min_{{ item.id }}" value="{{ item.stock_minimo }}" class="input-box" style="width: 70px; background: #f8fafc;">
+                        </td>
+                        <td style="text-align: center; font-size: 1.1rem; font-weight: 700; color: #475569;">
+                            {{ "%.2f"|format(teorico) }}
+                            <input type="hidden" name="teorico_{{ item.id }}" value="{{ teorico }}">
+                        </td>
+                        <td style="text-align: right;">
+                            <input type="number" step="0.01" name="real_{{ item.id }}" placeholder="Ej. 1.5" class="input-box" style="border-color: #b32417; background: #fff1f2;">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: right;">
+            <button type="submit" class="btn-primary">💾 Guardar Conteo de Hoy y Actualizar Sistema</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
