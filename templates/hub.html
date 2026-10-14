@@ -63,18 +63,19 @@
           <p>Registra activos fijos, mobiliario, remodelaciones y pago de deudas.</p>
       </div>
       </a>
+      <!-- AQUÍ ESTÁ EL ENLACE CORREGIDO DE GASTOS -->
+      <a href="{{ url_for('gastos.gastos_index') }}" class="hub-card">
+        <div class="hub-icon">🏢</div>
+        <div class="hub-info">
+          <h3>Gastos Fijos (OPEX)</h3>
+          <p>Registra nóminas, rentas, luz y servicios operativos.</p>
+        </div>
+      </a>
       <a href="/corte_caja" class="hub-card">
         <div class="hub-icon">💵</div>
         <div class="hub-info">
           <h3>Corte de Caja</h3>
           <p>Arqueo diario, control de efectivo y cuadre de terminales.</p>
-        </div>
-      </a>
-      <a href="/gastos" class="hub-card">
-        <div class="hub-icon">🏢</div>
-        <div class="hub-info">
-          <h3>Gastos Fijos (OPEX)</h3>
-          <p>Registra nóminas, rentas, luz y servicios operativos.</p>
         </div>
       </a>
       <a href="/estado_resultados" class="hub-card">
@@ -133,135 +134,4 @@
   {% endif %}
 
   <!-- MÓDULO 4: CRM -->
-  {% if 'all' in session.permisos or 'clientes' in session.permisos %}
-  <section class="hub-category">
-    <h2 class="hub-category-title">🤝 CRM y Clientes</h2>
-    <div class="hub-grid">
-      <a href="/clientes" class="hub-card">
-        <div class="hub-icon">👥</div>
-        <div class="hub-info">
-          <h3>Base de Clientes</h3>
-          <p>Administra los "Totopos" (puntos) y perfiles.</p>
-        </div>
-      </a>
-      <a href="/campanas" class="hub-card">
-        <div class="hub-icon">📢</div>
-        <div class="hub-info">
-          <h3>Campañas WhatsApp</h3>
-          <p>Recupera clientes inactivos con mensajes directos.</p>
-        </div>
-      </a>
-    </div>
-  </section>
-  {% endif %}
-
-   <!-- MÓDULO 5: RECURSOS HUMANOS (Visible para todos los que inician sesión) -->
-  <section class="hub-category">
-    <h2 class="hub-category-title">🧑‍💼 Recursos Humanos</h2>
-    <div class="hub-grid">
-      
-      {% if 'all' in session.permisos or 'rh' in session.permisos %}
-      <a href="/rh/directorio" class="hub-card">
-        <div class="hub-icon">🪪</div>
-        <div class="hub-info">
-          <h3>Directorio de Staff</h3>
-          <p>Registra a tus empleados, sueldos y perfiles.</p>
-        </div>
-      </a>
-      {% endif %}
-
-      <!-- Reloj Checador: Público para todo el staff -->
-      <a href="/rh/checador" class="hub-card" style="border-color: #3b82f6;">
-        <div class="hub-icon" style="background: #eff6ff;">⏱️</div>
-        <div class="hub-info">
-          <h3 style="color: #1d4ed8;">Reloj Checador</h3>
-          <p>Kiosco para marcar tu entrada y salida del turno.</p>
-        </div>
-      </a>
-
-      {% if 'all' in session.permisos or 'rh' in session.permisos %}
-      <a href="/rh/nomina" class="hub-card">
-        <div class="hub-icon">💸</div>
-        <div class="hub-info">
-          <h3>Pago de Nómina</h3>
-          <p>Liquida sueldos y mándalos directo a tu OPEX.</p>
-        </div>
-      </a>
-      {% endif %}
-
-    </div>
-  </section>
-
-  <!-- MÓDULO 6: ADMIN Y PÚBLICO -->
-  <section class="hub-category">
-    <h2 class="hub-category-title">⚙️ Configuración y Enlaces Públicos</h2>
-    <div class="hub-grid">
-      
-      {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
-      <a href="/borrar_pedidos" class="hub-card">
-        <div class="hub-icon">🕒</div>
-        <div class="hub-info">
-          <h3>Historial de Pedidos</h3>
-          <p>Auditoría, revisión y cancelación de tickets pasados.</p>
-        </div>
-      </a>
-      {% endif %}
-
-      <!-- ACCESO AL CONTROL MAESTRO DE SEGURIDAD -->
-      {% if 'all' in session.permisos or 'seguridad' in session.permisos %}
-      <a href="/seguridad/usuarios" class="hub-card" style="border-color: #b91c1c;">
-        <div class="hub-icon" style="background: #fee2e2;">🛡️</div>
-        <div class="hub-info">
-          <h3 style="color: #b91c1c;">Seguridad y Usuarios</h3>
-          <p>Crea cajeros, gerentes y asigna qué pueden ver.</p>
-        </div>
-      </a>
-      {% endif %}
-
-      <!-- ESTOS SON PÚBLICOS, CUALQUIERA LOGUEADO PUEDE GENERAR LOS LINKS -->
-      <a href="/menu" target="_blank" class="hub-card">
-        <div class="hub-icon">📱</div>
-        <div class="hub-info">
-          <h3>Ver Menú Digital</h3>
-          <p>Enlace público para que los clientes vean la carta.</p>
-        </div>
-      </a>
-      <a href="/mi-perfil" target="_blank" class="hub-card">
-        <div class="hub-icon">💳</div>
-        <div class="hub-info">
-          <h3>App de Lealtad</h3>
-          <p>Enlace público para que los clientes vean sus Totopos.</p>
-        </div>
-      </a>
-    </div>
-  </section>
-
-</div>
-
-<style>
-  /* Estilos del App Hub */
-  .app-hub { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-  .hub-header { text-align: center; margin-bottom: 50px; }
-  .hub-header h1 { font-size: 2.5rem; color: #0f172a; margin-bottom: 10px; letter-spacing: -1px; font-weight: 800;}
-  .hub-header p { color: #64748b; font-size: 1.1rem; }
-  
-  .hub-category { margin-bottom: 48px; }
-  .hub-category-title { font-size: 1.25rem; font-weight: 700; color: #334155; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
-  
-  .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-  
-  .hub-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-decoration: none; color: inherit; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: flex-start; gap: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-  .hub-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -3px rgba(0,0,0,0.1); border-color: #b32417; }
-  
-  .hub-icon { font-size: 2rem; background: #f8fafc; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 14px; border: 1px solid #e2e8f0; transition: 0.2s;}
-  .hub-card:hover .hub-icon { background: #fee2e2; border-color: #fecaca; }
-  
-  .hub-info h3 { margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 700; }
-  .hub-info p { margin: 6px 0 0; font-size: 0.9rem; color: #64748b; line-height: 1.5; }
-
-  /* Destacar el Dashboard */
-  .highlight-card { border-color: #cbd5e1; background: #f8fafc; }
-  .highlight-card:hover { border-color: #b32417; background: #fff; }
-</style>
-
-{% endblock %}
+  {% if 'all
