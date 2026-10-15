@@ -2094,6 +2094,108 @@ def borrar_pedidos_bulk():
     finally:
         conn.close()
 
+# =========================================================
+# ================== TICKETS Y RECIBOS ====================
+# =========================================================
+
+def generar_ticket_texto(pedido_id, cursor) -> str:
+    has_salsa = table_has_column(cursor, "pedido_items", "salsa_id")
+
+    if has_salsa:
+        cursor.execute("""
+            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, s.nombre AS salsa
+            FROM pedido_items pi
+            JOIN productos p ON p.id = pi.producto_id
+            LEFT JOIN salsas s ON pi.salsa_id = s.id
+            WHERE pi.pedido_id = %s
+            ORDER BY pi.id ASC
+        """, (pedido_id,))
+    else:
+        cursor.execute("""
+            SELECT p.nombre, pi.cantidad, pi.precio_unitario, pi.proteina, pi.sin, pi.nota, NULL AS salsa
+            FROM pedido_items pi
+            JOIN productos p ON p.id = pi.producto_id
+            WHERE pi.pedido_id = %s
+            ORDER BY pi.id ASC
+        """, (pedido_id,))
+
+    items = cursor.fetchall()
+
+    cursor.execute("SELECT total FROM pedidos WHERE id = %s", (pedido_id,))
+    pedido = cursor.fetchone()
+
+    lines = []
+    lines.append("Hola. Aqui tienes el resumen de tu pedido:\n")
+
+    subtotal_items = Decimal("0")
+
+    for it in items:
+        subtotal = Decimal(str(it["cantidad"])) * Decimal(str(it["precio_unitario"]))
+        subtotal_items += subtotal
+
+        lines.append(f'- {it["cantidad"]}x {it["nombre"]} (${float(subtotal):.2f})')
+
+        if it.get("proteina") and it.get("proteina") != "Sin proteina":
+            lines.append(f'   Huevo: {it["proteina"]}')
+        if it.get("salsa"):
+            lines.append(f'   Salsa: {it["salsa"]}')
+        if it.get("sin"):
+            lines.append(f'   Sin: {it["sin"]}')
+
+        nota = it.get("nota")
+        if nota:
+            if "👉 Para:" in nota or "Para:" in nota:
+                nota = nota.replace("👉 Para:", "Extra para:").replace("Para:", "Extra para:")
+            lines.append(f'   Nota: {nota}')
+
+    total = Decimal(str(pedido["total"] or 0)) if pedido else Decimal("0")
+
+    lines.append(f"\nSubtotal: ${float(subtotal_items):.2f}")
+    if subtotal_items != total:
+        descuento = subtotal_items - total
+        lines.append(f"Descuento: -${float(descuento):.2f}")
+
+    lines.append(f"Total a pagar: ${float(total):.2f}")
+
+    return "\n".join(lines)
+
+
+@app.route("/pedido/<int:pedido_id>/whatsapp")
+@requiere_permiso("pedidos")
+def enviar_ticket_whatsapp(pedido_id):
+    tel_raw = (request.args.get("tel") or "").strip()
+    telefono_e164 = normalize_phone_mx(tel_raw)
+
+    if not telefono_e164:
+        flash("Número no válido", "error")
+        return redirect(url_for("ver_pedido", pedido_id=pedido_id))
+
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            texto = generar_ticket_texto(pedido_id, cursor)
+    finally:
+        conn.close()
+
+    return redirect(wa_me_link(telefono_e164, texto))
+
+
+@app.route("/pedido/<int:pedido_id>/ticket_preview")
+@requiere_permiso("pedidos")
+def ticket_preview(pedido_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            texto = generar_ticket_texto(pedido_id, cursor)
+    finally:
+        conn.close()
+
+    msg_q = urllib.parse.quote_from_bytes(texto.encode("utf-8", "strict"))
+    return jsonify({
+        "texto": texto,
+        "whatsapp_url": f"https://wa.me/?text={msg_q}"
+    })
+
 
 # =========================================================
 # ================== RAW DATA (TABLAS SIN PROCESAR) =======
