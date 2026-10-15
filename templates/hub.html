@@ -14,14 +14,14 @@
     <div class="hub-grid">
 
       {% if 'all' in session.permisos or 'pedidos' in session.permisos %}
-      <a href="{{ url_for('nuevo_pedido') }}" class="hub-card">
+      <a href="/nuevo_pedido" class="hub-card">
         <div class="hub-icon">🍔</div>
         <div class="hub-info">
           <h3>Nuevo Pedido</h3>
           <p>Toma la orden, calcula totales y envía ticket por WhatsApp.</p>
         </div>
       </a>
-      <a href="{{ url_for('pedidos_abiertos') }}" class="hub-card">
+      <a href="/pedidos_abiertos" class="hub-card">
         <div class="hub-icon">📋</div>
         <div class="hub-info">
           <h3>Pedidos Abiertos</h3>
@@ -29,8 +29,6 @@
         </div>
       </a>
       {% endif %}
-
-
 
       {% if 'all' in session.permisos or 'cocina' in session.permisos %}
       <a href="{{ url_for('cocina.index_recetario') }}" class="hub-card">
@@ -65,7 +63,7 @@
           <p>Registra activos fijos, mobiliario, remodelaciones y pago de deudas.</p>
       </div>
       </a>
-      <a href="{{ url_for('corte_caja') }}" class="hub-card">
+      <a href="/corte_caja" class="hub-card">
         <div class="hub-icon">💵</div>
         <div class="hub-info">
           <h3>Corte de Caja</h3>
@@ -97,14 +95,14 @@
     <div class="hub-grid">
 
       {% if 'all' in session.permisos or 'inventario' in session.permisos %}
-      <a href="{{ url_for('compras') }}" class="hub-card">
+      <a href="/compras" class="hub-card">
         <div class="hub-icon">🛒</div>
         <div class="hub-info">
           <h3>Compras (Food Cost)</h3>
           <p>Ingresa facturas de insumos y materia prima.</p>
         </div>
       </a>
-      <a href="{{ url_for('ver_stock') }}" class="hub-card">
+      <a href="/inventario/stock" class="hub-card">
         <div class="hub-icon">📦</div>
         <div class="hub-info">
           <h3>Inventario Actual</h3>
@@ -139,14 +137,14 @@
   <section class="hub-category">
     <h2 class="hub-category-title">🤝 CRM y Clientes</h2>
     <div class="hub-grid">
-      <a href="{{ url_for('lista_clientes') }}" class="hub-card">
+      <a href="/clientes" class="hub-card">
         <div class="hub-icon">👥</div>
         <div class="hub-info">
           <h3>Base de Clientes</h3>
           <p>Administra los "Totopos" (puntos) y perfiles.</p>
         </div>
       </a>
-      <a href="{{ url_for('campanas') }}" class="hub-card">
+      <a href="/campanas" class="hub-card">
         <div class="hub-icon">📢</div>
         <div class="hub-info">
           <h3>Campañas WhatsApp</h3>
@@ -200,7 +198,7 @@
     <div class="hub-grid">
 
       {% if 'all' in session.permisos or 'finanzas' in session.permisos %}
-      <a href="{{ url_for('borrar_pedidos') }}" class="hub-card">
+      <a href="/borrar_pedidos" class="hub-card">
         <div class="hub-icon">🕒</div>
         <div class="hub-info">
           <h3>Historial de Pedidos</h3>
@@ -221,14 +219,14 @@
       {% endif %}
 
       <!-- ESTOS SON PÚBLICOS, CUALQUIERA LOGUEADO PUEDE GENERAR LOS LINKS -->
-      <a href="{{ url_for('menu') }}" target="_blank" class="hub-card">
+      <a href="/menu" target="_blank" class="hub-card">
         <div class="hub-icon">📱</div>
         <div class="hub-info">
           <h3>Ver Menú Digital</h3>
           <p>Enlace público para que los clientes vean la carta.</p>
         </div>
       </a>
-      <a href="{{ url_for('mi_perfil') }}" target="_blank" class="hub-card">
+      <a href="/mi-perfil" target="_blank" class="hub-card">
         <div class="hub-icon">💳</div>
         <div class="hub-info">
           <h3>App de Lealtad</h3>
